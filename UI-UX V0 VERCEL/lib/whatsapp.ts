@@ -11,18 +11,19 @@ function deviceLabel(order: Order) {
 }
 
 const TEMPLATES: Record<OrderStatus, (o: Order) => string> = {
-  recibido: (o) =>
+  pendiente: (o) =>
     `Hola ${o.customer.name.split(' ')[0]}, recibimos tu *${deviceLabel(o)}* en ${BUSINESS.name}.\n\n` +
     `Orden: *${o.id}*\nFalla reportada: ${o.reportedFault}\n` +
     (o.estimatedDate ? `Fecha estimada: ${formatDate(o.estimatedDate)}\n` : '') +
     `\nTe avisaremos por este medio cada vez que avance tu reparación.`,
-  en_revision: (o) =>
+  enRevision: (o) =>
     `Hola ${o.customer.name.split(' ')[0]}, tu *${deviceLabel(o)}* (orden *${o.id}*) ya está *en revisión*. ` +
     `Nuestro técnico está diagnosticando la falla y pronto te enviaremos el presupuesto.`,
-  en_reparacion: (o) =>
-    `Buenas noticias ${o.customer.name.split(' ')[0]}: tu *${deviceLabel(o)}* (orden *${o.id}*) está *en reparación*. ` +
-    `Costo estimado: ${formatMoney(o.estimatedCost)}.`,
-  listo: (o) => {
+  esperandoConfirmacion: (o) =>
+    `Hola ${o.customer.name.split(' ')[0]}, ya tenemos el diagnóstico de tu *${deviceLabel(o)}* (orden *${o.id}*).\n\n` +
+    `Costo estimado: ${formatMoney(o.estimatedCost)}\n` +
+    `Quedamos atentos a tu confirmación para iniciar la reparación.`,
+  completada: (o) => {
     const total = o.items.reduce((s, i) => s + i.price, 0) || o.estimatedCost
     return (
       `¡Hola ${o.customer.name.split(' ')[0]}! Tu *${deviceLabel(o)}* está *listo para entrega*.\n\n` +
@@ -31,10 +32,14 @@ const TEMPLATES: Record<OrderStatus, (o: Order) => string> = {
       `Puedes recogerlo en ${BUSINESS.address}. Recuerda traer tu comprobante de recepción.`
     )
   },
-  entregado: (o) =>
-    `Gracias por confiar en ${BUSINESS.name}, ${o.customer.name.split(' ')[0]}.\n\n` +
-    `Tu *${deviceLabel(o)}* (orden *${o.id}*) fue entregado. ` +
-    `Garantía de ${BUSINESS.warrantyDays} días, válida hasta el ${formatDate(addDays(o.deliveredAt ?? new Date().toISOString(), BUSINESS.warrantyDays))}.`,
+  rechazada: (o) =>
+    `Hola ${o.customer.name.split(' ')[0]}, como no autorizaste la reparación de tu *${deviceLabel(o)}* ` +
+    `(orden *${o.id}*), el equipo queda disponible para reclamar en ${BUSINESS.address}. ` +
+    `Sin costo por la revisión.`,
+  fallida: (o) =>
+    `Hola ${o.customer.name.split(' ')[0]}, lamentablemente no pudimos reparar tu *${deviceLabel(o)}* ` +
+    `(orden *${o.id}*).\n\n${o.history.at(-1)?.note ?? ''}\n\n` +
+    `Puedes pasar por el equipo en ${BUSINESS.address}. No hay cobro por el diagnóstico.`,
 }
 
 export function buildStatusMessage(order: Order, status: OrderStatus = order.status) {

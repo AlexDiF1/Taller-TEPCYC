@@ -19,3 +19,6 @@ next-env.d.ts
 # sistema
 .DS_Store
 *.log
+# credenciales firebase
+firebase-key.json
+*firebase-adminsdk*.json

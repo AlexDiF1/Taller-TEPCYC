@@ -3,14 +3,14 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { Search, Plus, Inbox, Layers } from 'lucide-react'
+import { Search, Plus, Inbox, Layers, TriangleAlert } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/page-header'
 import { OrderCard } from './order-card'
 import { OrderDetailDialog } from './order-detail-dialog'
 import { useOrders } from '@/hooks/use-orders'
-import { STATUSES, STATUS_MAP } from '@/lib/status'
+import { STATUSES, STATUS_MAP, isClosed } from '@/lib/status'
 import { openWhatsApp } from '@/lib/whatsapp'
 import type { Order, OrderStatus } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils'
 type Filter = 'activas' | OrderStatus
 
 export function OrdersDashboard() {
-  const { orders, isLoading, setStatus } = useOrders()
+  const { orders, isLoading, error, setStatus } = useOrders()
   const [filter, setFilter] = useState<Filter>('activas')
   const [query, setQuery] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -28,12 +28,12 @@ export function OrdersDashboard() {
     orders.forEach((o) => (c[o.status] += 1))
     return c
   }, [orders])
-  const activeCount = orders.length - counts.entregado
+  const activeCount = orders.filter((o) => !isClosed(o.status)).length
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase()
     return orders.filter((o) => {
-      const matchesFilter = filter === 'activas' ? o.status !== 'entregado' : o.status === filter
+      const matchesFilter = filter === 'activas' ? !isClosed(o.status) : o.status === filter
       if (!matchesFilter) return false
       if (!q) return true
       return [o.id, o.customer.name, o.customer.phone, o.device.brand, o.device.model, o.device.serial ?? '']
@@ -74,7 +74,7 @@ export function OrdersDashboard() {
       />
 
       <div className="-mx-4 overflow-x-auto px-4 md:mx-0 md:px-0">
-        <div className="flex min-w-max gap-3 md:grid md:min-w-0 md:grid-cols-6" role="group" aria-label="Filtrar por estado">
+        <div className="flex min-w-max gap-3 md:grid md:min-w-0 md:grid-cols-4 xl:grid-cols-7" role="group" aria-label="Filtrar por estado">
           <FilterTile
             active={filter === 'activas'}
             onClick={() => setFilter('activas')}
@@ -114,7 +114,15 @@ export function OrdersDashboard() {
         />
       </div>
 
-      {isLoading ? (
+      {error ? (
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-destructive/40 bg-destructive/10 px-6 py-12 text-center">
+          <TriangleAlert className="size-9 text-destructive" aria-hidden="true" />
+          <p className="font-semibold">No se pudo leer Firestore</p>
+          <p className="max-w-md text-sm text-muted-foreground">
+            {error instanceof Error ? error.message : String(error)}
+          </p>
+        </div>
+      ) : isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-busy="true">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="h-80 animate-pulse rounded-2xl border border-border bg-card/60" />

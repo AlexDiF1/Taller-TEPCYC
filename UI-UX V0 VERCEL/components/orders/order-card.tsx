@@ -26,7 +26,7 @@ export function OrderCard({
   onOpen: (order: Order) => void
 }) {
   const Icon = DEVICE_ICON[order.device.type]
-  const receiptType = order.status === 'entregado' || order.status === 'listo' ? 'entrega' : 'recepcion'
+  const receiptType = order.status === 'completada' ? 'entrega' : 'recepcion'
 
   return (
     <article className="group flex flex-col rounded-2xl border border-border bg-card/90 p-4 transition-colors hover:border-foreground/20 md:p-5">

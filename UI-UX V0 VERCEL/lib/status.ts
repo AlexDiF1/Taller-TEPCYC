@@ -2,8 +2,10 @@ import {
   ClipboardCheck,
   PackageCheck,
   ScanSearch,
-  Wrench,
-  BadgeCheck,
+  Clock,
+  CircleSlash,
+  TriangleAlert,
+  Smartphone,
   Gamepad2,
   Joystick,
   Monitor,
@@ -24,19 +26,20 @@ export interface StatusMeta {
   ring: string
 }
 
+/** Estados reales que usa Firestore (colección `repairs`). */
 export const STATUSES: StatusMeta[] = [
   {
-    value: 'recibido',
-    label: 'Recibido',
-    short: 'Recibido',
+    value: 'pendiente',
+    label: 'Pendiente',
+    short: 'Pendiente',
     icon: ClipboardCheck,
-    text: 'text-status-received',
-    bg: 'bg-status-received/12',
-    dot: 'bg-status-received',
-    ring: 'ring-status-received/30',
+    text: 'text-status-pending',
+    bg: 'bg-status-pending/12',
+    dot: 'bg-status-pending',
+    ring: 'ring-status-pending/30',
   },
   {
-    value: 'en_revision',
+    value: 'enRevision',
     label: 'En revisión',
     short: 'Revisión',
     icon: ScanSearch,
@@ -46,36 +49,55 @@ export const STATUSES: StatusMeta[] = [
     ring: 'ring-status-review/30',
   },
   {
-    value: 'en_reparacion',
-    label: 'En reparación',
-    short: 'Reparación',
-    icon: Wrench,
-    text: 'text-status-repair',
-    bg: 'bg-status-repair/12',
-    dot: 'bg-status-repair',
-    ring: 'ring-status-repair/30',
+    value: 'esperandoConfirmacion',
+    label: 'Esperando confirmación',
+    short: 'Esperando',
+    icon: Clock,
+    text: 'text-status-waiting',
+    bg: 'bg-status-waiting/12',
+    dot: 'bg-status-waiting',
+    ring: 'ring-status-waiting/30',
   },
   {
-    value: 'listo',
-    label: 'Listo para entrega',
-    short: 'Listo',
+    value: 'completada',
+    label: 'Completada',
+    short: 'Completada',
     icon: PackageCheck,
-    text: 'text-status-ready',
-    bg: 'bg-status-ready/12',
-    dot: 'bg-status-ready',
-    ring: 'ring-status-ready/30',
+    text: 'text-status-done',
+    bg: 'bg-status-done/12',
+    dot: 'bg-status-done',
+    ring: 'ring-status-done/30',
   },
   {
-    value: 'entregado',
-    label: 'Entregado',
-    short: 'Entregado',
-    icon: BadgeCheck,
-    text: 'text-status-delivered',
-    bg: 'bg-status-delivered/12',
-    dot: 'bg-status-delivered',
-    ring: 'ring-status-delivered/30',
+    value: 'rechazada',
+    label: 'Rechazada por el cliente',
+    short: 'Rechazada',
+    icon: CircleSlash,
+    text: 'text-status-rejected',
+    bg: 'bg-status-rejected/12',
+    dot: 'bg-status-rejected',
+    ring: 'ring-status-rejected/30',
+  },
+  {
+    value: 'fallida',
+    label: 'Reparación fallida',
+    short: 'Fallida',
+    icon: TriangleAlert,
+    text: 'text-status-failed',
+    bg: 'bg-status-failed/12',
+    dot: 'bg-status-failed',
+    ring: 'ring-status-failed/30',
   },
 ]
+
+/** Órdenes que ya salieron del banco de trabajo. */
+export const CLOSED_STATUSES: OrderStatus[] = ['completada', 'rechazada', 'fallida']
+
+export function isClosed(status: OrderStatus) {
+  return CLOSED_STATUSES.includes(status)
+}
+
+export const ORDER_STATUS_VALUES: OrderStatus[] = STATUSES.map((s) => s.value)
 
 export const STATUS_MAP = Object.fromEntries(
   STATUSES.map((s) => [s.value, s]),
@@ -88,6 +110,7 @@ export function statusIndex(status: OrderStatus) {
 export const DEVICE_TYPES: { value: DeviceType; label: string; icon: LucideIcon }[] = [
   { value: 'consola', label: 'Consola', icon: Monitor },
   { value: 'control', label: 'Control', icon: Gamepad2 },
+  { value: 'celular', label: 'Celular', icon: Smartphone },
   { value: 'portatil', label: 'Portátil', icon: Joystick },
   { value: 'accesorio', label: 'Accesorio', icon: Cable },
 ]

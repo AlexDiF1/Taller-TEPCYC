@@ -34,7 +34,7 @@ export function ItemsEditor({ items, onChange }: { items: ServiceItem[]; onChang
                 onClick={() => update(item.id, { kind: item.kind === 'servicio' ? 'repuesto' : 'servicio' })}
                 className={cn(
                   'shrink-0 rounded-md px-2 py-1 font-mono text-[10px] uppercase tracking-wider',
-                  item.kind === 'servicio' ? 'bg-primary/15 text-primary' : 'bg-status-received/15 text-status-received',
+                  item.kind === 'servicio' ? 'bg-primary/15 text-primary' : 'bg-status-pending/15 text-status-pending',
                 )}
                 aria-label={`Cambiar tipo de la línea ${index + 1}, actual: ${item.kind}`}
               >

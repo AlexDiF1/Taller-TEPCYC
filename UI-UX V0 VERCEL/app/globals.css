@@ -8,11 +8,12 @@
   --font-sans: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
 
-  --color-status-received: var(--status-received);
+  --color-status-pending: var(--status-pending);
   --color-status-review: var(--status-review);
-  --color-status-repair: var(--status-repair);
-  --color-status-ready: var(--status-ready);
-  --color-status-delivered: var(--status-delivered);
+  --color-status-waiting: var(--status-waiting);
+  --color-status-done: var(--status-done);
+  --color-status-rejected: var(--status-rejected);
+  --color-status-failed: var(--status-failed);
   --color-whatsapp: var(--whatsapp);
 
   --color-sidebar-ring: var(--sidebar-ring);
@@ -83,11 +84,12 @@
   --chart-5: oklch(0.6 0.02 265);
   --radius: 0.75rem;
 
-  --status-received: oklch(0.76 0.13 230);
+  --status-pending: oklch(0.76 0.13 230);
   --status-review: oklch(0.83 0.16 80);
-  --status-repair: oklch(0.72 0.17 300);
-  --status-ready: oklch(0.64 0.21 25);
-  --status-delivered: oklch(0.62 0.02 265);
+  --status-waiting: oklch(0.72 0.17 300);
+  --status-done: oklch(0.72 0.15 150);
+  --status-rejected: oklch(0.64 0.2 25);
+  --status-failed: oklch(0.72 0.15 55);
   --whatsapp: oklch(0.72 0.17 150);
 
   --sidebar: oklch(0.175 0.009 265);

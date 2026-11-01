@@ -1,11 +1,17 @@
 import { Gamepad2, ShieldCheck } from 'lucide-react'
 import { BUSINESS, addDays, formatDate, formatMoney } from '@/lib/business'
 import { STATUS_MAP } from '@/lib/status'
-import type { Order, ServiceItem } from '@/lib/types'
+import type { DeviceType, Order, ServiceItem } from '@/lib/types'
 
 export type ReceiptType = 'recepcion' | 'entrega'
 
-const DEVICE_TYPE_LABEL = { consola: 'Consola', control: 'Control', portatil: 'Portátil', accesorio: 'Accesorio' }
+const DEVICE_TYPE_LABEL: Record<DeviceType, string> = {
+  consola: 'Consola',
+  control: 'Control',
+  celular: 'Celular',
+  portatil: 'Portátil',
+  accesorio: 'Accesorio',
+}
 
 export function ReceiptDocument({ order, type, items }: { order: Order; type: ReceiptType; items: ServiceItem[] }) {
   const isDelivery = type === 'entrega'

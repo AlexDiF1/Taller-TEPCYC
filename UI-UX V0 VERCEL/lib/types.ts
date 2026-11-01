@@ -1,11 +1,12 @@
 export type OrderStatus =
-  | 'recibido'
-  | 'en_revision'
-  | 'en_reparacion'
-  | 'listo'
-  | 'entregado'
+  | 'pendiente'
+  | 'enRevision'
+  | 'esperandoConfirmacion'
+  | 'completada'
+  | 'rechazada'
+  | 'fallida'
 
-export type DeviceType = 'consola' | 'control' | 'portatil' | 'accesorio'
+export type DeviceType = 'consola' | 'control' | 'portatil' | 'accesorio' | 'celular'
 
 export interface Customer {
   name: string
