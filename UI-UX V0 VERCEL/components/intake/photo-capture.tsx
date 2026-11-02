@@ -5,21 +5,13 @@ import { Camera, ImagePlus, RefreshCcw, SwitchCamera, Trash2, X, Aperture, Expan
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import type { IntakePhoto } from '@/lib/types'
+import { compressImage } from '@/lib/image'
 import { cn } from '@/lib/utils'
 
 const MAX_PHOTOS = 12
 
 function newPhoto(url: string): IntakePhoto {
   return { id: crypto.randomUUID(), url, takenAt: new Date().toISOString() }
-}
-
-function readFileAsDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result as string)
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
 }
 
 interface PhotoCaptureProps {
@@ -36,7 +28,7 @@ export function PhotoCapture({ photos, onChange }: PhotoCaptureProps) {
   async function handleFiles(files: FileList | null) {
     if (!files) return
     const selected = Array.from(files).filter((f) => f.type.startsWith('image/')).slice(0, remaining)
-    const urls = await Promise.all(selected.map(readFileAsDataUrl))
+    const urls = await Promise.all(selected.map((file) => compressImage(file)))
     onChange([...photos, ...urls.map(newPhoto)])
   }
 
@@ -220,7 +212,7 @@ function CameraDialog({ open, onOpenChange, onCapture, remaining, capturedCount 
     canvas.width = video.videoWidth * scale
     canvas.height = video.videoHeight * scale
     canvas.getContext('2d')?.drawImage(video, 0, 0, canvas.width, canvas.height)
-    onCapture(canvas.toDataURL('image/jpeg', 0.85))
+    onCapture(canvas.toDataURL('image/jpeg', 0.72))
     setFlash(true)
     setTimeout(() => setFlash(false), 150)
   }

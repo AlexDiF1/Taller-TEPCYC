@@ -24,6 +24,7 @@ import { FormSection, ChipToggle, Field } from './form-section'
 import { PhotoCapture } from './photo-capture'
 import { IntakeSummary } from './intake-summary'
 import { useOrders } from '@/hooks/use-orders'
+import { uploadPhoto } from '@/lib/api'
 import { ACCESSORIES, BRANDS, COMMON_FAULTS, DEVICE_TYPES } from '@/lib/status'
 import { BUSINESS } from '@/lib/business'
 import { openWhatsApp } from '@/lib/whatsapp'
@@ -142,7 +143,7 @@ export function IntakeForm() {
       faultTags: draft.faultTags,
       accessories: draft.accessories,
       physicalNotes: draft.physicalNotes.trim() || undefined,
-      photos: draft.photos,
+      photos: [],
       estimatedCost: Number(draft.estimatedCost) || 0,
       deposit: Number(draft.deposit) || 0,
       estimatedDate: draft.estimatedDate ? new Date(draft.estimatedDate).toISOString() : undefined,
@@ -150,7 +151,11 @@ export function IntakeForm() {
     }
 
     try {
-      const order = await createOrder(payload)
+      // 1) sube las fotos ya comprimidas a /uploads  2) registra la orden con sus URLs
+      const photos = await Promise.all(
+        draft.photos.map(async (photo) => ({ ...photo, url: await uploadPhoto(photo.url) })),
+      )
+      const order = await createOrder({ ...payload, photos })
       toast.success(`Orden ${order.id} registrada`, {
         description: `${order.device.brand} ${order.device.model} · ${order.customer.name}`,
         action: { label: 'Avisar por WhatsApp', onClick: () => openWhatsApp(order) },

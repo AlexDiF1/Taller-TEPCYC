@@ -6,6 +6,7 @@
 import type { NewOrderInput, Order, OrderStatus, ServiceItem } from './types'
 
 const ORDERS_URL = '/api/orders'
+const UPLOADS_URL = '/api/uploads'
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, {
@@ -54,4 +55,13 @@ export async function updateOrderStatus(id: string, status: OrderStatus): Promis
 
 export async function updateOrderItems(id: string, items: ServiceItem[]): Promise<Order> {
   return request<Order>(orderUrl(id), { method: 'PATCH', body: JSON.stringify({ items }) })
+}
+
+/** Sube una foto (data URL ya comprimida) y devuelve su URL en /uploads. */
+export async function uploadPhoto(dataUrl: string): Promise<string> {
+  const { url } = await request<{ url: string }>(UPLOADS_URL, {
+    method: 'POST',
+    body: JSON.stringify({ dataUrl }),
+  })
+  return url
 }
