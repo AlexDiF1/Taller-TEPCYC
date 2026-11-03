@@ -6,6 +6,7 @@ import { mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import Database from 'better-sqlite3'
+import { normalizePhone } from './phone.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 export const projectDir = join(here, '..')
@@ -120,6 +121,31 @@ CREATE TABLE IF NOT EXISTS venta_items (
   subtotal REAL NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_venta_items_venta ON venta_items(venta_id);
+
+CREATE TABLE IF NOT EXISTS whatsapp_contacts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  phone TEXT UNIQUE NOT NULL,
+  name TEXT,
+  source TEXT NOT NULL DEFAULT 'chat',
+  created_at TEXT NOT NULL,
+  last_seen TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_contacts_phone ON whatsapp_contacts(phone);
+
+CREATE TABLE IF NOT EXISTS estados_programados (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  text TEXT,
+  caption TEXT,
+  media_url TEXT,
+  media_type TEXT,
+  background_color TEXT,
+  scheduled_at TEXT,
+  status TEXT NOT NULL DEFAULT 'pendiente',
+  error TEXT,
+  created_at TEXT NOT NULL,
+  sent_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_estados_status ON estados_programados(status, scheduled_at);
 `)
 
 /* ------------------------------- lectura -------------------------------- */
@@ -644,6 +670,140 @@ function migrateLegacySales() {
 
 migrateLegacySales()
 
+/* ------------------------------- whatsapp -------------------------------- */
+
+export function upsertWhatsappContact({ phone, name, source = 'chat' }) {
+  const normalized = normalizePhone(phone)
+  if (!normalized) return null
+  const now = new Date().toISOString()
+  db.prepare(
+    `INSERT INTO whatsapp_contacts (phone, name, source, created_at, last_seen)
+     VALUES (?,?,?,?,?)
+     ON CONFLICT(phone) DO UPDATE SET
+       name = COALESCE(NULLIF(TRIM(excluded.name), ''), whatsapp_contacts.name),
+       source = CASE WHEN whatsapp_contacts.source = 'chat' THEN whatsapp_contacts.source ELSE excluded.source END,
+       last_seen = excluded.last_seen`,
+  ).run(normalized, (name ?? '').trim() || null, source, now, now)
+  return normalized
+}
+
+export function listWhatsappContacts(limit = 500) {
+  return rows('SELECT * FROM whatsapp_contacts ORDER BY last_seen DESC LIMIT ?', [limit]).map((r) => ({
+    phone: r.phone,
+    name: r.name || undefined,
+    source: r.source,
+    lastSeen: r.last_seen,
+  }))
+}
+
+export function countWhatsappContacts() {
+  return db.prepare('SELECT COUNT(*) c FROM whatsapp_contacts').get().c
+}
+
+/** Sincroniza los teléfonos de órdenes, ventas y clientes hacia los contactos de WhatsApp. */
+export function syncWhatsappContacts() {
+  const sources = [
+    {
+      source: 'orden',
+      list: rows(
+        `SELECT c.phone AS phone, c.name AS name FROM orders o
+           JOIN customers c ON c.id = o.customer_id
+          WHERE TRIM(COALESCE(c.phone, '')) <> ''`,
+      ),
+    },
+    {
+      source: 'venta',
+      list: rows(
+        `SELECT customer_phone AS phone, customer_name AS name FROM ventas
+          WHERE TRIM(COALESCE(customer_phone, '')) <> ''`,
+      ),
+    },
+  ]
+  let count = 0
+  const tx = db.transaction(() => {
+    for (const { source, list } of sources) {
+      for (const person of list) {
+        if (upsertWhatsappContact({ phone: person.phone, name: person.name, source })) count += 1
+      }
+    }
+  })
+  tx()
+  return count
+}
+
+/** Números sincronizados (sin sufijo) para armar el `statusJidList`. */
+export function statusJidPhones(limit = 2000) {
+  return rows('SELECT phone FROM whatsapp_contacts ORDER BY last_seen DESC LIMIT ?', [limit]).map((r) => r.phone)
+}
+
+function rowToEstado(row) {
+  return {
+    id: row.id,
+    text: row.text || undefined,
+    caption: row.caption || undefined,
+    mediaUrl: row.media_url || undefined,
+    mediaType: row.media_type || undefined,
+    backgroundColor: row.background_color || undefined,
+    scheduledAt: row.scheduled_at || undefined,
+    status: row.status,
+    error: row.error || undefined,
+    createdAt: row.created_at,
+    sentAt: row.sent_at || undefined,
+  }
+}
+
+export function createEstado(input = {}) {
+  const info = db
+    .prepare(
+      `INSERT INTO estados_programados (text, caption, media_url, media_type, background_color,
+        scheduled_at, status, created_at) VALUES (?,?,?,?,?,?,'pendiente',?)`,
+    )
+    .run(
+      input.text?.trim() || null,
+      input.caption?.trim() || null,
+      input.mediaUrl || null,
+      input.mediaType || null,
+      input.backgroundColor || null,
+      input.scheduledAt || null,
+      new Date().toISOString(),
+    )
+  return getEstado(Number(info.lastInsertRowid))
+}
+
+export function getEstado(id) {
+  const row = db.prepare('SELECT * FROM estados_programados WHERE id = ?').get(Number(id))
+  return row ? rowToEstado(row) : undefined
+}
+
+export function listEstados(limit = 60) {
+  return rows(
+    `SELECT * FROM estados_programados ORDER BY COALESCE(scheduled_at, created_at) DESC LIMIT ?`,
+    [limit],
+  ).map(rowToEstado)
+}
+
+export function deleteEstado(id) {
+  return db.prepare('DELETE FROM estados_programados WHERE id = ?').run(Number(id)).changes > 0
+}
+
+export function pendingEstados(nowIso = new Date().toISOString(), limit = 3) {
+  return rows(
+    `SELECT * FROM estados_programados
+      WHERE status = 'pendiente' AND (scheduled_at IS NULL OR scheduled_at <= ?)
+      ORDER BY COALESCE(scheduled_at, created_at) LIMIT ?`,
+    [nowIso, limit],
+  ).map(rowToEstado)
+}
+
+export function markEstado(id, status, error = null) {
+  db.prepare('UPDATE estados_programados SET status = ?, error = ?, sent_at = ? WHERE id = ?').run(
+    status,
+    error,
+    status === 'publicado' ? new Date().toISOString() : null,
+    Number(id),
+  )
+}
+
 export function stats() {
   return {
     orders: db.prepare('SELECT COUNT(*) c FROM orders').get().c,
@@ -654,4 +814,4 @@ export function stats() {
   }
 }
 
-export { db }
+export { db, dataDir }

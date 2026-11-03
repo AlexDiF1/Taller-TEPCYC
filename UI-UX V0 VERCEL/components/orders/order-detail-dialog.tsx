@@ -49,6 +49,7 @@ function Detail({
   const [delivery, setDelivery] = useState<ReceiptDelivery | null>(null)
   const [confirming, setConfirming] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [withPhotos, setWithPhotos] = useState(false)
   const itemsKey = JSON.stringify(order.items)
 
   async function handleDelete() {
@@ -261,7 +262,18 @@ function Detail({
           )}
           {delivery ? 'Enviar comprobante PDF' : 'Generando PDF...'}
         </a>
-        <WhatsAppButton order={order} label="Enviar estado por WhatsApp" />
+        {order.photos.length > 0 && (
+          <label className="flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-border px-3 text-xs text-muted-foreground transition-colors hover:text-foreground">
+            <input
+              type="checkbox"
+              checked={withPhotos}
+              onChange={(e) => setWithPhotos(e.target.checked)}
+              className="size-3.5 accent-primary"
+            />
+            Adjuntar fotos ({order.photos.length})
+          </label>
+        )}
+        <WhatsAppButton order={order} label="Enviar estado por WhatsApp" includePhotos={withPhotos} />
         <Button
           variant="destructive"
           className="h-9 sm:mr-auto"

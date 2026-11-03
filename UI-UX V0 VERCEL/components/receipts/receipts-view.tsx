@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Printer, ClipboardList, ShieldCheck, Save, FileX, Loader2, MessageCircle } from 'lucide-react'
+import { Printer, ClipboardList, ShieldCheck, Save, FileX, Loader2, MessageCircle, Send } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { PageHeader } from '@/components/page-header'
@@ -13,6 +13,8 @@ import { ReceiptDocument, type ReceiptType } from './receipt-document'
 import { ItemsEditor } from './items-editor'
 import { useOrders } from '@/hooks/use-orders'
 import { downloadReceiptPdf, prepareReceiptDelivery, type ReceiptDelivery } from '@/lib/receipt-pdf'
+import { buildReceiptMessage } from '@/lib/whatsapp'
+import { WaOfflineError, blobToDataUrl, waSendDocument } from '@/lib/wa'
 import type { Order, ServiceItem } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -26,6 +28,7 @@ export function ReceiptsView({ initialOrderId, initialType }: { initialOrderId?:
   const { orders, isLoading, setItems } = useOrders()
   const [type, setType] = useState<ReceiptType>(initialType ?? 'recepcion')
   const [delivery, setDelivery] = useState<ReceiptDelivery | null>(null)
+  const [sendingPdf, setSendingPdf] = useState(false)
   const orderId = initialOrderId ?? orders[0]?.id
   const order = orders.find((o) => o.id === orderId)
   const itemsKey = JSON.stringify(order?.items ?? [])
@@ -57,6 +60,30 @@ export function ReceiptsView({ initialOrderId, initialType }: { initialOrderId?:
     }
     downloadReceiptPdf(delivery)
     toast.info('PDF descargado: adjúntalo en el chat de WhatsApp.')
+  }
+
+  /** Envío automático: el PDF sale desde el WhatsApp vinculado del taller. */
+  async function sendReceiptAutomatically() {
+    if (!delivery || !order) return
+    setSendingPdf(true)
+    try {
+      await waSendDocument({
+        phone: order.customer.phone,
+        fileName: delivery.fileName,
+        dataUrl: await blobToDataUrl(delivery.blob),
+        caption: buildReceiptMessage(order, type),
+      })
+      toast.success(`Comprobante enviado por WhatsApp a ${order.customer.name.split(' ')[0]}.`)
+    } catch (error) {
+      if (error instanceof WaOfflineError) {
+        downloadReceiptPdf(delivery)
+        toast.info('WhatsApp no está conectado: se descargó el PDF para adjuntarlo a mano.')
+      } else {
+        toast.error(error instanceof Error ? error.message : 'No se pudo enviar el comprobante.')
+      }
+    } finally {
+      setSendingPdf(false)
+    }
   }
 
   function selectOrder(id: string) {
@@ -159,8 +186,18 @@ export function ReceiptsView({ initialOrderId, initialType }: { initialOrderId?:
                 ) : (
                   <Loader2 data-icon="inline-start" className="animate-spin" />
                 )}
-                {delivery ? 'Enviar comprobante PDF por WhatsApp' : 'Generando PDF...'}
+                {delivery ? 'Descargar PDF y abrir chat (manual)' : 'Generando PDF...'}
               </a>
+              <Button
+                type="button"
+                size="lg"
+                className="h-11 bg-whatsapp font-semibold text-black hover:bg-whatsapp/85"
+                onClick={sendReceiptAutomatically}
+                disabled={!delivery || sendingPdf}
+              >
+                {sendingPdf ? <Loader2 data-icon="inline-start" className="animate-spin" /> : <Send data-icon="inline-start" />}
+                {sendingPdf ? 'Enviando comprobante...' : 'Enviar comprobante automático'}
+              </Button>
               <WhatsAppButton order={order} label="Enviar estado por WhatsApp" className="h-11" />
             </div>
           )}

@@ -6,6 +6,7 @@ import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { Router } from 'express'
 import * as store from './db.mjs'
+import * as wa from './whatsapp.mjs'
 
 export const uploadsDir = process.env.UPLOADS_DIR ?? join(store.projectDir, 'uploads')
 mkdirSync(uploadsDir, { recursive: true })
@@ -165,6 +166,171 @@ api.get('/ventas/:id', (req, res) => {
 
 api.delete('/ventas/:id', (req, res) => {
   if (!store.deleteVenta(req.params.id)) return res.status(404).json({ error: 'Venta no encontrada.' })
+  res.json({ ok: true })
+})
+
+/* ------------------------------- whatsapp -------------------------------- */
+
+const MEDIA_EXT = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'video/mp4': 'mp4',
+  'application/pdf': 'pdf',
+}
+
+/** Guarda un archivo en data URL dentro de /uploads y devuelve su ruta y URL. */
+function saveDataUrl(dataUrl, { maxBytes, allowed }) {
+  const match = typeof dataUrl === 'string' ? dataUrl.match(/^data:([\w/+.-]+);base64,(.+)$/s) : null
+  if (!match) return { error: 'Se esperaba un archivo en data URL.' }
+  const [, mime, base64] = match
+  if (!allowed.includes(mime)) return { error: `Formato no soportado (${mime}).` }
+  const buffer = Buffer.from(base64, 'base64')
+  if (!buffer.length) return { error: 'El archivo está vacío.' }
+  if (buffer.length > maxBytes) return { error: `El archivo supera ${Math.round(maxBytes / 1024 / 1024)} MB.` }
+  const file = `${new Date().toISOString().slice(0, 10)}-${randomUUID().slice(0, 8)}.${MEDIA_EXT[mime]}`
+  writeFileSync(join(uploadsDir, file), buffer)
+  return { url: `/uploads/${file}`, path: join(uploadsDir, file), type: mime, bytes: buffer.length }
+}
+
+function waError(res, error) {
+  const code = error?.code
+  if (code === 'WA_BAD_PHONE') return res.status(400).json({ error: error.message })
+  if (code === 'WA_OFFLINE') return res.status(409).json({ error: 'WhatsApp no está conectado.', offline: true })
+  if (code === 'WA_RATE_LIMIT') return res.status(429).json({ error: error.message })
+  return res.status(500).json({ error: error?.message ?? 'Error al enviar por WhatsApp.' })
+}
+
+api.get('/whatsapp/status', (_req, res) => {
+  res.json(wa.getStatus())
+})
+
+api.post('/whatsapp/restart', async (_req, res) => {
+  res.json(await wa.restartSession())
+})
+
+api.post('/whatsapp/logout', async (_req, res) => {
+  res.json(await wa.logoutSession())
+})
+
+api.post('/whatsapp/send', async (req, res) => {
+  const { phone, message } = req.body ?? {}
+  try {
+    const sent = await wa.sendText(phone, String(message ?? '').slice(0, 4000))
+    res.json({ ok: true, id: sent?.key?.id ?? null, to: phone })
+  } catch (error) {
+    waError(res, error)
+  }
+})
+
+/** Mensaje de actualización de una orden, con sus fotos si se piden. */
+api.post('/whatsapp/send-order', async (req, res) => {
+  const { orderId, phone, message, includePhotos } = req.body ?? {}
+  if (!orderId && !phone) return res.status(400).json({ error: 'Falta la orden o el teléfono.' })
+  const order = orderId ? store.getOrder(String(orderId)) : undefined
+  const target = phone || order?.customer?.phone
+  if (!target) return res.status(400).json({ error: 'La orden no tiene teléfono registrado.' })
+  const text = String(message ?? '').slice(0, 4000)
+  if (!text) return res.status(400).json({ error: 'El mensaje está vacío.' })
+  try {
+    const photos = includePhotos && order ? order.photos.map((p) => p.url) : []
+    const result = await wa.sendOrderUpdate({ phone: target, message: text, photos })
+    res.json({ ok: true, ...result, to: target })
+  } catch (error) {
+    waError(res, error)
+  }
+})
+
+/** Comprobante o recibo en PDF (el PDF lo genera el navegador con jsPDF). */
+api.post('/whatsapp/send-document', async (req, res) => {
+  const { phone, caption, fileName, dataUrl } = req.body ?? {}
+  if (!phone) return res.status(400).json({ error: 'Falta el teléfono del cliente.' })
+  const pdf = /^data:application\/pdf;base64,/.test(String(dataUrl ?? ''))
+    ? { buffer: Buffer.from(String(dataUrl).replace(/^data:application\/pdf;base64,/, ''), 'base64') }
+    : null
+  if (!pdf) return res.status(400).json({ error: 'Se esperaba el PDF en data URL.' })
+  if (pdf.buffer.length > 8 * 1024 * 1024) return res.status(413).json({ error: 'El PDF supera 8 MB.' })
+  try {
+    const sent = await wa.sendDocument(phone, {
+      buffer: pdf.buffer,
+      fileName: String(fileName ?? 'comprobante.pdf').slice(0, 80),
+      mimetype: 'application/pdf',
+      caption: caption ? String(caption).slice(0, 900) : undefined,
+    })
+    res.json({ ok: true, id: sent?.key?.id ?? null, to: phone })
+  } catch (error) {
+    waError(res, error)
+  }
+})
+
+api.get('/whatsapp/contactos', (_req, res) => {
+  res.json({ total: store.countWhatsappContacts(), contactos: store.listWhatsappContacts(400) })
+})
+
+api.post('/whatsapp/sync', (_req, res) => {
+  res.json({ ok: true, actualizados: store.syncWhatsappContacts(), total: store.countWhatsappContacts() })
+})
+
+api.get('/whatsapp/estados', (_req, res) => {
+  res.json(store.listEstados(60))
+})
+
+api.post('/whatsapp/estados', async (req, res) => {
+  const body = req.body ?? {}
+  const text = String(body.text ?? '').trim().slice(0, 700)
+  const caption = String(body.caption ?? '').trim().slice(0, 700)
+  const mediaType = body.mediaType === 'video' ? 'video' : 'image'
+  let media
+  if (body.mediaDataUrl) {
+    media = saveDataUrl(body.mediaDataUrl, {
+      maxBytes: mediaType === 'video' ? 12 * 1024 * 1024 : 8 * 1024 * 1024,
+      allowed: mediaType === 'video' ? ['video/mp4'] : ['image/jpeg', 'image/png', 'image/webp'],
+    })
+    if (media.error) return res.status(400).json({ error: media.error })
+  }
+  if (!text && !caption && !media) {
+    return res.status(400).json({ error: 'Escribe un texto o adjunta una imagen/video.' })
+  }
+
+  const scheduledAt = body.scheduledAt ? new Date(String(body.scheduledAt)) : null
+  if (scheduledAt && Number.isNaN(scheduledAt.getTime())) {
+    return res.status(400).json({ error: 'La fecha de programación no es válida.' })
+  }
+  // Publicar en el momento exige la sesión activa; no se crea basura en la tabla.
+  if (!scheduledAt && !wa.isConnected()) {
+    return res.status(409).json({ error: 'WhatsApp no está conectado.', offline: true })
+  }
+
+  const estado = store.createEstado({
+    text: media && !caption ? text : caption || text,
+    caption: caption || text,
+    mediaUrl: media?.url,
+    mediaType: media ? mediaType : undefined,
+    backgroundColor: typeof body.backgroundColor === 'string' ? body.backgroundColor.slice(0, 9) : undefined,
+    scheduledAt: scheduledAt ? scheduledAt.toISOString() : undefined,
+  })
+
+  // Si es "ahora" se publica de inmediato; si es programado lo toma el ticker.
+  if (!scheduledAt) {
+    try {
+      await wa.publishEstado({
+        text: estado.text,
+        caption: estado.caption,
+        mediaPath: media?.path,
+        mediaType: estado.mediaType,
+        backgroundColor: estado.backgroundColor,
+      })
+      store.markEstado(estado.id, 'publicado')
+    } catch (error) {
+      store.markEstado(estado.id, 'error', error?.message ?? String(error))
+      return waError(res, error)
+    }
+  }
+  res.status(201).json(store.getEstado(estado.id))
+})
+
+api.delete('/whatsapp/estados/:id', (req, res) => {
+  if (!store.deleteEstado(req.params.id)) return res.status(404).json({ error: 'Estado no encontrado.' })
   res.json({ ok: true })
 })
 

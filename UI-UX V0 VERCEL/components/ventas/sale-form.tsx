@@ -14,6 +14,7 @@ import {
   UserRound,
   PackagePlus,
   Banknote,
+  Send,
 } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,6 +22,7 @@ import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { formatMoney } from '@/lib/business'
 import { buildWhatsAppUrl } from '@/lib/whatsapp'
+import { WaOfflineError, blobToDataUrl, waSendDocument } from '@/lib/wa'
 import {
   PAYMENT_METHODS,
   PAYMENT_MAP,
@@ -44,6 +46,7 @@ interface DraftItem {
 interface Delivery {
   url: string
   blobUrl: string
+  dataUrl: string
   fileName: string
 }
 
@@ -82,11 +85,14 @@ export function SaleForm({ onCreated }: { onCreated: () => void }) {
     let cancelled = false
     let objectUrl = ''
     buildSaleReceiptPdf(sale)
-      .then(({ blob, filename }) => {
+      .then(async ({ blob, filename }) => {
+        if (cancelled) return
+        const dataUrl = await blobToDataUrl(blob)
         if (cancelled) return
         objectUrl = URL.createObjectURL(blob)
         setDelivery({
           blobUrl: objectUrl,
+          dataUrl,
           fileName: filename,
           url: sale.customerPhone ? buildWhatsAppUrl(sale.customerPhone, buildSaleMessage(sale)) : '',
         })
@@ -485,6 +491,30 @@ function SaleSuccessDialog({
   onClose: () => void
   onNewSale: () => void
 }) {
+  const [sending, setSending] = useState(false)
+
+  async function sendAutomatically() {
+    if (!sale || !delivery) return
+    setSending(true)
+    try {
+      await waSendDocument({
+        phone: sale.customerPhone ?? '',
+        fileName: delivery.fileName,
+        dataUrl: delivery.dataUrl,
+        caption: buildSaleMessage(sale),
+      })
+      toast.success('Recibo enviado por WhatsApp.')
+    } catch (error) {
+      if (error instanceof WaOfflineError) {
+        toast.info('WhatsApp no está conectado: descarga el PDF y envíalo a mano.')
+      } else {
+        toast.error(error instanceof Error ? error.message : 'No se pudo enviar el recibo.')
+      }
+    } finally {
+      setSending(false)
+    }
+  }
+
   return (
     <Dialog open={sale !== null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
@@ -535,18 +565,29 @@ function SaleSuccessDialog({
               )}
 
               {delivery?.url && (
-                <a
-                  href={delivery.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={buttonVariants({
-                    variant: 'outline',
-                    className: 'h-10 w-full rounded-xl border-whatsapp/40 text-whatsapp hover:bg-whatsapp/10',
-                  })}
-                >
-                  <MessageCircle className="size-4" aria-hidden="true" />
-                  Enviar por WhatsApp
-                </a>
+                <>
+                  <Button
+                    type="button"
+                    className="h-10 w-full rounded-xl bg-whatsapp font-semibold text-black hover:bg-whatsapp/85"
+                    onClick={sendAutomatically}
+                    disabled={sending || !sale.customerPhone}
+                  >
+                    {sending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Send className="size-4" aria-hidden="true" />}
+                    {sending ? 'Enviando recibo...' : 'Enviar recibo automático'}
+                  </Button>
+                  <a
+                    href={delivery.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={buttonVariants({
+                      variant: 'outline',
+                      className: 'h-10 w-full rounded-xl border-whatsapp/40 text-whatsapp hover:bg-whatsapp/10',
+                    })}
+                  >
+                    <MessageCircle className="size-4" aria-hidden="true" />
+                    Abrir chat y adjuntar a mano
+                  </a>
+                </>
               )}
 
               <p className="text-center text-[11px] text-muted-foreground">
