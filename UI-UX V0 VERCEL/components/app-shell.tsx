@@ -9,9 +9,9 @@ import { cn } from '@/lib/utils'
 
 const NAV = [
   { href: '/', label: 'Órdenes', icon: LayoutGrid },
-  { href: '/ingreso', label: 'Nuevo ingreso', icon: Plus },
+  { href: '/ingreso', label: 'Nuevo ingreso', short: 'Ingreso', icon: Plus, raised: true },
   { href: '/comprobantes', label: 'Comprobantes', icon: ReceiptText },
-  { href: '/ventas', label: 'Ventas', icon: ShoppingCart },
+  { href: '/ventas', label: 'Ventas', short: 'Nueva venta', icon: ShoppingCart, raised: true },
 ]
 
 function isActive(pathname: string, href: string) {
@@ -74,16 +74,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         aria-label="Navegación móvil"
         className="fixed inset-x-3 bottom-3 z-40 flex items-center justify-around rounded-2xl border border-border bg-popover/90 px-2 py-2 shadow-2xl shadow-black/40 backdrop-blur-xl print:hidden lg:hidden"
       >
-        {NAV.map(({ href, label, icon: Icon }) => {
+        {NAV.map(({ href, label, short, icon: Icon, raised }) => {
           const active = isActive(pathname, href)
-          const isPrimary = href === '/ingreso'
+          const isPrimary = Boolean(raised)
           return (
             <Link
               key={href}
               href={href}
               aria-current={active ? 'page' : undefined}
               className={cn(
-                'flex min-w-16 flex-col items-center gap-1 rounded-xl px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors',
+                'flex min-w-16 flex-col items-center gap-1 rounded-xl px-2.5 py-1.5 text-[11px] font-medium whitespace-nowrap text-muted-foreground transition-colors',
                 active && 'text-foreground',
               )}
             >
@@ -98,7 +98,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <Icon className="size-5" aria-hidden="true" />
               </span>
-              {isPrimary ? 'Ingreso' : label}
+              {short ?? label}
             </Link>
           )
         })}
