@@ -3,7 +3,7 @@ import { PageHeader } from '@/components/page-header'
 import { IntakeForm } from '@/components/intake/intake-form'
 
 export const metadata: Metadata = {
-  title: 'Nuevo ingreso · TODOENPCYCONSOLAS2',
+  title: 'Nuevo ingreso · TODOENPCYCONSOLAS',
 }
 
 export default function IngresoPage() {

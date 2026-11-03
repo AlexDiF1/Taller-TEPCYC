@@ -19,7 +19,6 @@ export const SEED_ORDERS: Order[] = [
     estimatedCost: 180000,
     deposit: 50000,
     estimatedDate: '2026-11-05T00:00:00.000Z',
-    technician: 'Andrés',
     items: [],
     history: [{ status: 'pendiente', at: '2026-10-31T15:20:00.000Z', note: 'Equipo ingresado al taller' }],
   },
@@ -36,7 +35,6 @@ export const SEED_ORDERS: Order[] = [
     estimatedCost: 95000,
     deposit: 0,
     estimatedDate: '2026-11-03T00:00:00.000Z',
-    technician: 'Camila',
     items: [],
     history: [
       { status: 'pendiente', at: '2026-10-30T18:05:00.000Z', note: 'Equipo ingresado al taller' },
@@ -57,7 +55,6 @@ export const SEED_ORDERS: Order[] = [
     estimatedCost: 220000,
     deposit: 100000,
     estimatedDate: '2026-11-04T00:00:00.000Z',
-    technician: 'Julián',
     items: [
       { id: 'i1', description: 'Chip de carga M92T36', kind: 'repuesto', price: 85000 },
       { id: 'i2', description: 'Microsoldadura y diagnóstico', kind: 'servicio', price: 120000 },
@@ -81,7 +78,6 @@ export const SEED_ORDERS: Order[] = [
     estimatedCost: 160000,
     deposit: 60000,
     estimatedDate: '2026-11-01T00:00:00.000Z',
-    technician: 'Andrés',
     items: [
       { id: 'i3', description: 'Puerto HDMI original', kind: 'repuesto', price: 45000 },
       { id: 'i4', description: 'Cambio de puerto HDMI + limpieza', kind: 'servicio', price: 110000 },
@@ -106,7 +102,6 @@ export const SEED_ORDERS: Order[] = [
     photos: [],
     estimatedCost: 70000,
     deposit: 0,
-    technician: 'Camila',
     items: [],
     history: [
       { status: 'pendiente', at: '2026-10-24T13:00:00.000Z', note: 'Equipo ingresado al taller' },
@@ -128,7 +123,6 @@ export const SEED_ORDERS: Order[] = [
     estimatedCost: 380000,
     deposit: 150000,
     estimatedDate: '2026-11-07T00:00:00.000Z',
-    technician: 'Julián',
     items: [],
     history: [
       { status: 'pendiente', at: '2026-10-26T19:30:00.000Z', note: 'Equipo ingresado al taller' },

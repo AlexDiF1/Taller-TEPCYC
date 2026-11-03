@@ -1,29 +1,94 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Phone, Hash, Package, ReceiptText, ImageOff } from 'lucide-react'
+import { toast } from 'sonner'
+import { Phone, Hash, Package, ReceiptText, ImageOff, Loader2, MessageCircle, Pencil, Trash2 } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { StatusBadge } from '@/components/status-badge'
 import { WhatsAppButton } from './whatsapp-button'
 import { DEVICE_ICON, STATUS_MAP } from '@/lib/status'
 import { formatDate, formatMoney } from '@/lib/business'
+import { downloadReceiptPdf, prepareReceiptDelivery, type ReceiptDelivery } from '@/lib/receipt-pdf'
 import type { Order } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
-export function OrderDetailDialog({ order, onClose }: { order: Order | null; onClose: () => void }) {
+export function OrderDetailDialog({
+  order,
+  onClose,
+  onEdit,
+  onDelete,
+}: {
+  order: Order | null
+  onClose: () => void
+  onEdit: (order: Order) => void
+  onDelete: (order: Order) => Promise<void>
+}) {
   return (
     <Dialog open={!!order} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto p-0 sm:max-w-2xl">
-        {order && <Detail order={order} />}
+        {order && <Detail order={order} onEdit={onEdit} onDelete={onDelete} />}
       </DialogContent>
     </Dialog>
   )
 }
 
-function Detail({ order }: { order: Order }) {
+function Detail({
+  order,
+  onEdit,
+  onDelete,
+}: {
+  order: Order
+  onEdit: (order: Order) => void
+  onDelete: (order: Order) => Promise<void>
+}) {
   const Icon = DEVICE_ICON[order.device.type]
   const total = order.items.reduce((s, i) => s + i.price, 0) || order.estimatedCost
+  const receiptType = order.status === 'completada' ? 'entrega' : 'recepcion'
+  const [delivery, setDelivery] = useState<ReceiptDelivery | null>(null)
+  const [confirming, setConfirming] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const itemsKey = JSON.stringify(order.items)
+
+  async function handleDelete() {
+    setDeleting(true)
+    try {
+      await onDelete(order)
+      toast.success(`Registro ${order.id} eliminado.`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo eliminar el registro.')
+      setDeleting(false)
+    }
+  }
+
+  // El PDF se genera al abrir el detalle: así el clic puede descargar y navegar
+  // a WhatsApp de inmediato, sin perder el gesto de usuario en el móvil.
+  useEffect(() => {
+    let alive = true
+    setDelivery(null)
+    prepareReceiptDelivery(order, receiptType, order.items)
+      .then((next) => {
+        if (alive) setDelivery(next)
+      })
+      .catch(() => {
+        if (alive) toast.error('No se pudo generar el comprobante en PDF.')
+      })
+    return () => {
+      alive = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order.id, receiptType, itemsKey])
+
+  function sendReceipt(event: React.MouseEvent<HTMLAnchorElement>) {
+    if (!delivery) {
+      event.preventDefault()
+      toast.info('Generando el comprobante, inténtalo en un segundo...')
+      return
+    }
+    downloadReceiptPdf(delivery)
+    toast.info('PDF descargado: adjúntalo en el chat de WhatsApp.')
+  }
 
   return (
     <>
@@ -146,18 +211,68 @@ function Detail({ order }: { order: Order }) {
         </section>
       </div>
 
-      <div className="sticky bottom-0 flex flex-col gap-2 border-t border-border bg-popover/95 p-4 backdrop-blur sm:flex-row sm:justify-end">
+      {confirming ? (
+        <div className="sticky bottom-0 flex flex-col gap-3 border-t border-destructive/40 bg-destructive/10 p-4 backdrop-blur">
+          <p className="text-sm text-pretty">
+            <strong>¿Eliminar {order.id}?</strong> Se borran el equipo, el historial, los comprobantes y las fotos
+            asociadas. Esta acción no se puede deshacer.
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <Button variant="outline" className="h-9" onClick={() => setConfirming(false)} disabled={deleting}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" className="h-9" onClick={handleDelete} disabled={deleting}>
+              <Trash2 data-icon="inline-start" />
+              {deleting ? 'Eliminando...' : 'Eliminar definitivamente'}
+            </Button>
+          </div>
+        </div>
+      ) : (
+      <div className="sticky bottom-0 flex flex-col gap-2 border-t border-border bg-popover/95 p-4 backdrop-blur sm:flex-row sm:flex-wrap sm:justify-end">
+        <Button variant="outline" className="h-9" onClick={() => onEdit(order)}>
+          <Pencil data-icon="inline-start" />
+          Editar registro
+        </Button>
         <Button
           variant="outline"
           className="h-9"
           nativeButton={false}
-          render={<Link href={`/comprobantes?orden=${order.id}&tipo=recepcion`} />}
+          render={<Link href={`/comprobantes?orden=${order.id}&tipo=${receiptType}`} />}
         >
           <ReceiptText data-icon="inline-start" />
           Comprobante de recepción
         </Button>
+        <a
+          href={delivery?.url ?? '#'}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-disabled={!delivery}
+          onClick={sendReceipt}
+          className={cn(
+            buttonVariants(),
+            'h-9 bg-whatsapp font-semibold text-black hover:bg-whatsapp/85',
+            !delivery && 'pointer-events-none opacity-50',
+          )}
+        >
+          {delivery ? (
+            <MessageCircle data-icon="inline-start" />
+          ) : (
+            <Loader2 data-icon="inline-start" className="animate-spin" />
+          )}
+          {delivery ? 'Enviar comprobante PDF' : 'Generando PDF...'}
+        </a>
         <WhatsAppButton order={order} label="Enviar estado por WhatsApp" />
+        <Button
+          variant="destructive"
+          className="h-9 sm:mr-auto"
+          onClick={() => setConfirming(true)}
+          aria-label={`Eliminar el registro ${order.id}`}
+        >
+          <Trash2 data-icon="inline-start" />
+          Eliminar
+        </Button>
       </div>
+      )}
     </>
   )
 }

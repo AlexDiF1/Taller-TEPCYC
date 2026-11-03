@@ -1,5 +1,5 @@
 export const BUSINESS = {
-  name: 'TODOENPCYCONSOLAS2',
+  name: 'TODOENPCYCONSOLAS',
   tagline: 'Servicio técnico de consolas, controles y accesorios',
   taxId: 'NIT 900.000.000-2',
   address: 'Cra. 00 #00-00, Local 2',
@@ -9,7 +9,6 @@ export const BUSINESS = {
   warrantyDays: 90,
   currency: 'COP',
   locale: 'es-CO',
-  technicians: ['Andrés', 'Camila', 'Julián'],
 } as const
 
 export function formatMoney(value: number) {

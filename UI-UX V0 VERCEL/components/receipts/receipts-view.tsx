@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Printer, ClipboardList, ShieldCheck, Save, FileX } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Printer, ClipboardList, ShieldCheck, Save, FileX, Loader2, MessageCircle } from 'lucide-react'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { PageHeader } from '@/components/page-header'
 import { StatusBadge } from '@/components/status-badge'
@@ -12,6 +12,7 @@ import { WhatsAppButton } from '@/components/orders/whatsapp-button'
 import { ReceiptDocument, type ReceiptType } from './receipt-document'
 import { ItemsEditor } from './items-editor'
 import { useOrders } from '@/hooks/use-orders'
+import { downloadReceiptPdf, prepareReceiptDelivery, type ReceiptDelivery } from '@/lib/receipt-pdf'
 import type { Order, ServiceItem } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -24,8 +25,39 @@ export function ReceiptsView({ initialOrderId, initialType }: { initialOrderId?:
   const router = useRouter()
   const { orders, isLoading, setItems } = useOrders()
   const [type, setType] = useState<ReceiptType>(initialType ?? 'recepcion')
+  const [delivery, setDelivery] = useState<ReceiptDelivery | null>(null)
   const orderId = initialOrderId ?? orders[0]?.id
   const order = orders.find((o) => o.id === orderId)
+  const itemsKey = JSON.stringify(order?.items ?? [])
+
+  // El PDF se genera antes del clic: el manejador del clic descarga y navega a
+  // WhatsApp de inmediato, sin perder el gesto de usuario en el móvil.
+  useEffect(() => {
+    let alive = true
+    setDelivery(null)
+    if (!order) return
+    prepareReceiptDelivery(order, type, order.items)
+      .then((next) => {
+        if (alive) setDelivery(next)
+      })
+      .catch(() => {
+        if (alive) toast.error('No se pudo generar el comprobante en PDF.')
+      })
+    return () => {
+      alive = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order?.id, type, itemsKey])
+
+  function sendReceiptByWhatsApp(event: React.MouseEvent<HTMLAnchorElement>) {
+    if (!delivery) {
+      event.preventDefault()
+      toast.info('Generando el comprobante, inténtalo en un segundo...')
+      return
+    }
+    downloadReceiptPdf(delivery)
+    toast.info('PDF descargado: adjúntalo en el chat de WhatsApp.')
+  }
 
   function selectOrder(id: string) {
     router.replace(`/comprobantes?orden=${id}&tipo=${type}`, { scroll: false })
@@ -110,6 +142,25 @@ export function ReceiptsView({ initialOrderId, initialType }: { initialOrderId?:
                 <Printer data-icon="inline-start" />
                 Imprimir / Guardar PDF
               </Button>
+              <a
+                href={delivery?.url ?? '#'}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-disabled={!delivery}
+                onClick={sendReceiptByWhatsApp}
+                className={cn(
+                  buttonVariants({ variant: 'default', size: 'lg' }),
+                  'h-11 bg-whatsapp font-semibold text-black hover:bg-whatsapp/85',
+                  !delivery && 'pointer-events-none opacity-50',
+                )}
+              >
+                {delivery ? (
+                  <MessageCircle data-icon="inline-start" />
+                ) : (
+                  <Loader2 data-icon="inline-start" className="animate-spin" />
+                )}
+                {delivery ? 'Enviar comprobante PDF por WhatsApp' : 'Generando PDF...'}
+              </a>
               <WhatsAppButton order={order} label="Enviar estado por WhatsApp" className="h-11" />
             </div>
           )}

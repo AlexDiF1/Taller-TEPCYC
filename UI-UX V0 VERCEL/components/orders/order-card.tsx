@@ -62,12 +62,6 @@ export function OrderCard({
         <p className="line-clamp-2 min-h-10 text-pretty text-sm text-muted-foreground">{order.reportedFault}</p>
 
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          {order.technician && (
-            <span className="flex items-center gap-1">
-              <Wrench className="size-3.5" aria-hidden="true" />
-              {order.technician}
-            </span>
-          )}
           {order.photos.length > 0 && (
             <span className="flex items-center gap-1">
               <Images className="size-3.5" aria-hidden="true" />

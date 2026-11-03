@@ -130,7 +130,6 @@ export function ReceiptDocument({ order, type, items }: { order: Order; type: Re
 
         <div className="flex flex-col gap-4 md:col-span-2 md:flex-row md:items-end md:justify-between">
           <div className="text-xs text-neutral-600">
-            {order.technician && <p>Técnico: {order.technician}</p>}
             {!isDelivery && order.estimatedDate && <p>Entrega estimada: {formatDate(order.estimatedDate)}</p>}
             <p>Estado actual: {STATUS_MAP[order.status].label}</p>
           </div>

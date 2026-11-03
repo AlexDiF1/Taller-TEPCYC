@@ -3,7 +3,7 @@ import { ReceiptsView } from '@/components/receipts/receipts-view'
 import type { ReceiptType } from '@/components/receipts/receipt-document'
 
 export const metadata: Metadata = {
-  title: 'Comprobantes · TODOENPCYCONSOLAS2',
+  title: 'Comprobantes · TODOENPCYCONSOLAS',
 }
 
 export default async function ComprobantesPage({

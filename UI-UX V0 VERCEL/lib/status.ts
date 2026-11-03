@@ -119,30 +119,17 @@ export const DEVICE_ICON = Object.fromEntries(
   DEVICE_TYPES.map((d) => [d.value, d.icon]),
 ) as Record<DeviceType, LucideIcon>
 
-export const BRANDS = ['PlayStation', 'Xbox', 'Nintendo', 'Valve', 'Otra']
+export const BRANDS = ['PlayStation', 'Xbox', 'Nintendo', 'Otra']
 
-export const COMMON_FAULTS = [
-  'No enciende',
-  'Drift en joystick',
-  'Puerto HDMI dañado',
-  'Sobrecalentamiento',
-  'No lee discos',
-  'Botones fallando',
-  'No carga / batería',
-  'Error de software',
-  'Ruido en ventilador',
-  'Sin conexión Bluetooth',
-]
+/** Modelos disponibles por marca de consola (Xbox 360 → Series X/S, PS3 → PS5, Wii → Switch 2). */
+export const CONSOLE_MODELS: Record<string, string[]> = {
+  Xbox: ['Xbox 360', 'Xbox One', 'Xbox One S', 'Xbox One X', 'Xbox Series S', 'Xbox Series X'],
+  PlayStation: ['PlayStation 3', 'PlayStation 4', 'PlayStation 5'],
+  Nintendo: ['Wii', 'Wii U', 'Nintendo Switch', 'Nintendo Switch Lite', 'Nintendo Switch OLED', 'Nintendo Switch 2'],
+}
 
-export const ACCESSORIES = [
-  'Cable de poder',
-  'Cable HDMI',
-  'Control',
-  'Cable de carga',
-  'Base / Dock',
-  'Estuche',
-  'Caja original',
-  'Memoria / SD',
-  'Juegos',
-  'Audífonos',
-]
+/** Tipos de equipo donde la marca y el modelo se escriben a mano. */
+export const CUSTOM_DEVICE_TYPES: DeviceType[] = ['celular', 'accesorio']
+
+/** Única opción rápida de accesorios: el resto se escribe a mano. */
+export const ACCESSORIES = ['Nada']

@@ -19,7 +19,7 @@ export function IntakeSummary({
   const checklist = [
     { label: 'Cliente', done: draft.name.trim().length >= 3 && draft.phone.replace(/\D/g, '').length >= 7 },
     { label: 'Equipo', done: !!draft.model.trim() },
-    { label: 'Falla', done: !!draft.reportedFault.trim() || draft.faultTags.length > 0 },
+    { label: 'Falla', done: !!draft.reportedFault.trim() },
     { label: 'Fotos', done: draft.photos.length > 0 },
     { label: 'Condiciones', done: draft.acceptedTerms },
   ]
@@ -74,7 +74,7 @@ export function IntakeSummary({
             </ul>
           </div>
 
-          <dl className="grid grid-cols-3 gap-2 text-center">
+          <dl className="grid grid-cols-2 gap-2 text-center">
             <div className="rounded-lg bg-secondary/50 p-2.5">
               <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">Accesorios</dt>
               <dd className="mt-1 font-mono text-lg font-semibold">{draft.accessories.length}</dd>
@@ -82,10 +82,6 @@ export function IntakeSummary({
             <div className="rounded-lg bg-secondary/50 p-2.5">
               <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">Fotos</dt>
               <dd className="mt-1 font-mono text-lg font-semibold">{draft.photos.length}</dd>
-            </div>
-            <div className="rounded-lg bg-secondary/50 p-2.5">
-              <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">Fallas</dt>
-              <dd className="mt-1 font-mono text-lg font-semibold">{draft.faultTags.length}</dd>
             </div>
           </dl>
 

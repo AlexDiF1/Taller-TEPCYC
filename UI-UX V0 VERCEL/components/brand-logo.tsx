@@ -11,7 +11,6 @@ export function BrandLogo({ className, compact = false }: { className?: string; 
         <span className="flex flex-col leading-none">
           <span className="text-[15px] font-bold tracking-tight">
             TODOENPC<span className="text-primary">Y</span>CONSOLAS
-            <span className="ml-0.5 font-mono text-primary">2</span>
           </span>
           <span className="mt-1 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
             Service Lab

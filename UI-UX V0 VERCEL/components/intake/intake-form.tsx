@@ -25,7 +25,7 @@ import { PhotoCapture } from './photo-capture'
 import { IntakeSummary } from './intake-summary'
 import { useOrders } from '@/hooks/use-orders'
 import { uploadPhoto } from '@/lib/api'
-import { ACCESSORIES, BRANDS, COMMON_FAULTS, DEVICE_TYPES } from '@/lib/status'
+import { ACCESSORIES, BRANDS, CONSOLE_MODELS, CUSTOM_DEVICE_TYPES, DEVICE_TYPES } from '@/lib/status'
 import { BUSINESS } from '@/lib/business'
 import { openWhatsApp } from '@/lib/whatsapp'
 import type { DeviceType, IntakePhoto, NewOrderInput } from '@/lib/types'
@@ -35,21 +35,18 @@ export interface IntakeDraft {
   name: string
   phone: string
   documentId: string
-  email: string
   deviceType: DeviceType
   brand: string
   model: string
   serial: string
   color: string
   reportedFault: string
-  faultTags: string[]
   accessories: string[]
   physicalNotes: string
   photos: IntakePhoto[]
   estimatedCost: string
   deposit: string
   estimatedDate: string
-  technician: string
   acceptedTerms: boolean
 }
 
@@ -57,42 +54,39 @@ const EMPTY: IntakeDraft = {
   name: '',
   phone: '',
   documentId: '',
-  email: '',
   deviceType: 'consola',
   brand: 'PlayStation',
   model: '',
   serial: '',
   color: '',
   reportedFault: '',
-  faultTags: [],
   accessories: [],
   physicalNotes: '',
   photos: [],
   estimatedCost: '',
   deposit: '',
   estimatedDate: '',
-  technician: BUSINESS.technicians[0],
   acceptedTerms: false,
 }
 
 type Errors = Partial<Record<keyof IntakeDraft, string>>
 
+function isCustomDevice(type: DeviceType) {
+  return CUSTOM_DEVICE_TYPES.includes(type)
+}
+
 function validate(d: IntakeDraft): Errors {
   const errors: Errors = {}
   if (d.name.trim().length < 3) errors.name = 'Ingresa el nombre completo del cliente.'
   if (d.phone.replace(/\D/g, '').length < 7) errors.phone = 'Ingresa un número de WhatsApp válido.'
+  if (!d.brand.trim()) errors.brand = 'Indica la marca del equipo.'
   if (!d.model.trim()) errors.model = 'Indica el modelo del equipo.'
-  if (!d.reportedFault.trim() && d.faultTags.length === 0) errors.reportedFault = 'Describe la falla reportada.'
+  if (!d.reportedFault.trim()) errors.reportedFault = 'Describe la falla reportada.'
   if (!d.acceptedTerms) errors.acceptedTerms = 'El cliente debe aceptar las condiciones del servicio.'
   return errors
 }
 
-function toggle(list: string[], value: string) {
-  return list.includes(value) ? list.filter((v) => v !== value) : [...list, value]
-}
-
 const BRAND_ITEMS = BRANDS.map((b) => ({ label: b, value: b }))
-const TECH_ITEMS = BUSINESS.technicians.map((t) => ({ label: t, value: t }))
 
 export function IntakeForm() {
   const router = useRouter()
@@ -101,10 +95,31 @@ export function IntakeForm() {
   const [errors, setErrors] = useState<Errors>({})
   const [submitting, setSubmitting] = useState(false)
   const [customAccessory, setCustomAccessory] = useState('')
+  const [freeModel, setFreeModel] = useState(false)
+
+  const customDevice = isCustomDevice(draft.deviceType)
+  const models = CONSOLE_MODELS[draft.brand] ?? []
+  const useModelSelect = !customDevice && !freeModel && models.length > 0
 
   function set<K extends keyof IntakeDraft>(key: K, value: IntakeDraft[K]) {
     setDraft((d) => ({ ...d, [key]: value }))
     if (errors[key]) setErrors((e) => ({ ...e, [key]: undefined }))
+  }
+
+  function selectDeviceType(type: DeviceType) {
+    setFreeModel(false)
+    setDraft((d) => ({
+      ...d,
+      deviceType: type,
+      brand: isCustomDevice(type) ? '' : CONSOLE_MODELS[d.brand] ? d.brand : BRANDS[0],
+      model: '',
+    }))
+  }
+
+  function selectBrand(brand: string) {
+    setFreeModel(false)
+    setDraft((d) => ({ ...d, brand, model: '' }))
+    if (errors.brand) setErrors((e) => ({ ...e, brand: undefined }))
   }
 
   function addCustomAccessory() {
@@ -130,24 +145,22 @@ export function IntakeForm() {
         name: draft.name.trim(),
         phone: draft.phone.trim(),
         documentId: draft.documentId.trim() || undefined,
-        email: draft.email.trim() || undefined,
       },
       device: {
         type: draft.deviceType,
-        brand: draft.brand,
+        brand: draft.brand.trim(),
         model: draft.model.trim(),
         serial: draft.serial.trim() || undefined,
         color: draft.color.trim() || undefined,
       },
-      reportedFault: draft.reportedFault.trim() || draft.faultTags.join(', '),
-      faultTags: draft.faultTags,
+      reportedFault: draft.reportedFault.trim(),
+      faultTags: [],
       accessories: draft.accessories,
       physicalNotes: draft.physicalNotes.trim() || undefined,
       photos: [],
       estimatedCost: Number(draft.estimatedCost) || 0,
       deposit: Number(draft.deposit) || 0,
       estimatedDate: draft.estimatedDate ? new Date(draft.estimatedDate).toISOString() : undefined,
-      technician: draft.technician,
     }
 
     try {
@@ -202,7 +215,7 @@ export function IntakeForm() {
                 />
               </div>
             </Field>
-            <Field label="Documento" htmlFor="documentId">
+            <Field label="Documento" htmlFor="documentId" className="sm:col-span-2 sm:max-w-[50%]">
               <Input
                 id="documentId"
                 inputMode="numeric"
@@ -212,21 +225,10 @@ export function IntakeForm() {
                 className="h-10"
               />
             </Field>
-            <Field label="Correo" htmlFor="email">
-              <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                placeholder="opcional@correo.com"
-                value={draft.email}
-                onChange={(e) => set('email', e.target.value)}
-                className="h-10"
-              />
-            </Field>
           </div>
         </FormSection>
 
-        <FormSection step={2} icon={Gamepad} title="Equipo" description="Consola, control o accesorio que ingresa.">
+        <FormSection step={2} icon={Gamepad} title="Equipo" description="Consola, control, celular o accesorio que ingresa.">
           <fieldset className="mb-5">
             <legend className="mb-2 text-sm font-medium">Tipo de equipo</legend>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -237,7 +239,7 @@ export function IntakeForm() {
                     key={value}
                     type="button"
                     aria-pressed={active}
-                    onClick={() => set('deviceType', value)}
+                    onClick={() => selectDeviceType(value)}
                     className={cn(
                       'flex flex-col items-center gap-2 rounded-xl border px-3 py-4 text-sm font-medium transition-all',
                       active
@@ -252,31 +254,80 @@ export function IntakeForm() {
               })}
             </div>
           </fieldset>
+
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Marca" htmlFor="brand" required>
-              <Select items={BRAND_ITEMS} value={draft.brand} onValueChange={(v) => set('brand', String(v))}>
-                <SelectTrigger id="brand" className="h-10 w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {BRAND_ITEMS.map((b) => (
-                    <SelectItem key={b.value} value={b.value}>
-                      {b.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {customDevice ? (
+              <Field label="Marca" htmlFor="brand" required error={errors.brand} hint="Escríbela tú mismo">
+                <Input
+                  id="brand"
+                  placeholder="Ej. Samsung, Xiaomi, Genérico"
+                  value={draft.brand}
+                  onChange={(e) => selectBrand(e.target.value)}
+                  aria-invalid={!!errors.brand}
+                  className="h-10"
+                />
+              </Field>
+            ) : (
+              <Field label="Marca" htmlFor="brand" required error={errors.brand}>
+                <Select items={BRAND_ITEMS} value={draft.brand} onValueChange={(v) => v && selectBrand(String(v))}>
+                  <SelectTrigger id="brand" className="h-10 w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BRAND_ITEMS.map((b) => (
+                      <SelectItem key={b.value} value={b.value}>
+                        {b.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            )}
+
+            <Field
+              label="Modelo"
+              htmlFor="model"
+              required
+              error={errors.model}
+              hint={customDevice ? 'Escríbelo tú mismo' : undefined}
+            >
+              {useModelSelect ? (
+                <Select
+                  items={models.map((m) => ({ label: m, value: m }))}
+                  value={models.includes(draft.model) ? draft.model : null}
+                  onValueChange={(v) => {
+                    if (String(v) === '__otro__') {
+                      set('model', '')
+                      setFreeModel(true)
+                      return
+                    }
+                    set('model', String(v))
+                  }}
+                >
+                  <SelectTrigger id="model" className="h-10 w-full">
+                    <SelectValue placeholder="Selecciona el modelo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {models.map((m) => (
+                      <SelectItem key={m} value={m}>
+                        {m}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="__otro__">Otro modelo…</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  id="model"
+                  placeholder={customDevice ? 'Ej. Galaxy A54, Redmi Note 12' : 'Ej. Xbox Series X, Switch OLED'}
+                  value={draft.model}
+                  onChange={(e) => set('model', e.target.value)}
+                  aria-invalid={!!errors.model}
+                  className="h-10"
+                />
+              )}
             </Field>
-            <Field label="Modelo" htmlFor="model" required error={errors.model}>
-              <Input
-                id="model"
-                placeholder="Ej. PS5 Slim, DualSense, Switch OLED"
-                value={draft.model}
-                onChange={(e) => set('model', e.target.value)}
-                aria-invalid={!!errors.model}
-                className="h-10"
-              />
-            </Field>
+
             <Field label="Número de serie" htmlFor="serial">
               <Input
                 id="serial"
@@ -298,18 +349,8 @@ export function IntakeForm() {
           </div>
         </FormSection>
 
-        <FormSection step={3} icon={AlertTriangle} title="Falla reportada" description="Toca las fallas comunes o descríbela con tus palabras.">
-          <div className="mb-4 flex flex-wrap gap-2" role="group" aria-label="Fallas comunes">
-            {COMMON_FAULTS.map((fault) => (
-              <ChipToggle
-                key={fault}
-                label={fault}
-                selected={draft.faultTags.includes(fault)}
-                onToggle={() => set('faultTags', toggle(draft.faultTags, fault))}
-              />
-            ))}
-          </div>
-          <Field label="Descripción del cliente" htmlFor="reportedFault" error={errors.reportedFault}>
+        <FormSection step={3} icon={AlertTriangle} title="Falla reportada" description="Describe con tus palabras qué presenta el equipo.">
+          <Field label="Descripción del cliente" htmlFor="reportedFault" required error={errors.reportedFault}>
             <Textarea
               id="reportedFault"
               rows={4}
@@ -321,24 +362,24 @@ export function IntakeForm() {
           </Field>
         </FormSection>
 
-        <FormSection step={4} icon={Package} title="Accesorios que deja" description="Todo lo que queda en custodia del taller.">
+        <FormSection step={4} icon={Package} title="Accesorios que deja" description="Escribe cada accesorio que queda en custodia del taller.">
           <div className="flex flex-wrap gap-2" role="group" aria-label="Accesorios">
-            {[...ACCESSORIES, ...draft.accessories.filter((a) => !ACCESSORIES.includes(a))].map((item) => (
+            {ACCESSORIES.map((item) => (
               <ChipToggle
                 key={item}
                 label={item}
-                selected={draft.accessories.includes(item)}
-                onToggle={() => set('accessories', toggle(draft.accessories, item))}
+                selected={draft.accessories.length === 0}
+                onToggle={() => set('accessories', [])}
               />
             ))}
           </div>
           <div className="mt-4 flex gap-2">
             <label htmlFor="customAccessory" className="sr-only">
-              Otro accesorio
+              Accesorio
             </label>
             <Input
               id="customAccessory"
-              placeholder="Otro accesorio..."
+              placeholder="Escribe un accesorio y presiona Agregar"
               value={customAccessory}
               onChange={(e) => setCustomAccessory(e.target.value)}
               onKeyDown={(e) => {
@@ -355,11 +396,25 @@ export function IntakeForm() {
               Agregar
             </Button>
           </div>
-          {draft.accessories.length === 0 && (
-            <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
-              <X className="size-3.5" aria-hidden="true" />
-              Sin accesorios: el equipo ingresa solo.
-            </p>
+          {draft.accessories.length > 0 && (
+            <ul className="mt-3 flex flex-wrap gap-2">
+              {draft.accessories.map((item) => (
+                <li
+                  key={item}
+                  className="inline-flex items-center gap-2 rounded-full border border-primary/60 bg-primary/12 px-3 py-1.5 text-sm text-primary"
+                >
+                  {item}
+                  <button
+                    type="button"
+                    className="text-primary/70 transition-colors hover:text-primary"
+                    onClick={() => set('accessories', draft.accessories.filter((a) => a !== item))}
+                    aria-label={`Quitar ${item}`}
+                  >
+                    <X className="size-3.5" aria-hidden="true" />
+                  </button>
+                </li>
+              ))}
+            </ul>
           )}
         </FormSection>
 
@@ -376,7 +431,7 @@ export function IntakeForm() {
           </Field>
         </FormSection>
 
-        <FormSection step={6} icon={Calculator} title="Presupuesto y asignación">
+        <FormSection step={6} icon={Calculator} title="Presupuesto">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Costo estimado" htmlFor="estimatedCost" hint="Sujeto a diagnóstico">
               <MoneyInput id="estimatedCost" value={draft.estimatedCost} onChange={(v) => set('estimatedCost', v)} />
@@ -392,20 +447,6 @@ export function IntakeForm() {
                 onChange={(e) => set('estimatedDate', e.target.value)}
                 className="h-10 [color-scheme:dark]"
               />
-            </Field>
-            <Field label="Técnico asignado" htmlFor="technician">
-              <Select items={TECH_ITEMS} value={draft.technician} onValueChange={(v) => set('technician', String(v))}>
-                <SelectTrigger id="technician" className="h-10 w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {TECH_ITEMS.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>
-                      {t.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </Field>
           </div>
 

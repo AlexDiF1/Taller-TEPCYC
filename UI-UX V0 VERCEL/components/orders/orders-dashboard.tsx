@@ -6,9 +6,9 @@ import { toast } from 'sonner'
 import { Search, Plus, Inbox, Layers, TriangleAlert } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { PageHeader } from '@/components/page-header'
 import { OrderCard } from './order-card'
 import { OrderDetailDialog } from './order-detail-dialog'
+import { OrderEditDialog } from './order-edit-dialog'
 import { useOrders } from '@/hooks/use-orders'
 import { STATUSES, STATUS_MAP, isClosed } from '@/lib/status'
 import { openWhatsApp } from '@/lib/whatsapp'
@@ -18,10 +18,11 @@ import { cn } from '@/lib/utils'
 type Filter = 'activas' | OrderStatus
 
 export function OrdersDashboard() {
-  const { orders, isLoading, error, setStatus } = useOrders()
+  const { orders, isLoading, error, setStatus, updateOrder, deleteOrder } = useOrders()
   const [filter, setFilter] = useState<Filter>('activas')
   const [query, setQuery] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
 
   const counts = useMemo(() => {
     const c = Object.fromEntries(STATUSES.map((s) => [s.value, 0])) as Record<OrderStatus, number>
@@ -44,6 +45,18 @@ export function OrdersDashboard() {
   }, [orders, filter, query])
 
   const selected = orders.find((o) => o.id === selectedId) ?? null
+  const editing = orders.find((o) => o.id === editingId) ?? null
+
+  function startEditing(order: Order) {
+    setSelectedId(null)
+    setEditingId(order.id)
+  }
+
+  async function handleDelete(order: Order) {
+    await deleteOrder(order.id)
+    setSelectedId(null)
+    setEditingId(null)
+  }
 
   async function handleStatusChange(order: Order, status: OrderStatus) {
     const promise = setStatus(order.id, status)
@@ -60,21 +73,9 @@ export function OrdersDashboard() {
   }
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-6 md:px-8 md:py-10">
-      <PageHeader
-        eyebrow="Banco de trabajo"
-        title="Órdenes activas"
-        description="Actualiza el estado de cada equipo y notifica al cliente con un toque."
-        actions={
-          <Button size="lg" className="h-10 px-4 font-semibold" nativeButton={false} render={<Link href="/ingreso" />}>
-            <Plus data-icon="inline-start" />
-            Nuevo ingreso
-          </Button>
-        }
-      />
-
+    <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-6 md:px-8 md:py-8">
       <div className="-mx-4 overflow-x-auto px-4 md:mx-0 md:px-0">
-        <div className="flex min-w-max gap-3 md:grid md:min-w-0 md:grid-cols-4 xl:grid-cols-7" role="group" aria-label="Filtrar por estado">
+        <div className="flex min-w-max items-center gap-2" role="group" aria-label="Filtrar por estado">
           <FilterTile
             active={filter === 'activas'}
             onClick={() => setFilter('activas')}
@@ -99,7 +100,8 @@ export function OrdersDashboard() {
         </div>
       </div>
 
-      <div className="relative">
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
         <Search className="pointer-events-none absolute left-3.5 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
         <label htmlFor="order-search" className="sr-only">
           Buscar órdenes
@@ -112,6 +114,16 @@ export function OrdersDashboard() {
           onChange={(e) => setQuery(e.target.value)}
           className="h-12 rounded-xl bg-card/80 pl-10 text-base backdrop-blur-sm"
         />
+        </div>
+        <Button
+          size="icon"
+          aria-label="Nuevo ingreso"
+          className="size-12 shrink-0 rounded-xl"
+          nativeButton={false}
+          render={<Link href="/ingreso" />}
+        >
+          <Plus />
+        </Button>
       </div>
 
       {error ? (
@@ -146,7 +158,13 @@ export function OrdersDashboard() {
         </ul>
       )}
 
-      <OrderDetailDialog order={selected} onClose={() => setSelectedId(null)} />
+      <OrderDetailDialog
+        order={selected}
+        onClose={() => setSelectedId(null)}
+        onEdit={startEditing}
+        onDelete={handleDelete}
+      />
+      <OrderEditDialog order={editing} onClose={() => setEditingId(null)} onSave={updateOrder} />
     </div>
   )
 }
@@ -174,16 +192,14 @@ function FilterTile({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        'relative flex w-36 flex-col gap-3 overflow-hidden rounded-xl border p-4 text-left transition-all md:w-auto',
+        'relative inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border px-3 py-1.5 transition-all',
         active ? 'border-foreground/30 bg-card' : 'border-border bg-card/50 hover:bg-card',
       )}
     >
       {active && <span className={cn('absolute inset-x-0 top-0 h-0.5', dot)} aria-hidden="true" />}
-      <span className="flex items-center justify-between">
-        <Icon className={cn('size-4.5', accent)} />
-        <span className="font-mono text-2xl font-bold tabular-nums">{count}</span>
-      </span>
+      <Icon className={cn('size-4', accent)} />
       <span className={cn('text-sm font-medium', active ? 'text-foreground' : 'text-muted-foreground')}>{label}</span>
+      <span className="font-mono text-base font-bold tabular-nums">{count}</span>
     </button>
   )
 }

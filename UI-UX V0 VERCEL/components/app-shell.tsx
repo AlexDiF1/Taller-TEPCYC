@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutGrid, Plus, ReceiptText, MapPin, Phone } from 'lucide-react'
+import { LayoutGrid, Plus, ReceiptText, ShoppingCart, MapPin, Phone } from 'lucide-react'
 import { BrandLogo } from '@/components/brand-logo'
 import { BUSINESS } from '@/lib/business'
 import { cn } from '@/lib/utils'
@@ -11,6 +11,7 @@ const NAV = [
   { href: '/', label: 'Órdenes', icon: LayoutGrid },
   { href: '/ingreso', label: 'Nuevo ingreso', icon: Plus },
   { href: '/comprobantes', label: 'Comprobantes', icon: ReceiptText },
+  { href: '/ventas', label: 'Ventas', icon: ShoppingCart },
 ]
 
 function isActive(pathname: string, href: string) {
@@ -82,7 +83,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               href={href}
               aria-current={active ? 'page' : undefined}
               className={cn(
-                'flex min-w-20 flex-col items-center gap-1 rounded-xl px-3 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors',
+                'flex min-w-16 flex-col items-center gap-1 rounded-xl px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors',
                 active && 'text-foreground',
               )}
             >

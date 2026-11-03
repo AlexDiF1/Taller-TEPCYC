@@ -2,7 +2,7 @@
 
 import useSWR from 'swr'
 import * as api from '@/lib/api'
-import type { NewOrderInput, OrderStatus, ServiceItem } from '@/lib/types'
+import type { NewOrderInput, OrderPatch, OrderStatus, ServiceItem } from '@/lib/types'
 
 const ORDERS_KEY = 'orders'
 
@@ -21,6 +21,17 @@ export function useOrders() {
     return updated
   }
 
+  async function updateOrder(id: string, patch: OrderPatch) {
+    const updated = await api.updateOrder(id, patch)
+    await mutate()
+    return updated
+  }
+
+  async function deleteOrder(id: string) {
+    await api.deleteOrder(id)
+    await mutate()
+  }
+
   async function setItems(id: string, items: ServiceItem[]) {
     const updated = await api.updateOrderItems(id, items)
     await mutate()
@@ -34,5 +45,7 @@ export function useOrders() {
     createOrder,
     setStatus,
     setItems,
+    updateOrder,
+    deleteOrder,
   }
 }

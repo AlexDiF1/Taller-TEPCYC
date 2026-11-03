@@ -63,7 +63,27 @@ export interface Order {
   deliveredAt?: string
 }
 
+/** Campos editables de una orden ya registrada (PATCH/PUT /api/orders/:id). */
+export interface OrderPatch {
+  status?: OrderStatus
+  customer?: Partial<Customer>
+  device?: Partial<Device>
+  deviceType?: DeviceType
+  brand?: string
+  model?: string
+  serial?: string
+  color?: string
+  reportedFault?: string
+  faultTags?: string[]
+  accessories?: string[]
+  physicalNotes?: string
+  estimatedCost?: number
+  deposit?: number
+  estimatedDate?: string
+  technician?: string
+}
+
 export type NewOrderInput = Omit<
   Order,
-  'id' | 'createdAt' | 'status' | 'history' | 'items' | 'deliveredAt'
+  'id' | 'createdAt' | 'status' | 'history' | 'items' | 'deliveredAt' | 'technician'
 >
