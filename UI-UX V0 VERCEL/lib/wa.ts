@@ -16,6 +16,29 @@ export interface WaEvent {
   detail: string | null
 }
 
+export interface WaProtections {
+  active: boolean
+  paused: boolean
+  cooldownUntil: string | null
+  cooldownReason: string | null
+  cooldownRemainingMs: number
+  graceRemainingMs: number
+  warmup: { active: boolean; until: string | null; daysLeft: number }
+  guardTrips: number
+  sentLastHour: number
+  sentToday: number
+  errorsToday: number
+  statusesToday: number
+  effective: {
+    minGapMs: number
+    maxPerHour: number
+    maxPerDay: number
+    maxStatusPerDay: number
+    statusMinGapMs: number
+  }
+  rules: string[]
+}
+
 export interface WaState {
   status: WaStatusName
   connected: boolean
@@ -31,6 +54,7 @@ export interface WaState {
   pendientes: number
   events: WaEvent[]
   limits: { minGapMs: number; maxPerHour: number }
+  protections: WaProtections
 }
 
 export interface EstadoProgramado {
@@ -67,6 +91,9 @@ const BASE = '/api/whatsapp'
 
 export class WaOfflineError extends Error {}
 
+/** El servicio está frenando envíos a propósito (límites o enfriamiento). */
+export class WaThrottleError extends Error {}
+
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, {
     cache: 'no-store',
@@ -84,6 +111,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
       /* respuesta sin JSON */
     }
     if (offline || response.status === 409) throw new WaOfflineError(detail)
+    if (response.status === 429) throw new WaThrottleError(detail)
     throw new Error(detail)
   }
   return (await response.json()) as T
@@ -99,6 +127,11 @@ export function waRestart() {
 
 export function waLogout() {
   return request<WaState>(`${BASE}/logout`, { method: 'POST' })
+}
+
+/** Reanuda los envíos cuando el enfriamiento automático fue una falsa alarma. */
+export function waResume() {
+  return request<WaState>(`${BASE}/resume`, { method: 'POST' })
 }
 
 export function waSendText(phone: string, message: string) {

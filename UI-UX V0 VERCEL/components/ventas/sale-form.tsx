@@ -22,7 +22,7 @@ import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { formatMoney } from '@/lib/business'
 import { buildWhatsAppUrl } from '@/lib/whatsapp'
-import { WaOfflineError, blobToDataUrl, waSendDocument } from '@/lib/wa'
+import { WaOfflineError, WaThrottleError, blobToDataUrl, waSendDocument } from '@/lib/wa'
 import {
   PAYMENT_METHODS,
   PAYMENT_MAP,
@@ -507,6 +507,8 @@ function SaleSuccessDialog({
     } catch (error) {
       if (error instanceof WaOfflineError) {
         toast.info('WhatsApp no está conectado: descarga el PDF y envíalo a mano.')
+      } else if (error instanceof WaThrottleError) {
+        toast.info(`${error.message} Usa "Abrir chat y adjuntar a mano".`)
       } else {
         toast.error(error instanceof Error ? error.message : 'No se pudo enviar el recibo.')
       }

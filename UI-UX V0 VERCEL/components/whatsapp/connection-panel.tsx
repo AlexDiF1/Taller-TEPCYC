@@ -13,10 +13,21 @@ import {
   Wifi,
   TriangleAlert,
   ScrollText,
+  PlayCircle,
+  PauseCircle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { formatDate } from '@/lib/business'
-import { STATUS_LABEL, waContacts, waLogout, waRestart, waSyncContacts, type WaContact, type WaState } from '@/lib/wa'
+import {
+  STATUS_LABEL,
+  waContacts,
+  waLogout,
+  waRestart,
+  waResume,
+  waSyncContacts,
+  type WaContact,
+  type WaState,
+} from '@/lib/wa'
 import { cn } from '@/lib/utils'
 
 export function ConnectionPanel({
@@ -30,14 +41,15 @@ export function ConnectionPanel({
   error: unknown
   onState: (next: WaState) => void
 }) {
-  const [busy, setBusy] = useState<'restart' | 'logout' | 'sync' | null>(null)
+  const [busy, setBusy] = useState<'restart' | 'logout' | 'sync' | 'resume' | null>(null)
   const [confirming, setConfirming] = useState(false)
   const [contacts, setContacts] = useState<WaContact[] | null>(null)
 
   const meta = state ? STATUS_LABEL[state.status] : undefined
+  const protection = state?.protections
   const needsQr = !state?.connected
 
-  async function run(action: 'restart' | 'logout' | 'sync') {
+  async function run(action: 'restart' | 'logout' | 'sync' | 'resume') {
     setBusy(action)
     try {
       if (action === 'restart') {
@@ -47,6 +59,9 @@ export function ConnectionPanel({
         onState(await waLogout())
         setConfirming(false)
         toast.success('Sesión cerrada. Escanea el nuevo QR para vincular otro número.')
+      } else if (action === 'resume') {
+        onState(await waResume())
+        toast.success('Envíos reanudados.')
       } else {
         const result = await waSyncContacts()
         toast.success(`Números sincronizados: ${result.total} contactos.`)
@@ -178,6 +193,102 @@ export function ConnectionPanel({
         </section>
 
         <section className="rounded-2xl border border-border bg-card/70 p-4 ring-1 ring-foreground/5 md:p-5">
+          <header className="flex flex-wrap items-center gap-2">
+            <span
+              className={cn(
+                'grid size-7 place-items-center rounded-lg',
+                protection?.paused ? 'bg-destructive/12 text-destructive' : 'bg-status-done/12 text-status-done',
+              )}
+            >
+              <ShieldCheck className="size-4" aria-hidden="true" />
+            </span>
+            <div className="flex-1">
+              <h2 className="text-sm font-semibold">Protecciones anti-bloqueo</h2>
+              <p className="text-xs text-muted-foreground">
+                El servicio escribe despacio y se frena solo si WhatsApp se queja, para cuidar la cuenta.
+              </p>
+            </div>
+            {protection?.paused ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-9 rounded-xl border-destructive/40 text-destructive hover:bg-destructive/10"
+                disabled={busy !== null}
+                onClick={() => run('resume')}
+              >
+                {busy === 'resume' ? <Loader2 className="size-3.5 animate-spin" /> : <PlayCircle className="size-3.5" />}
+                Reanudar envíos
+              </Button>
+            ) : (
+              <span
+                className={cn(
+                  'rounded-full px-2.5 py-1 text-[10px] font-medium uppercase tracking-wide',
+                  protection?.active ? 'bg-status-done/12 text-status-done' : 'bg-status-review/12 text-status-review',
+                )}
+              >
+                {protection?.active ? 'Activas' : 'En espera'}
+              </span>
+            )}
+          </header>
+
+          {protection?.paused && (
+            <p className="mt-3 flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              <PauseCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+              Envíos en pausa: {protection.cooldownReason ?? 'ritmo alto'} · vuelve en ~
+              {Math.max(1, Math.ceil(protection.cooldownRemainingMs / 60000))} min
+              {protection.cooldownUntil ? ` (${formatDate(protection.cooldownUntil, true)})` : ''}.
+            </p>
+          )}
+
+          {!protection?.paused && (protection?.graceRemainingMs ?? 0) > 0 && (
+            <p className="mt-3 rounded-xl border border-status-review/30 bg-status-review/10 px-3 py-2 text-xs text-status-review">
+              Ventana de gracia: faltan {Math.ceil((protection?.graceRemainingMs ?? 0) / 1000)} s para poder escribir. Nadie
+              escribe en el primer segundo después de conectar.
+            </p>
+          )}
+
+          {protection?.warmup.active && (
+            <p className="mt-3 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-xs text-primary">
+              Cuenta en calentamiento: {protection.warmup.daysLeft} día(s) con límites reducidos (los números recién
+              vinculados son los que más fácil se reportan).
+            </p>
+          )}
+
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            <ProtectionStat
+              label="Última hora"
+              value={`${protection?.sentLastHour ?? 0}/${protection?.effective.maxPerHour ?? 0}`}
+            />
+            <ProtectionStat label="Hoy" value={`${protection?.sentToday ?? 0}/${protection?.effective.maxPerDay ?? 0}`} />
+            <ProtectionStat
+              label="Estados hoy"
+              value={`${protection?.statusesToday ?? 0}/${protection?.effective.maxStatusPerDay ?? 0}`}
+            />
+            <ProtectionStat
+              label="Errores hoy"
+              value={String(protection?.errorsToday ?? 0)}
+              danger={(protection?.errorsToday ?? 0) > 0}
+            />
+          </div>
+
+          <ul className="mt-3 flex flex-col gap-1">
+            {(protection?.rules ?? []).map((rule) => (
+              <li key={rule} className="flex items-start gap-2 text-[11px] text-muted-foreground">
+                <span className="mt-1.5 size-1 shrink-0 rounded-full bg-status-done" aria-hidden="true" />
+                {rule}
+              </li>
+            ))}
+          </ul>
+
+          {(protection?.guardTrips ?? 0) > 0 && (
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              Envíos masivos bloqueados por la guarda anti-spam: {protection?.guardTrips}
+            </p>
+          )}
+        </section>
+
+        <section className="rounded-2xl border border-border bg-card/70 p-4 ring-1 ring-foreground/5 md:p-5">
           <header className="flex items-center gap-2">
             <span className="grid size-7 place-items-center rounded-lg bg-status-pending/12 text-status-pending">
               <Users className="size-4" aria-hidden="true" />
@@ -288,6 +399,17 @@ export function ConnectionPanel({
           </p>
         )}
       </aside>
+    </div>
+  )
+}
+
+function ProtectionStat({ label, value, danger = false }: { label: string; value: string; danger?: boolean }) {
+  return (
+    <div className="rounded-xl border border-border bg-background/40 px-3 py-2">
+      <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
+      <p className={cn('mt-0.5 font-mono text-sm font-semibold tabular-nums', danger ? 'text-destructive' : 'text-foreground')}>
+        {value}
+      </p>
     </div>
   )
 }

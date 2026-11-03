@@ -196,6 +196,9 @@ function saveDataUrl(dataUrl, { maxBytes, allowed }) {
 function waError(res, error) {
   const code = error?.code
   if (code === 'WA_BAD_PHONE') return res.status(400).json({ error: error.message })
+  if (code === 'WA_BULK_GUARD') return res.status(429).json({ error: error.message, guard: true })
+  if (code === 'WA_COOLDOWN') return res.status(429).json({ error: error.message, paused: true })
+  if (code === 'WA_GRACE') return res.status(429).json({ error: error.message, grace: true })
   if (code === 'WA_OFFLINE') return res.status(409).json({ error: 'WhatsApp no está conectado.', offline: true })
   if (code === 'WA_RATE_LIMIT') return res.status(429).json({ error: error.message })
   return res.status(500).json({ error: error?.message ?? 'Error al enviar por WhatsApp.' })
@@ -211,6 +214,11 @@ api.post('/whatsapp/restart', async (_req, res) => {
 
 api.post('/whatsapp/logout', async (_req, res) => {
   res.json(await wa.logoutSession())
+})
+
+/** Reanuda los envíos si el enfriamiento automático fue una falsa alarma. */
+api.post('/whatsapp/resume', (_req, res) => {
+  res.json(wa.resumeSending())
 })
 
 api.post('/whatsapp/send', async (req, res) => {

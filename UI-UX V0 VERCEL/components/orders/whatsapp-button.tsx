@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { MessageCircle, Loader2, CheckCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { buildStatusMessage, buildWhatsAppUrl } from '@/lib/whatsapp'
-import { WaOfflineError, waSendOrder } from '@/lib/wa'
+import { WaOfflineError, WaThrottleError, waSendOrder } from '@/lib/wa'
 import type { Order } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -55,6 +55,10 @@ export function WhatsAppButton({
     } catch (error) {
       if (error instanceof WaOfflineError) {
         toast.info('WhatsApp no está conectado: se abre wa.me como respaldo.')
+        openFallback()
+      } else if (error instanceof WaThrottleError) {
+        // El servicio frena por seguridad: se resuelve a mano para no insistir.
+        toast.info(`${error.message} Se abre wa.me como respaldo.`)
         openFallback()
       } else {
         toast.error(error instanceof Error ? error.message : 'No se pudo enviar el mensaje.', {

@@ -14,7 +14,7 @@ import { ItemsEditor } from './items-editor'
 import { useOrders } from '@/hooks/use-orders'
 import { downloadReceiptPdf, prepareReceiptDelivery, type ReceiptDelivery } from '@/lib/receipt-pdf'
 import { buildReceiptMessage } from '@/lib/whatsapp'
-import { WaOfflineError, blobToDataUrl, waSendDocument } from '@/lib/wa'
+import { WaOfflineError, WaThrottleError, blobToDataUrl, waSendDocument } from '@/lib/wa'
 import type { Order, ServiceItem } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -78,6 +78,9 @@ export function ReceiptsView({ initialOrderId, initialType }: { initialOrderId?:
       if (error instanceof WaOfflineError) {
         downloadReceiptPdf(delivery)
         toast.info('WhatsApp no está conectado: se descargó el PDF para adjuntarlo a mano.')
+      } else if (error instanceof WaThrottleError) {
+        downloadReceiptPdf(delivery)
+        toast.info(`${error.message} Se descargó el PDF para enviarlo a mano.`)
       } else {
         toast.error(error instanceof Error ? error.message : 'No se pudo enviar el comprobante.')
       }

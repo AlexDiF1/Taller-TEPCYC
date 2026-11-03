@@ -146,6 +146,21 @@ CREATE TABLE IF NOT EXISTS estados_programados (
   sent_at TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_estados_status ON estados_programados(status, scheduled_at);
+
+CREATE TABLE IF NOT EXISTS whatsapp_meta (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS whatsapp_audit (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  at TEXT NOT NULL,
+  phone TEXT,
+  kind TEXT NOT NULL,
+  ok INTEGER NOT NULL DEFAULT 1,
+  detail TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_audit_at ON whatsapp_audit(at);
 `)
 
 /* ------------------------------- lectura -------------------------------- */
@@ -681,7 +696,12 @@ export function upsertWhatsappContact({ phone, name, source = 'chat' }) {
      VALUES (?,?,?,?,?)
      ON CONFLICT(phone) DO UPDATE SET
        name = COALESCE(NULLIF(TRIM(excluded.name), ''), whatsapp_contacts.name),
-       source = CASE WHEN whatsapp_contacts.source = 'chat' THEN whatsapp_contacts.source ELSE excluded.source END,
+       source = CASE
+         WHEN whatsapp_contacts.source = 'chat' OR excluded.source = 'chat' THEN 'chat'
+         WHEN whatsapp_contacts.source IN ('orden', 'venta') THEN whatsapp_contacts.source
+         WHEN excluded.source IN ('orden', 'venta') THEN excluded.source
+         ELSE COALESCE(whatsapp_contacts.source, excluded.source)
+       END,
        last_seen = excluded.last_seen`,
   ).run(normalized, (name ?? '').trim() || null, source, now, now)
   return normalized
@@ -734,6 +754,62 @@ export function syncWhatsappContacts() {
 /** Números sincronizados (sin sufijo) para armar el `statusJidList`. */
 export function statusJidPhones(limit = 2000) {
   return rows('SELECT phone FROM whatsapp_contacts ORDER BY last_seen DESC LIMIT ?', [limit]).map((r) => r.phone)
+}
+
+/* --------------------- bitácora y estado del servicio WA ------------------ */
+
+export function getMeta(key) {
+  const row = db.prepare('SELECT value FROM whatsapp_meta WHERE key = ?').get(String(key))
+  return row?.value ?? null
+}
+
+export function setMeta(key, value) {
+  db.prepare(
+    `INSERT INTO whatsapp_meta (key, value) VALUES (?,?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+  ).run(String(key), String(value))
+  return String(value)
+}
+
+/** Registra cada envío (o intento) para auditar los límites anti-bloqueo. */
+export function logAudit({ phone = null, kind, ok = true, detail = null } = {}) {
+  db.prepare('INSERT INTO whatsapp_audit (at, phone, kind, ok, detail) VALUES (?,?,?,?,?)').run(
+    new Date().toISOString(),
+    phone ? String(phone).slice(0, 20) : null,
+    String(kind ?? 'texto').slice(0, 20),
+    ok ? 1 : 0,
+    detail ? String(detail).slice(0, 200) : null,
+  )
+}
+
+export function countAudit({ since, kind, onlyOk = false } = {}) {
+  const where = ['at >= ?']
+  const params = [since]
+  if (kind) {
+    where.push('kind = ?')
+    params.push(kind)
+  }
+  if (onlyOk) where.push('ok = 1')
+  return db.prepare(`SELECT COUNT(*) c FROM whatsapp_audit WHERE ${where.join(' AND ')}`).get(...params).c
+}
+
+export function lastAudit({ kind, onlyOk = true } = {}) {
+  const where = []
+  const params = []
+  if (kind) {
+    where.push('kind = ?')
+    params.push(kind)
+  }
+  if (onlyOk) where.push('ok = 1')
+  const row = db
+    .prepare(`SELECT at FROM whatsapp_audit ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY at DESC LIMIT 1`)
+    .get(...params)
+  return row?.at ?? null
+}
+
+export function pruneAudit(days = 30) {
+  const limit = new Date(Date.now() - days * 86_400_000).toISOString()
+  return db.prepare('DELETE FROM whatsapp_audit WHERE at < ?').run(limit).changes
 }
 
 function rowToEstado(row) {
