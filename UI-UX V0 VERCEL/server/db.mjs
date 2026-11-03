@@ -94,6 +94,32 @@ CREATE TABLE IF NOT EXISTS sales (
   items TEXT NOT NULL DEFAULT '[]',
   total REAL NOT NULL DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS ventas (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  sale_number TEXT UNIQUE NOT NULL,
+  created_at TEXT NOT NULL,
+  customer_name TEXT,
+  customer_phone TEXT,
+  payment_method TEXT NOT NULL DEFAULT 'efectivo',
+  total REAL NOT NULL DEFAULT 0,
+  total_cost REAL NOT NULL DEFAULT 0,
+  profit REAL NOT NULL DEFAULT 0,
+  notes TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_ventas_created ON ventas(created_at);
+CREATE INDEX IF NOT EXISTS idx_ventas_method ON ventas(payment_method);
+
+CREATE TABLE IF NOT EXISTS venta_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  venta_id INTEGER NOT NULL REFERENCES ventas(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  price REAL NOT NULL DEFAULT 0,
+  cost REAL NOT NULL DEFAULT 0,
+  quantity INTEGER NOT NULL DEFAULT 1,
+  subtotal REAL NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_venta_items_venta ON venta_items(venta_id);
 `)
 
 /* ------------------------------- lectura -------------------------------- */
@@ -275,6 +301,8 @@ export function createOrder(input) {
   return getOrder(orderNumber)
 }
 
+const CLOSED_STATUSES = ['completada', 'rechazada', 'fallida']
+
 function findRow(orderNumber) {
   return db.prepare('SELECT * FROM orders WHERE order_number = ?').get(orderNumber)
 }
@@ -323,6 +351,98 @@ export function updateOrderItems(orderNumber, items) {
   return getOrder(orderNumber)
 }
 
+export function updateOrderDetails(orderNumber, patch = {}) {
+  const row = findRow(orderNumber)
+  if (!row) return undefined
+  const now = new Date().toISOString()
+  const d = patch.device ?? {}
+  const c = patch.customer ?? {}
+  const sets = []
+  const params = []
+
+  const columns = [
+    ['device_type', patch.deviceType ?? d.type],
+    ['device_brand', patch.brand ?? d.brand],
+    ['device_model', patch.model ?? d.model],
+    ['device_serial', patch.serial ?? d.serial],
+    ['device_color', patch.color ?? d.color],
+    ['reported_fault', patch.reportedFault],
+    ['physical_notes', patch.physicalNotes],
+    ['estimated_date', patch.estimatedDate],
+    ['technician', patch.technician],
+  ]
+  for (const [column, value] of columns) {
+    if (value === undefined) continue
+    sets.push(`${column} = ?`)
+    params.push(value || null)
+  }
+  for (const [column, key] of [['estimated_cost', 'estimatedCost'], ['deposit', 'deposit']]) {
+    if (patch[key] === undefined) continue
+    sets.push(`${column} = ?`)
+    params.push(Number(patch[key]) || 0)
+  }
+  for (const [column, key] of [['fault_tags', 'faultTags'], ['accessories', 'accessories']]) {
+    if (patch[key] === undefined) continue
+    sets.push(`${column} = ?`)
+    params.push(JSON.stringify(patch[key] ?? []))
+  }
+
+  const nextStatus = patch.status && patch.status !== row.status ? patch.status : null
+  if (nextStatus) {
+    sets.push('status = ?')
+    params.push(nextStatus)
+    sets.push('delivered_at = ?')
+    params.push(CLOSED_STATUSES.includes(nextStatus) ? row.delivered_at ?? now : null)
+  }
+  sets.push('updated_at = ?')
+  params.push(now)
+
+  const tx = db.transaction(() => {
+    db.prepare(
+      `UPDATE customers SET name = COALESCE(?, name), phone = COALESCE(?, phone),
+         document_id = COALESCE(?, document_id), email = COALESCE(?, email) WHERE id = ?`,
+    ).run(
+      c.name?.trim() || null,
+      c.phone?.trim() || null,
+      c.documentId?.trim() || null,
+      c.email?.trim() || null,
+      row.customer_id,
+    )
+    db.prepare(`UPDATE orders SET ${sets.join(', ')} WHERE id = ?`).run(...params, row.id)
+    if (nextStatus) {
+      db.prepare('INSERT INTO status_events (order_id, status, at, note) VALUES (?,?,?,?)').run(
+        row.id,
+        nextStatus,
+        now,
+        'Datos editados',
+      )
+    }
+    // Los importes pueden haber cambiado: regenera los comprobantes de la orden.
+    db.prepare('DELETE FROM invoices WHERE order_id = ?').run(row.id)
+    addInvoice(row.id, 'recepcion', orderNumber)
+    if ((patch.status ?? row.status) === 'completada') addInvoice(row.id, 'entrega', orderNumber)
+  })
+  tx()
+  return getOrder(orderNumber)
+}
+
+export function deleteOrder(orderNumber) {
+  const row = findRow(orderNumber)
+  if (!row) return false
+  const tx = db.transaction(() => {
+    db.prepare('DELETE FROM order_items WHERE order_id = ?').run(row.id)
+    db.prepare('DELETE FROM order_photos WHERE order_id = ?').run(row.id)
+    db.prepare('DELETE FROM status_events WHERE order_id = ?').run(row.id)
+    db.prepare('DELETE FROM invoices WHERE order_id = ?').run(row.id)
+    db.prepare('DELETE FROM orders WHERE id = ?').run(row.id)
+    // Si el cliente no tiene más órdenes, se elimina también para no dejar registros huérfanos.
+    const left = db.prepare('SELECT COUNT(*) AS c FROM orders WHERE customer_id = ?').get(row.customer_id).c
+    if (left === 0) db.prepare('DELETE FROM customers WHERE id = ?').run(row.customer_id)
+  })
+  tx()
+  return true
+}
+
 export function listInvoices(orderNumber) {
   return rows(
     'SELECT i.* FROM invoices i JOIN orders o ON o.id = i.order_id WHERE o.order_number = ? ORDER BY i.id',
@@ -330,13 +450,207 @@ export function listInvoices(orderNumber) {
   )
 }
 
+/* --------------------------------- ventas -------------------------------- */
+
+export const PAYMENT_METHODS = ['efectivo', 'nequi', 'daviplata', 'llave', 'tarjeta']
+
+function groupByVenta(ventaIds) {
+  const map = new Map()
+  if (ventaIds.length === 0) return map
+  const list = rows(
+    `SELECT * FROM venta_items WHERE venta_id IN (${ventaIds.map(() => '?').join(',')}) ORDER BY id`,
+    ventaIds,
+  )
+  for (const row of list) {
+    if (!map.has(row.venta_id)) map.set(row.venta_id, [])
+    map.get(row.venta_id).push(row)
+  }
+  return map
+}
+
+function rowToVenta(row, items) {
+  return {
+    id: row.sale_number,
+    dbId: row.id,
+    createdAt: row.created_at,
+    customerName: row.customer_name || undefined,
+    customerPhone: row.customer_phone || undefined,
+    paymentMethod: row.payment_method,
+    total: row.total,
+    totalCost: row.total_cost,
+    profit: row.profit,
+    notes: row.notes || undefined,
+    items: items.map((i) => ({
+      id: String(i.id),
+      name: i.name,
+      price: i.price,
+      cost: i.cost,
+      quantity: i.quantity,
+      subtotal: i.subtotal,
+    })),
+  }
+}
+
+function nextSaleNumber() {
+  const used = new Set(db.prepare('SELECT sale_number FROM ventas').all().map((r) => r.sale_number))
+  const max = [...used].reduce((m, value) => {
+    const digits = Number(String(value).replace(/\D/g, ''))
+    return Number.isFinite(digits) ? Math.max(m, digits) : m
+  }, 0)
+  let candidate = Math.max(max + 1, 1001)
+  while (used.has(`VTA-${candidate}`)) candidate += 1
+  return `VTA-${candidate}`
+}
+
+export function listVentas(filters = {}) {
+  const where = []
+  const params = []
+  if (filters.from) {
+    where.push('v.created_at >= ?')
+    params.push(filters.from)
+  }
+  if (filters.to) {
+    where.push('v.created_at <= ?')
+    params.push(filters.to)
+  }
+  if (filters.method && PAYMENT_METHODS.includes(filters.method)) {
+    where.push('v.payment_method = ?')
+    params.push(filters.method)
+  }
+  const q = (filters.q ?? '').trim()
+  if (q) {
+    const like = `%${q}%`
+    where.push(`(
+      COALESCE(v.customer_name, '') LIKE ? OR
+      COALESCE(v.customer_phone, '') LIKE ? OR
+      v.sale_number LIKE ? OR
+      EXISTS (SELECT 1 FROM venta_items vi WHERE vi.venta_id = v.id AND vi.name LIKE ?)
+    )`)
+    params.push(like, like, like, like)
+  }
+  const sql = `SELECT v.* FROM ventas v ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+    ORDER BY v.created_at DESC, v.id DESC`
+  const list = rows(sql, params)
+  const items = groupByVenta(list.map((v) => v.id))
+  return list.map((v) => rowToVenta(v, items.get(v.id) ?? []))
+}
+
+export function getVenta(id) {
+  const row = db.prepare('SELECT * FROM ventas WHERE id = ?').get(Number(id))
+  if (!row) return undefined
+  const items = groupByVenta([row.id]).get(row.id) ?? []
+  return rowToVenta(row, items)
+}
+
+export function createVenta(input = {}) {
+  const now = new Date().toISOString()
+  const items = (Array.isArray(input.items) ? input.items : []).map((i) => ({
+    name: String(i?.name ?? '').trim(),
+    price: Math.max(0, Number(i?.price) || 0),
+    cost: Math.max(0, Number(i?.cost) || 0),
+    quantity: Math.max(1, Math.trunc(Number(i?.quantity) || 1)),
+  }))
+  const total = items.reduce((s, i) => s + i.price * i.quantity, 0)
+  const totalCost = items.reduce((s, i) => s + i.cost * i.quantity, 0)
+
+  const tx = db.transaction(() => {
+    const info = db
+      .prepare(`INSERT INTO ventas (sale_number, created_at, customer_name, customer_phone,
+        payment_method, total, total_cost, profit, notes) VALUES (?,?,?,?,?,?,?,?,?)`)
+      .run(
+        nextSaleNumber(),
+        input.createdAt || now,
+        input.customerName?.trim() || null,
+        input.customerPhone?.trim() || null,
+        input.paymentMethod,
+        total,
+        totalCost,
+        total - totalCost,
+        input.notes?.trim() || null,
+      )
+    const ventaId = Number(info.lastInsertRowid)
+    const insertItem = db.prepare(
+      'INSERT INTO venta_items (venta_id, name, price, cost, quantity, subtotal) VALUES (?,?,?,?,?,?)',
+    )
+    for (const item of items) {
+      insertItem.run(ventaId, item.name, item.price, item.cost, item.quantity, item.price * item.quantity)
+    }
+    return ventaId
+  })
+  return getVenta(tx())
+}
+
+export function deleteVenta(id) {
+  const row = db.prepare('SELECT id FROM ventas WHERE id = ?').get(Number(id))
+  if (!row) return false
+  const tx = db.transaction(() => {
+    db.prepare('DELETE FROM venta_items WHERE venta_id = ?').run(row.id)
+    db.prepare('DELETE FROM ventas WHERE id = ?').run(row.id)
+  })
+  tx()
+  return true
+}
+
+/**
+ * Migra la vieja tabla `sales` (ítems en JSON) a `ventas`/`venta_items` la
+ * primera vez, para que el historial no arranque vacío. No borra `sales`.
+ */
+function migrateLegacySales() {
+  const already = db.prepare('SELECT COUNT(*) AS c FROM ventas').get().c
+  if (already > 0) return
+  const legacy = rows('SELECT * FROM sales ORDER BY id')
+  if (legacy.length === 0) return
+  const tx = db.transaction(() => {
+    const insertVenta = db.prepare(`INSERT INTO ventas (sale_number, created_at, customer_name,
+      customer_phone, payment_method, total, total_cost, profit, notes) VALUES (?,?,?,?,?,?,?,?,?)`)
+    const insertItem = db.prepare(
+      'INSERT INTO venta_items (venta_id, name, price, cost, quantity, subtotal) VALUES (?,?,?,?,?,?)',
+    )
+    for (const sale of legacy) {
+      let items = []
+      try {
+        items = JSON.parse(sale.items || '[]')
+      } catch {
+        items = []
+      }
+      if (!Array.isArray(items) || items.length === 0) continue
+      const parsed = items.map((i) => ({
+        name: String(i?.name ?? 'Artículo').trim() || 'Artículo',
+        price: Math.max(0, Number(i?.price) || 0),
+        cost: Math.max(0, Number(i?.costPrice ?? i?.cost) || 0),
+        quantity: Math.max(1, Math.trunc(Number(i?.quantity) || 1)),
+      }))
+      const total = parsed.reduce((s, i) => s + i.price * i.quantity, 0)
+      const totalCost = parsed.reduce((s, i) => s + i.cost * i.quantity, 0)
+      const info = insertVenta.run(
+        `VTA-L${String(sale.id).padStart(4, '0')}`,
+        sale.sale_date || new Date().toISOString(),
+        null,
+        null,
+        'efectivo',
+        total,
+        totalCost,
+        total - totalCost,
+        'Venta histórica migrada',
+      )
+      const ventaId = Number(info.lastInsertRowid)
+      for (const item of parsed) {
+        insertItem.run(ventaId, item.name, item.price, item.cost, item.quantity, item.price * item.quantity)
+      }
+    }
+  })
+  tx()
+}
+
+migrateLegacySales()
+
 export function stats() {
   return {
     orders: db.prepare('SELECT COUNT(*) c FROM orders').get().c,
     customers: db.prepare('SELECT COUNT(*) c FROM customers').get().c,
     photos: db.prepare('SELECT COUNT(*) c FROM order_photos').get().c,
     invoices: db.prepare('SELECT COUNT(*) c FROM invoices').get().c,
-    sales: db.prepare('SELECT COUNT(*) c FROM sales').get().c,
+    sales: db.prepare('SELECT COUNT(*) c FROM ventas').get().c,
   }
 }
 
