@@ -51,6 +51,15 @@ export interface NewVentaInput {
   notes?: string
 }
 
+/** Campos editables de una venta ya registrada (PUT /api/ventas/:id). */
+export interface VentaPatch {
+  items?: { name: string; price: number; cost: number; quantity: number }[]
+  paymentMethod?: PaymentMethod
+  customerName?: string
+  customerPhone?: string
+  notes?: string
+}
+
 export interface VentaFilters {
   q?: string
   from?: string
@@ -165,6 +174,11 @@ export async function listVentas(filters: VentaFilters = {}): Promise<VentaListR
 
 export async function createVenta(input: NewVentaInput): Promise<Venta> {
   return request<Venta>(VENTAS_URL, { method: 'POST', body: JSON.stringify(input) })
+}
+
+/** Edita cliente, método de pago, nota o los artículos de una venta. */
+export async function updateVenta(id: string | number, patch: VentaPatch): Promise<Venta> {
+  return request<Venta>(ventaUrl(id), { method: 'PUT', body: JSON.stringify(patch) })
 }
 
 export async function deleteVenta(id: string | number): Promise<void> {

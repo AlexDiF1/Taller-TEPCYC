@@ -117,45 +117,94 @@ api.get('/ventas', (req, res) => {
   })
 })
 
-api.post('/ventas', (req, res) => {
-  const body = req.body ?? {}
-  const items = Array.isArray(body.items) ? body.items : []
-  if (items.length === 0) return res.status(400).json({ error: 'La venta debe tener al menos un artículo.' })
-  if (items.length > 200) return res.status(400).json({ error: 'La venta supera el máximo de 200 artículos.' })
+/** Valida los ítems de una venta; lanza {status:400, message} si algo no cuadra. */
+function cleanVentaItems(rawItems) {
+  const items = Array.isArray(rawItems) ? rawItems : []
+  const fail = (message) => {
+    throw Object.assign(new Error(message), { status: 400 })
+  }
+  if (items.length === 0) fail('La venta debe tener al menos un artículo.')
+  if (items.length > 200) fail('La venta supera el máximo de 200 artículos.')
 
-  const method = String(body.paymentMethod ?? '').toLowerCase()
-  if (!store.PAYMENT_METHODS.includes(method)) return res.status(400).json({ error: 'Método de pago inválido.' })
-
-  const cleanItems = []
-  for (const [index, item] of items.entries()) {
+  return items.map((item, index) => {
     const name = String(item?.name ?? '').trim()
-    if (!name) return res.status(400).json({ error: `El artículo #${index + 1} no tiene nombre.` })
-    if (name.length > 120) return res.status(400).json({ error: `El nombre del artículo #${index + 1} es demasiado largo.` })
+    if (!name) fail(`El artículo #${index + 1} no tiene nombre.`)
+    if (name.length > 120) fail(`El nombre del artículo #${index + 1} es demasiado largo.`)
     const price = normalizeMoney(item?.price)
     const cost = normalizeMoney(item?.cost ?? 0)
-    if (Number.isNaN(price)) return res.status(400).json({ error: `Precio inválido en el artículo #${index + 1}.` })
-    if (Number.isNaN(cost)) return res.status(400).json({ error: `Costo inválido en el artículo #${index + 1}.` })
+    if (Number.isNaN(price)) fail(`Precio inválido en el artículo #${index + 1}.`)
+    if (Number.isNaN(cost)) fail(`Costo inválido en el artículo #${index + 1}.`)
     const quantity = Math.trunc(Number(item?.quantity ?? 1))
     if (!Number.isFinite(quantity) || quantity < 1 || quantity > 999) {
-      return res.status(400).json({ error: `Cantidad inválida en el artículo #${index + 1}.` })
+      fail(`Cantidad inválida en el artículo #${index + 1}.`)
     }
-    cleanItems.push({ name, price, cost, quantity })
-  }
+    return { name, price, cost, quantity }
+  })
+}
 
+function cleanVentaCustomer(body) {
   const customerName = String(body.customerName ?? '').trim().slice(0, 120)
   const customerPhone = String(body.customerPhone ?? '').trim().slice(0, 30)
   if (customerPhone && !/^[+()\-\s\d]{7,30}$/.test(customerPhone)) {
-    return res.status(400).json({ error: 'El teléfono del cliente no es válido.' })
+    throw Object.assign(new Error('El teléfono del cliente no es válido.'), { status: 400 })
+  }
+  return { customerName, customerPhone }
+}
+
+api.post('/ventas', (req, res) => {
+  const body = req.body ?? {}
+  const method = String(body.paymentMethod ?? '').toLowerCase()
+  if (!store.PAYMENT_METHODS.includes(method)) return res.status(400).json({ error: 'Método de pago inválido.' })
+
+  let cleanItems
+  let customer
+  try {
+    cleanItems = cleanVentaItems(body.items)
+    customer = cleanVentaCustomer(body)
+  } catch (error) {
+    return res.status(error?.status ?? 400).json({ error: error.message })
   }
 
   const venta = store.createVenta({
     items: cleanItems,
     paymentMethod: method,
-    customerName,
-    customerPhone,
+    customerName: customer.customerName,
+    customerPhone: customer.customerPhone,
     notes: String(body.notes ?? '').slice(0, 400),
   })
   res.status(201).json(venta)
+})
+
+/** Edición de una venta ya registrada (cliente, método, nota e ítems). */
+api.put('/ventas/:id', (req, res) => {
+  const body = req.body ?? {}
+  if (body.paymentMethod !== undefined) {
+    const method = String(body.paymentMethod).toLowerCase()
+    if (!store.PAYMENT_METHODS.includes(method)) {
+      return res.status(400).json({ error: 'Método de pago inválido.' })
+    }
+    body.paymentMethod = method
+  }
+
+  const patch = {}
+  try {
+    if (body.items !== undefined) patch.items = cleanVentaItems(body.items)
+    if (body.customerName !== undefined || body.customerPhone !== undefined) {
+      const customer = cleanVentaCustomer({ customerName: body.customerName, customerPhone: body.customerPhone })
+      if (body.customerName !== undefined) patch.customerName = customer.customerName
+      if (body.customerPhone !== undefined) patch.customerPhone = customer.customerPhone
+    }
+    if (body.paymentMethod !== undefined) patch.paymentMethod = body.paymentMethod
+    if (body.notes !== undefined) patch.notes = String(body.notes).slice(0, 400)
+  } catch (error) {
+    return res.status(error?.status ?? 400).json({ error: error.message })
+  }
+
+  if (Object.keys(patch).length === 0) return res.status(400).json({ error: 'Nada que actualizar.' })
+
+  const venta = store.updateVenta(req.params.id, patch)
+  if (!venta) return res.status(404).json({ error: 'Venta no encontrada.' })
+  res.json(venta)
 })
 
 api.get('/ventas/:id', (req, res) => {

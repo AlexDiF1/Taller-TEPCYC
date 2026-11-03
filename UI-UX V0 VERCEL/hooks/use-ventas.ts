@@ -2,7 +2,7 @@
 
 import useSWR from 'swr'
 import * as api from '@/lib/ventas'
-import type { NewVentaInput, VentaFilters } from '@/lib/ventas'
+import type { NewVentaInput, VentaFilters, VentaPatch } from '@/lib/ventas'
 
 function key(filters: VentaFilters) {
   const params = new URLSearchParams()
@@ -41,12 +41,19 @@ export function useVentas(filters: VentaFilters = {}) {
     await mutate()
   }
 
+  async function updateVenta(id: string | number, patch: VentaPatch) {
+    const venta = await api.updateVenta(id, patch)
+    await mutate()
+    return venta
+  }
+
   return {
     ventas: data?.ventas ?? EMPTY.ventas,
     summary: data?.summary ?? EMPTY.summary,
     isLoading,
     error,
     createVenta,
+    updateVenta,
     deleteVenta,
     refresh: mutate,
   }

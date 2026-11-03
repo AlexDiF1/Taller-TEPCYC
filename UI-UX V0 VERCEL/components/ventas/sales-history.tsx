@@ -14,12 +14,25 @@ import {
   TriangleAlert,
   CalendarDays,
   X,
+  Pencil,
+  Send,
+  FileDown,
+  Loader2,
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatDate, formatMoney } from '@/lib/business'
-import { PAYMENT_METHODS, PAYMENT_MAP, type Venta, type VentaFilters, type VentaSummary } from '@/lib/ventas'
+import {
+  PAYMENT_METHODS,
+  PAYMENT_MAP,
+  buildSaleMessage,
+  buildSaleReceiptPdf,
+  type Venta,
+  type VentaFilters,
+  type VentaSummary,
+} from '@/lib/ventas'
+import { WaOfflineError, WaThrottleError, blobToDataUrl, waSendDocument } from '@/lib/wa'
 import { cn } from '@/lib/utils'
 
 const METHOD_ITEMS = [
@@ -68,6 +81,7 @@ export function SalesHistory({
   filters,
   onFiltersChange,
   onDelete,
+  onEdit,
 }: {
   ventas: Venta[]
   summary: VentaSummary
@@ -76,9 +90,11 @@ export function SalesHistory({
   filters: VentaFilters
   onFiltersChange: (next: VentaFilters) => void
   onDelete: (venta: Venta) => Promise<void>
+  onEdit?: (venta: Venta) => void
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [confirmId, setConfirmId] = useState<string | null>(null)
+  const [sendingId, setSendingId] = useState<string | null>(null)
   const [period, setPeriod] = useState<Period>('todo')
 
   const maxMethod = useMemo(
@@ -106,6 +122,53 @@ export function SalesHistory({
       await promise
     } catch {
       /* el toast ya muestra el error */
+    }
+  }
+
+  /** Descarga el recibo en PDF de una venta del historial. */
+  async function downloadReceipt(venta: Venta) {
+    try {
+      const { blob, filename } = await buildSaleReceiptPdf(venta)
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 4000)
+      toast.info(`Recibo ${venta.id} descargado en PDF.`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo generar el recibo.')
+    }
+  }
+
+  /** Envía el recibo por WhatsApp desde la sesión vinculada del taller. */
+  async function sendReceipt(venta: Venta) {
+    if (!venta.customerPhone) {
+      toast.error('Esta venta no tiene teléfono del cliente. Edítala para agregarlo.')
+      return
+    }
+    setSendingId(venta.id)
+    try {
+      const { blob, filename } = await buildSaleReceiptPdf(venta)
+      await waSendDocument({
+        phone: venta.customerPhone,
+        fileName: filename,
+        dataUrl: await blobToDataUrl(blob),
+        caption: buildSaleMessage(venta),
+      })
+      toast.success(`Recibo de ${venta.id} enviado a ${venta.customerName?.split(' ')[0] ?? venta.customerPhone}.`)
+    } catch (error) {
+      if (error instanceof WaOfflineError) {
+        toast.info('WhatsApp no está conectado: usa "PDF" para enviarlo a mano.')
+      } else if (error instanceof WaThrottleError) {
+        toast.info(`${error.message} Usa "PDF" para enviarlo a mano.`)
+      } else {
+        toast.error(error instanceof Error ? error.message : 'No se pudo enviar el recibo.')
+      }
+    } finally {
+      setSendingId(null)
     }
   }
 
@@ -318,14 +381,15 @@ export function SalesHistory({
                         </li>
                       ))}
                     </ul>
-                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-2.5">
-                      <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                    <div className="mt-3 flex flex-col gap-2.5 border-t border-border pt-2.5">
+                      <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
                         <span>Costo: {formatMoney(venta.totalCost)}</span>
                         <span className="text-status-done">Ganancia: {formatMoney(venta.profit)}</span>
                         {venta.notes && <span className="max-w-[240px] truncate">{venta.notes}</span>}
                       </div>
+
                       {confirming ? (
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center justify-end gap-2">
                           <span className="text-xs text-destructive">¿Eliminar esta venta?</span>
                           <Button
                             type="button"
@@ -347,16 +411,62 @@ export function SalesHistory({
                           </Button>
                         </div>
                       ) : (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setConfirmId(venta.id)}
-                          className="h-8 rounded-lg text-muted-foreground hover:text-destructive"
-                        >
-                          <Trash2 className="size-3.5" aria-hidden="true" />
-                          Eliminar
-                        </Button>
+                        <div className="flex flex-wrap items-center justify-end gap-2">
+                          {onEdit && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => onEdit(venta)}
+                              className="h-8 rounded-lg"
+                            >
+                              <Pencil className="size-3.5" aria-hidden="true" />
+                              Editar
+                            </Button>
+                          )}
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => downloadReceipt(venta)}
+                            className="h-8 rounded-lg"
+                          >
+                            <FileDown className="size-3.5" aria-hidden="true" />
+                            Recibo PDF
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => sendReceipt(venta)}
+                            disabled={sendingId === venta.id}
+                            title={
+                              venta.customerPhone
+                                ? 'Envía el recibo por WhatsApp desde la sesión del taller'
+                                : 'La venta no tiene teléfono del cliente'
+                            }
+                            className={cn(
+                              'h-8 rounded-lg bg-whatsapp font-semibold text-black hover:bg-whatsapp/85',
+                              !venta.customerPhone && 'opacity-60',
+                            )}
+                          >
+                            {sendingId === venta.id ? (
+                              <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                            ) : (
+                              <Send className="size-3.5" aria-hidden="true" />
+                            )}
+                            {sendingId === venta.id ? 'Enviando…' : 'Enviar recibo'}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setConfirmId(venta.id)}
+                            className="h-8 rounded-lg text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="size-3.5" aria-hidden="true" />
+                            Eliminar
+                          </Button>
+                        </div>
                       )}
                     </div>
                   </div>

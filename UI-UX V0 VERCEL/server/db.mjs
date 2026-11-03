@@ -633,6 +633,56 @@ export function deleteVenta(id) {
 }
 
 /**
+ * Edita una venta ya registrada. Los totales siempre se recalculan desde los
+ * ítems (nunca se aceptan del cliente).
+ */
+export function updateVenta(id, patch = {}) {
+  const row = db.prepare('SELECT id FROM ventas WHERE id = ?').get(Number(id))
+  if (!row) return undefined
+
+  const tx = db.transaction(() => {
+    if (Array.isArray(patch.items)) {
+      db.prepare('DELETE FROM venta_items WHERE venta_id = ?').run(row.id)
+      const insert = db.prepare(
+        'INSERT INTO venta_items (venta_id, name, price, cost, quantity, subtotal) VALUES (?,?,?,?,?,?)',
+      )
+      for (const item of patch.items) {
+        insert.run(row.id, item.name, item.price, item.cost, item.quantity, item.price * item.quantity)
+      }
+    }
+
+    const items = rows('SELECT * FROM venta_items WHERE venta_id = ? ORDER BY id', [row.id])
+    const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+    const totalCost = items.reduce((sum, item) => sum + item.cost * item.quantity, 0)
+
+    const sets = []
+    const params = []
+    if (patch.customerName !== undefined) {
+      sets.push('customer_name = ?')
+      params.push(patch.customerName?.trim() || null)
+    }
+    if (patch.customerPhone !== undefined) {
+      sets.push('customer_phone = ?')
+      params.push(patch.customerPhone?.trim() || null)
+    }
+    if (patch.paymentMethod !== undefined) {
+      sets.push('payment_method = ?')
+      params.push(patch.paymentMethod)
+    }
+    if (patch.notes !== undefined) {
+      sets.push('notes = ?')
+      params.push(patch.notes?.trim() || null)
+    }
+    sets.push('total = ?', 'total_cost = ?', 'profit = ?')
+    params.push(total, totalCost, total - totalCost)
+
+    db.prepare(`UPDATE ventas SET ${sets.join(', ')} WHERE id = ?`).run(...params, row.id)
+  })
+  tx()
+  return getVenta(row.id)
+}
+
+/**
  * Migra la vieja tabla `sales` (ítems en JSON) a `ventas`/`venta_items` la
  * primera vez, para que el historial no arranque vacío. No borra `sales`.
  */

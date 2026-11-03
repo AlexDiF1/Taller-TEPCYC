@@ -5,6 +5,7 @@ import { ShoppingCart, History, BarChart3 } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
 import { SaleForm } from './sale-form'
 import { SalesHistory } from './sales-history'
+import { SaleEditDialog } from './sale-edit-dialog'
 import { useVentas } from '@/hooks/use-ventas'
 import type { PaymentMethod, Venta, VentaFilters } from '@/lib/ventas'
 import { cn } from '@/lib/utils'
@@ -13,6 +14,7 @@ type Tab = 'nueva' | 'historial'
 
 export function VentasDashboard() {
   const [tab, setTab] = useState<Tab>('nueva')
+  const [editing, setEditing] = useState<Venta | null>(null)
   const [filters, setFilters] = useState<VentaFilters>({ q: '', method: '', from: '', to: '' })
   const [debouncedQuery, setDebouncedQuery] = useState('')
 
@@ -26,7 +28,7 @@ export function VentasDashboard() {
     [filters, debouncedQuery],
   )
 
-  const { ventas, summary, isLoading, error, deleteVenta, refresh } = useVentas(queryFilters)
+  const { ventas, summary, isLoading, error, deleteVenta, updateVenta, refresh } = useVentas(queryFilters)
 
   useEffect(() => {
     if (tab === 'historial') void refresh()
@@ -79,6 +81,12 @@ export function VentasDashboard() {
             filters={filters}
             onFiltersChange={changeFilters}
             onDelete={handleDelete}
+            onEdit={setEditing}
+          />
+          <SaleEditDialog
+            venta={editing}
+            onClose={() => setEditing(null)}
+            onSave={updateVenta}
           />
         </div>
       )}
