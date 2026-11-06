@@ -1,8 +1,8 @@
 export const BUSINESS = {
   name: 'TODOENPCYCONSOLAS',
   tagline: 'Servicio técnico de consolas, controles y accesorios',
-  taxId: 'NIT 900.000.000-2',
-  address: 'Cra. 00 #00-00, Local 2',
+  taxId: 'NIT 1007624883-1',
+  address: 'Cra 3 # 20-26 Barrio la Esperanza',
   city: 'Bogotá, Colombia',
   phone: '+57 300 000 0000',
   countryCode: '57',
