@@ -3,7 +3,7 @@ export const BUSINESS = {
   tagline: 'Servicio técnico de consolas, controles y accesorios',
   taxId: 'NIT 1007624883-1',
   address: 'Cra 3 # 20-26 Barrio la Esperanza',
-  city: 'Bogotá, Colombia',
+  city: 'Mosquera, Cundinamarca',
   phone: '+57 318 022 3184',
   countryCode: '57',
   warrantyDays: 90,
