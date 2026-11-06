@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import { LayoutGrid, Plus, ReceiptText } from 'lucide-react'
-import { PageHeader } from '@/components/page-header'
 import { cn } from '@/lib/utils'
 
 const TALLER_TABS = [
@@ -19,15 +18,10 @@ export function TallerHeader({
   actions?: React.ReactNode
 }) {
   return (
-    <PageHeader
-      eyebrow="Servicio Técnico"
-      title="Taller de Reparación"
-      description="Gestión integral de servicio técnico: registro de órdenes con fotografías de estado físico, seguimiento por estado y facturación."
-      actions={actions}
-    >
+    <div className="flex flex-wrap items-center gap-2">
       <nav
         aria-label="Pestañas de Taller"
-        className="mt-2 flex items-center gap-1.5 overflow-x-auto rounded-xl border border-border bg-card/60 p-1 backdrop-blur-sm"
+        className="flex items-center gap-1.5 overflow-x-auto rounded-xl border border-border bg-card/60 p-1 backdrop-blur-sm"
       >
         {TALLER_TABS.map((tab) => {
           const active = activeTab === tab.id
@@ -49,6 +43,7 @@ export function TallerHeader({
           )
         })}
       </nav>
-    </PageHeader>
+      {actions && <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>}
+    </div>
   )
 }

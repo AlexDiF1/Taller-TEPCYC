@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { ShoppingCart, History, BarChart3 } from 'lucide-react'
-import { PageHeader } from '@/components/page-header'
 import { SaleForm } from './sale-form'
 import { SalesHistory } from './sales-history'
 import { SaleEditDialog } from './sale-edit-dialog'
@@ -50,12 +49,6 @@ export function VentasDashboard() {
 
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8 md:py-8">
-      <PageHeader
-        eyebrow="Punto de Venta"
-        title="Ventas y Caja POS"
-        description="Registra ventas con carrito multiobjeto, métodos de pago, cálculo de utilidad neta e historial de transacciones."
-      />
-
       <div
         className="inline-flex w-fit items-center gap-1 rounded-xl border border-border bg-muted/40 p-1"
         role="tablist"
