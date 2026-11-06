@@ -88,8 +88,8 @@ export function ConnectionPanel({
   }, [state?.contacts, contacts, state])
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
-      <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
+      <div className="order-2 flex flex-col gap-5">
         <section className="rounded-2xl border border-border bg-card/70 p-4 ring-1 ring-foreground/5 md:p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -356,7 +356,7 @@ export function ConnectionPanel({
         </section>
       </div>
 
-      <aside className="flex flex-col gap-4 rounded-2xl border border-border bg-card/80 p-4 ring-1 ring-foreground/10 lg:sticky lg:top-6">
+      <aside className="order-1 flex flex-col gap-4 rounded-2xl border border-border bg-card/80 p-4 ring-1 ring-foreground/10">
         <header className="flex items-center gap-2">
           <QrCode className="size-4 text-primary" aria-hidden="true" />
           <h2 className="text-sm font-semibold">Vinculación</h2>

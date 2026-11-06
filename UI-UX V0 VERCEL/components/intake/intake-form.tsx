@@ -164,7 +164,6 @@ export function IntakeForm() {
     }
 
     try {
-      // 1) sube las fotos ya comprimidas a /uploads  2) registra la orden con sus URLs
       const photos = await Promise.all(
         draft.photos.map(async (photo) => ({ ...photo, url: await uploadPhoto(photo.url) })),
       )
@@ -182,8 +181,9 @@ export function IntakeForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="grid gap-6 xl:grid-cols-[1fr_380px]">
-      <div className="flex min-w-0 flex-col gap-6">
+    <form onSubmit={handleSubmit} noValidate className="grid gap-6 xl:grid-cols-12">
+      {/* Columna Izquierda / Principal: Datos del cliente y del equipo */}
+      <div className="flex min-w-0 flex-col gap-6 xl:col-span-7">
         <FormSection step={1} icon={UserRound} title="Datos del cliente" description="A este número llegarán las notificaciones.">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Nombre completo" htmlFor="name" required error={errors.name}>
@@ -194,7 +194,7 @@ export function IntakeForm() {
                 value={draft.name}
                 onChange={(e) => set('name', e.target.value)}
                 aria-invalid={!!errors.name}
-                className="h-10"
+                className="h-10 rounded-xl"
               />
             </Field>
             <Field label="WhatsApp" htmlFor="phone" required error={errors.phone} hint={`Se usará el indicativo +${BUSINESS.countryCode}`}>
@@ -211,7 +211,7 @@ export function IntakeForm() {
                   value={draft.phone}
                   onChange={(e) => set('phone', e.target.value)}
                   aria-invalid={!!errors.phone}
-                  className="h-10 pl-12 font-mono"
+                  className="h-10 rounded-xl pl-12 font-mono"
                 />
               </div>
             </Field>
@@ -222,7 +222,7 @@ export function IntakeForm() {
                 placeholder="C.C. / NIT"
                 value={draft.documentId}
                 onChange={(e) => set('documentId', e.target.value)}
-                className="h-10"
+                className="h-10 rounded-xl"
               />
             </Field>
           </div>
@@ -231,7 +231,7 @@ export function IntakeForm() {
         <FormSection step={2} icon={Gamepad} title="Equipo" description="Consola, control, celular o accesorio que ingresa.">
           <fieldset className="mb-5">
             <legend className="mb-2 text-sm font-medium">Tipo de equipo</legend>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
               {DEVICE_TYPES.map(({ value, label, icon: Icon }) => {
                 const active = draft.deviceType === value
                 return (
@@ -241,13 +241,13 @@ export function IntakeForm() {
                     aria-pressed={active}
                     onClick={() => selectDeviceType(value)}
                     className={cn(
-                      'flex flex-col items-center gap-2 rounded-xl border px-3 py-4 text-sm font-medium transition-all',
+                      'flex flex-col items-center gap-2 rounded-xl border p-3 text-xs font-semibold transition-all duration-200',
                       active
-                        ? 'border-primary bg-primary/10 text-foreground shadow-[0_0_0_1px] shadow-primary/40'
-                        : 'border-border bg-secondary/30 text-muted-foreground hover:border-foreground/25 hover:text-foreground',
+                        ? 'border-primary bg-primary/10 text-foreground shadow-sm ring-1 ring-primary/40'
+                        : 'border-border/80 bg-background/40 text-muted-foreground hover:border-foreground/20 hover:text-foreground',
                     )}
                   >
-                    <Icon className={cn('size-6', active && 'text-primary')} aria-hidden="true" />
+                    <Icon className={cn('size-5', active ? 'text-primary' : 'text-muted-foreground')} aria-hidden="true" />
                     {label}
                   </button>
                 )
@@ -264,13 +264,13 @@ export function IntakeForm() {
                   value={draft.brand}
                   onChange={(e) => selectBrand(e.target.value)}
                   aria-invalid={!!errors.brand}
-                  className="h-10"
+                  className="h-10 rounded-xl"
                 />
               </Field>
             ) : (
               <Field label="Marca" htmlFor="brand" required error={errors.brand}>
                 <Select items={BRAND_ITEMS} value={draft.brand} onValueChange={(v) => v && selectBrand(String(v))}>
-                  <SelectTrigger id="brand" className="h-10 w-full">
+                  <SelectTrigger id="brand" className="h-10 w-full rounded-xl">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -304,7 +304,7 @@ export function IntakeForm() {
                     set('model', String(v))
                   }}
                 >
-                  <SelectTrigger id="model" className="h-10 w-full">
+                  <SelectTrigger id="model" className="h-10 w-full rounded-xl">
                     <SelectValue placeholder="Selecciona el modelo" />
                   </SelectTrigger>
                   <SelectContent>
@@ -323,7 +323,7 @@ export function IntakeForm() {
                   value={draft.model}
                   onChange={(e) => set('model', e.target.value)}
                   aria-invalid={!!errors.model}
-                  className="h-10"
+                  className="h-10 rounded-xl"
                 />
               )}
             </Field>
@@ -334,7 +334,7 @@ export function IntakeForm() {
                 placeholder="S/N"
                 value={draft.serial}
                 onChange={(e) => set('serial', e.target.value)}
-                className="h-10 font-mono uppercase"
+                className="h-10 rounded-xl font-mono uppercase"
               />
             </Field>
             <Field label="Color / edición" htmlFor="color">
@@ -343,7 +343,7 @@ export function IntakeForm() {
                 placeholder="Ej. Blanco, Midnight Black"
                 value={draft.color}
                 onChange={(e) => set('color', e.target.value)}
-                className="h-10"
+                className="h-10 rounded-xl"
               />
             </Field>
           </div>
@@ -353,11 +353,12 @@ export function IntakeForm() {
           <Field label="Descripción del cliente" htmlFor="reportedFault" required error={errors.reportedFault}>
             <Textarea
               id="reportedFault"
-              rows={4}
+              rows={3}
               placeholder="¿Qué pasa con el equipo? ¿Desde cuándo? ¿Sufrió golpes o humedad?"
               value={draft.reportedFault}
               onChange={(e) => set('reportedFault', e.target.value)}
               aria-invalid={!!errors.reportedFault}
+              className="rounded-xl"
             />
           </Field>
         </FormSection>
@@ -389,9 +390,9 @@ export function IntakeForm() {
                   addCustomAccessory()
                 }
               }}
-              className="h-10"
+              className="h-10 rounded-xl"
             />
-            <Button type="button" variant="outline" className="h-10" onClick={addCustomAccessory}>
+            <Button type="button" variant="outline" className="h-10 rounded-xl" onClick={addCustomAccessory}>
               <Plus data-icon="inline-start" />
               Agregar
             </Button>
@@ -401,7 +402,7 @@ export function IntakeForm() {
               {draft.accessories.map((item) => (
                 <li
                   key={item}
-                  className="inline-flex items-center gap-2 rounded-full border border-primary/60 bg-primary/12 px-3 py-1.5 text-sm text-primary"
+                  className="inline-flex items-center gap-2 rounded-full border border-primary/60 bg-primary/12 px-3 py-1 text-xs text-primary"
                 >
                   {item}
                   <button
@@ -418,19 +419,6 @@ export function IntakeForm() {
           )}
         </FormSection>
 
-        <FormSection step={5} icon={Camera} title="Estado físico" description="Fotografía rayones, golpes, sellos y puertos al recibir.">
-          <PhotoCapture photos={draft.photos} onChange={(photos) => set('photos', photos)} />
-          <Field label="Observaciones físicas" htmlFor="physicalNotes" className="mt-5">
-            <Textarea
-              id="physicalNotes"
-              rows={3}
-              placeholder="Ej. Rayón en tapa superior, falta tornillo trasero, sello de garantía roto."
-              value={draft.physicalNotes}
-              onChange={(e) => set('physicalNotes', e.target.value)}
-            />
-          </Field>
-        </FormSection>
-
         <FormSection step={6} icon={Calculator} title="Presupuesto">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Costo estimado" htmlFor="estimatedCost" hint="Sujeto a diagnóstico">
@@ -439,21 +427,21 @@ export function IntakeForm() {
             <Field label="Abono recibido" htmlFor="deposit">
               <MoneyInput id="deposit" value={draft.deposit} onChange={(v) => set('deposit', v)} />
             </Field>
-            <Field label="Entrega estimada" htmlFor="estimatedDate">
+            <Field label="Entrega estimada" htmlFor="estimatedDate" className="sm:col-span-2">
               <Input
                 id="estimatedDate"
                 type="date"
                 value={draft.estimatedDate}
                 onChange={(e) => set('estimatedDate', e.target.value)}
-                className="h-10 [color-scheme:dark]"
+                className="h-10 rounded-xl [color-scheme:dark]"
               />
             </Field>
           </div>
 
           <div
             className={cn(
-              'mt-5 flex items-start gap-3 rounded-xl border p-4',
-              errors.acceptedTerms ? 'border-destructive/60 bg-destructive/5' : 'border-border bg-secondary/30',
+              'mt-5 flex items-start gap-3 rounded-xl border p-4 transition-colors',
+              errors.acceptedTerms ? 'border-destructive/60 bg-destructive/5' : 'border-border/80 bg-background/40',
             )}
           >
             <Checkbox
@@ -461,9 +449,9 @@ export function IntakeForm() {
               checked={draft.acceptedTerms}
               onCheckedChange={(checked) => set('acceptedTerms', checked === true)}
               aria-invalid={!!errors.acceptedTerms}
-              className="mt-0.5"
+              className="mt-0.5 rounded-md"
             />
-            <label htmlFor="acceptedTerms" className="text-sm leading-relaxed text-muted-foreground">
+            <label htmlFor="acceptedTerms" className="text-xs leading-relaxed text-muted-foreground">
               El cliente acepta las condiciones del servicio: el diagnóstico puede modificar el costo estimado y los
               equipos no reclamados en 60 días podrán generar cobro por bodegaje.
             </label>
@@ -471,15 +459,32 @@ export function IntakeForm() {
         </FormSection>
       </div>
 
-      <IntakeSummary draft={draft} submitting={submitting}>
-        <Button type="submit" size="lg" disabled={submitting} className="h-12 w-full text-base font-semibold">
-          {submitting ? (
-            <Loader2 data-icon="inline-start" className="animate-spin" />
-          ) : null}
-          {submitting ? 'Registrando...' : 'Registrar ingreso'}
-          {!submitting && <ArrowRight data-icon="inline-end" />}
-        </Button>
-      </IntakeSummary>
+      {/* Columna Derecha / Cámara + Panel de Resumen Fijo */}
+      <div className="flex flex-col gap-6 xl:col-span-5">
+        <FormSection step={5} icon={Camera} title="Estado físico" description="Fotografía rayones, golpes, sellos y puertos al recibir.">
+          <PhotoCapture photos={draft.photos} onChange={(photos) => set('photos', photos)} />
+          <Field label="Observaciones físicas" htmlFor="physicalNotes" className="mt-5">
+            <Textarea
+              id="physicalNotes"
+              rows={2}
+              placeholder="Ej. Rayón en tapa superior, falta tornillo trasero, sello de garantía roto."
+              value={draft.physicalNotes}
+              onChange={(e) => set('physicalNotes', e.target.value)}
+              className="rounded-xl"
+            />
+          </Field>
+        </FormSection>
+
+        <IntakeSummary draft={draft} submitting={submitting}>
+          <Button type="submit" size="lg" disabled={submitting} className="h-11 w-full rounded-xl text-sm font-semibold shadow-md">
+            {submitting ? (
+              <Loader2 data-icon="inline-start" className="animate-spin" />
+            ) : null}
+            {submitting ? 'Registrando...' : 'Registrar ingreso'}
+            {!submitting && <ArrowRight data-icon="inline-end" className="size-4" />}
+          </Button>
+        </IntakeSummary>
+      </div>
     </form>
   )
 }
@@ -487,14 +492,14 @@ export function IntakeForm() {
 function MoneyInput({ id, value, onChange }: { id: string; value: string; onChange: (v: string) => void }) {
   return (
     <div className="relative">
-      <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">$</span>
+      <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-sm text-muted-foreground">$</span>
       <Input
         id={id}
         inputMode="numeric"
         placeholder="0"
         value={value ? Number(value).toLocaleString(BUSINESS.locale) : ''}
         onChange={(e) => onChange(e.target.value.replace(/\D/g, ''))}
-        className="h-10 pl-7 font-mono"
+        className="h-10 rounded-xl pl-7 font-mono"
       />
     </div>
   )

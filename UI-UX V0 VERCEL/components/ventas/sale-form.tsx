@@ -190,9 +190,9 @@ export function SaleForm({ onCreated }: { onCreated: () => void }) {
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start">
+    <div className="grid gap-6 lg:grid-cols-12 lg:items-start">
       {/* ---------------------------- entrada de datos ---------------------------- */}
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-5 lg:col-span-7">
         <section className="rounded-2xl border border-border bg-card/70 p-4 ring-1 ring-foreground/5 md:p-5">
           <header className="flex items-center gap-2">
             <span className="grid size-7 place-items-center rounded-lg bg-primary/12 text-primary">
@@ -309,52 +309,24 @@ export function SaleForm({ onCreated }: { onCreated: () => void }) {
           </form>
         </section>
 
-        <section className="rounded-2xl border border-border bg-card/70 p-4 ring-1 ring-foreground/5 md:p-5">
-          <header className="flex items-center gap-2">
-            <span className="grid size-7 place-items-center rounded-lg bg-status-review/12 text-status-review">
-              <Banknote className="size-4" aria-hidden="true" />
-            </span>
-            <div>
-              <h2 className="text-sm font-semibold">Método de pago</h2>
-              <p className="text-xs text-muted-foreground">Toca el medio por el que entró el dinero.</p>
-            </div>
-          </header>
-          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {PAYMENT_METHODS.map((method) => {
-              const active = paymentMethod === method.value
-              const Icon = method.icon
-              return (
-                <button
-                  key={method.value}
-                  type="button"
-                  onClick={() => setPaymentMethod(method.value)}
-                  aria-pressed={active}
-                  className={cn(
-                    'flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-all',
-                    active
-                      ? 'border-primary/60 bg-primary/10 ring-1 ring-primary/40'
-                      : 'border-border bg-background/40 hover:bg-card hover:border-foreground/20',
-                  )}
-                >
-                  <span className={cn('grid size-9 shrink-0 place-items-center rounded-lg', method.bg, method.text)}>
-                    <Icon className="size-4.5" aria-hidden="true" />
-                  </span>
-                  <span className="min-w-0">
-                    <span className={cn('block truncate text-sm font-medium', active ? 'text-foreground' : 'text-muted-foreground')}>
-                      {method.label}
-                    </span>
-                    <span className="block truncate text-[11px] text-muted-foreground">{method.hint}</span>
-                  </span>
-                </button>
-              )
-            })}
+        <section className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-border bg-card/70 p-4">
+            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Artículos</p>
+            <p className="mt-1 font-mono text-xl font-bold tabular-nums">{totals.units}</p>
           </div>
-          {!paymentMethod && <p className="mt-3 text-xs text-muted-foreground">Selecciona un método para habilitar el registro.</p>}
+          <div className="rounded-2xl border border-border bg-card/70 p-4">
+            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Total</p>
+            <p className="mt-1 font-mono text-xl font-bold tabular-nums">{money(totals.total)}</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-card/70 p-4">
+            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Ganancia</p>
+            <p className="mt-1 font-mono text-xl font-bold tabular-nums text-status-done">{money(totals.profit)}</p>
+          </div>
         </section>
       </div>
 
       {/* -------------------------------- carrito -------------------------------- */}
-      <aside className="flex flex-col gap-3 rounded-2xl border border-border bg-card/80 ring-1 ring-foreground/10 lg:sticky lg:top-6">
+      <aside className="flex flex-col gap-3 rounded-2xl border border-border bg-card/80 ring-1 ring-foreground/10 lg:sticky lg:top-6 lg:col-span-5">
         <header className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
           <div className="flex items-center gap-2">
             <ShoppingCart className="size-4 text-primary" aria-hidden="true" />
@@ -442,6 +414,49 @@ export function SaleForm({ onCreated }: { onCreated: () => void }) {
             </ul>
           )}
         </div>
+
+        <section className="border-t border-border px-4 py-3">
+          <header className="flex items-center gap-2">
+            <span className="grid size-7 place-items-center rounded-lg bg-status-review/12 text-status-review">
+              <Banknote className="size-4" aria-hidden="true" />
+            </span>
+            <div>
+              <h2 className="text-sm font-semibold">Método de pago</h2>
+              <p className="text-xs text-muted-foreground">Toca el medio por el que entró el dinero.</p>
+            </div>
+          </header>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            {PAYMENT_METHODS.map((method) => {
+              const active = paymentMethod === method.value
+              const Icon = method.icon
+              return (
+                <button
+                  key={method.value}
+                  type="button"
+                  onClick={() => setPaymentMethod(method.value)}
+                  aria-pressed={active}
+                  className={cn(
+                    'flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-all duration-200',
+                    active
+                      ? 'border-primary/60 bg-primary/10 ring-1 ring-primary/40'
+                      : 'border-border bg-background/40 hover:bg-card hover:border-foreground/20',
+                  )}
+                >
+                  <span className={cn('grid size-9 shrink-0 place-items-center rounded-lg', method.bg, method.text)}>
+                    <Icon className="size-4.5" aria-hidden="true" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className={cn('block truncate text-sm font-medium', active ? 'text-foreground' : 'text-muted-foreground')}>
+                      {method.label}
+                    </span>
+                    <span className="block truncate text-[11px] text-muted-foreground">{method.hint}</span>
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+          {!paymentMethod && <p className="mt-3 text-xs text-muted-foreground">Selecciona un método para habilitar el registro.</p>}
+        </section>
 
         <div className="border-t border-border px-4 py-3">
           <div className="flex items-center justify-between text-xs text-muted-foreground">

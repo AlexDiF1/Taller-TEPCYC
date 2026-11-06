@@ -144,7 +144,7 @@ export function EstadosPanel({
   const pendientes = estados.filter((e) => e.status === 'pendiente').length
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start">
+    <div className="flex flex-col gap-5">
       <section className="rounded-2xl border border-border bg-card/70 p-4 ring-1 ring-foreground/5 md:p-5">
         <header className="flex items-center gap-2">
           <span className="grid size-7 place-items-center rounded-lg bg-status-waiting/12 text-status-waiting">
@@ -311,7 +311,7 @@ export function EstadosPanel({
         </div>
       </section>
 
-      <aside className="flex flex-col gap-3 rounded-2xl border border-border bg-card/80 p-4 ring-1 ring-foreground/10 lg:sticky lg:top-6">
+      <aside className="flex flex-col gap-3 rounded-2xl border border-border bg-card/80 p-4 ring-1 ring-foreground/10">
         <header className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Clock className="size-4 text-primary" aria-hidden="true" />
