@@ -14,6 +14,17 @@ const nextConfig = {
     'profiles-textbooks-innocent-souls.trycloudflare.com',
     '*.trycloudflare.com',
   ],
+  // El HTML va prerenderizado y tanto el navegador como los proxies intermedios
+  // lo retienen: sin cabeceras de revalidación un despliegue tarda en verse.
+  // Se fuerza la revalidación en cada navegación (los assets de /_next/ quedan intactos).
+  async headers() {
+    return [
+      {
+        source: '/((?!_next/).*)',
+        headers: [{ key: 'Cache-Control', value: 'no-store, must-revalidate' }],
+      },
+    ]
+  },
 }
 
 export default nextConfig
