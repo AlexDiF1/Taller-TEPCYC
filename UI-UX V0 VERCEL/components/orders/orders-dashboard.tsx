@@ -94,8 +94,8 @@ export function OrdersDashboard() {
           />
         </div>
 
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 lg:pb-0">
-          <div className="flex items-center gap-1.5" role="group" aria-label="Filtrar por estado">
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0" role="group" aria-label="Filtrar por estado">
             <FilterTile
               active={filter === 'activas'}
               onClick={() => setFilter('activas')}
