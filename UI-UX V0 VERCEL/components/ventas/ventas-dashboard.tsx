@@ -49,11 +49,11 @@ export function VentasDashboard() {
   }
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-6 md:px-8 md:py-8">
+    <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8 md:py-8">
       <PageHeader
-        eyebrow="Punto de venta"
-        title="Ventas"
-        description="Registra una venta con su carrito, calcula la ganancia real y consulta el historial con sus indicadores."
+        eyebrow="Punto de Venta"
+        title="Ventas y Caja POS"
+        description="Registra ventas con carrito multiobjeto, métodos de pago, cálculo de utilidad neta e historial de transacciones."
       />
 
       <div

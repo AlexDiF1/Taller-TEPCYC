@@ -31,11 +31,11 @@ export function WhatsappDashboard() {
   }, [tab])
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-6 md:px-8 md:py-8">
+    <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8 md:py-8">
       <PageHeader
-        eyebrow="Mensajería"
-        title="WhatsApp"
-        description="Vincula el WhatsApp Business del taller, publica estados y deja programadas las historias del día."
+        eyebrow="Centro de Mensajería"
+        title="WhatsApp Business"
+        description="Vincula la cuenta de WhatsApp del taller mediante Baileys, gestiona protecciones anti-bloqueo y programa historias/estados."
       />
 
       <div

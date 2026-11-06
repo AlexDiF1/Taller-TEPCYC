@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { OrderCard } from './order-card'
 import { OrderDetailDialog } from './order-detail-dialog'
 import { OrderEditDialog } from './order-edit-dialog'
+import { TallerHeader } from './taller-header'
 import { useOrders } from '@/hooks/use-orders'
 import { STATUSES, STATUS_MAP, isClosed } from '@/lib/status'
 import { openWhatsApp } from '@/lib/whatsapp'
@@ -73,7 +74,9 @@ export function OrdersDashboard() {
   }
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-6 md:px-8 md:py-8">
+    <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8 md:py-8">
+      <TallerHeader activeTab="ordenes" />
+
       <div className="-mx-4 overflow-x-auto px-4 md:mx-0 md:px-0">
         <div className="flex min-w-max items-center gap-2" role="group" aria-label="Filtrar por estado">
           <FilterTile
@@ -102,18 +105,18 @@ export function OrdersDashboard() {
 
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
-        <Search className="pointer-events-none absolute left-3.5 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-        <label htmlFor="order-search" className="sr-only">
-          Buscar órdenes
-        </label>
-        <Input
-          id="order-search"
-          type="search"
-          placeholder="Buscar por orden, cliente, teléfono, modelo o serial..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="h-12 rounded-xl bg-card/80 pl-10 text-base backdrop-blur-sm"
-        />
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+          <label htmlFor="order-search" className="sr-only">
+            Buscar órdenes
+          </label>
+          <Input
+            id="order-search"
+            type="search"
+            placeholder="Buscar por orden, cliente, teléfono, modelo o serial..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="h-12 rounded-xl bg-card/80 pl-10 text-base backdrop-blur-sm"
+          />
         </div>
         <Button
           size="icon"

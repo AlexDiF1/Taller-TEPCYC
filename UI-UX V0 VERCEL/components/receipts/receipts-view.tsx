@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { Printer, ClipboardList, ShieldCheck, Save, FileX, Loader2, MessageCircle, Send } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { PageHeader } from '@/components/page-header'
+import { TallerHeader } from '@/components/orders/taller-header'
 import { StatusBadge } from '@/components/status-badge'
 import { WhatsAppButton } from '@/components/orders/whatsapp-button'
 import { ReceiptDocument, type ReceiptType } from './receipt-document'
@@ -101,12 +101,8 @@ export function ReceiptsView({ initialOrderId, initialType }: { initialOrderId?:
   const orderItems = orders.map((o) => ({ label: `${o.id} · ${o.customer.name}`, value: o.id }))
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-6 md:px-8 md:py-10 print:max-w-none print:p-0">
-      <PageHeader
-        eyebrow="Facturación"
-        title="Comprobantes"
-        description="Genera e imprime el comprobante de recepción o la factura de entrega con garantía."
-      />
+    <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8 md:py-8 print:max-w-none print:p-0">
+      <TallerHeader activeTab="comprobantes" />
 
       <div className="grid gap-6 lg:grid-cols-[340px_1fr] print:block">
         <aside className="flex flex-col gap-4 lg:sticky lg:top-6 lg:self-start print:hidden" aria-label="Opciones del comprobante">
