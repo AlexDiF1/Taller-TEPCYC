@@ -163,6 +163,18 @@ CREATE TABLE IF NOT EXISTS whatsapp_audit (
 CREATE INDEX IF NOT EXISTS idx_whatsapp_audit_at ON whatsapp_audit(at);
 `)
 
+/* Migraciones incrementales (SQLite no soporta ADD COLUMN IF NOT EXISTS). */
+function ensureColumn(table, column, definition) {
+  const exists = db
+    .prepare(`PRAGMA table_info(${table})`)
+    .all()
+    .some((c) => c.name === column)
+  if (!exists) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)
+}
+ensureColumn('orders', 'warranty_days', 'INTEGER')
+ensureColumn('orders', 'warranty_screen_excluded', 'INTEGER NOT NULL DEFAULT 0')
+ensureColumn('orders', 'warranty_no_after_review', 'INTEGER NOT NULL DEFAULT 1')
+
 /* ------------------------------- lectura -------------------------------- */
 
 function rows(sql, params = []) {
@@ -206,6 +218,9 @@ function rowToOrder(row, items, photos, events) {
     estimatedCost: row.estimated_cost,
     deposit: row.deposit,
     estimatedDate: row.estimated_date || undefined,
+    warrantyDays: row.warranty_days ?? undefined,
+    warrantyScreenExcluded: Boolean(row.warranty_screen_excluded),
+    warrantyNoAfterReview: row.warranty_no_after_review === undefined ? true : Boolean(row.warranty_no_after_review),
     technician: row.technician || undefined,
     items: items.map((i) => ({ id: String(i.id), description: i.description, kind: i.kind, price: i.price })),
     history: events.map((e) => ({ status: e.status, at: e.at, note: e.note || undefined })),
@@ -299,8 +314,9 @@ export function createOrder(input) {
     const info = db
       .prepare(`INSERT INTO orders (order_number, customer_id, device_type, device_brand, device_model,
         device_serial, device_color, reported_fault, fault_tags, accessories, physical_notes,
-        estimated_cost, deposit, estimated_date, technician, status, created_at, updated_at)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+        estimated_cost, deposit, estimated_date, warranty_days, warranty_screen_excluded,
+        warranty_no_after_review, technician, status, created_at, updated_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
       .run(
         orderNumber,
         customerId,
@@ -316,6 +332,9 @@ export function createOrder(input) {
         Number(input.estimatedCost ?? 0),
         Number(input.deposit ?? 0),
         input.estimatedDate ?? null,
+        input.warrantyDays == null ? null : Number(input.warrantyDays),
+        input.warrantyScreenExcluded ? 1 : 0,
+        input.warrantyNoAfterReview === false ? 0 : 1,
         input.technician ?? null,
         'pendiente',
         now,
@@ -421,6 +440,18 @@ export function updateOrderDetails(orderNumber, patch = {}) {
     if (patch[key] === undefined) continue
     sets.push(`${column} = ?`)
     params.push(Number(patch[key]) || 0)
+  }
+  if (patch.warrantyDays !== undefined) {
+    sets.push('warranty_days = ?')
+    params.push(patch.warrantyDays === null || patch.warrantyDays === '' ? null : Number(patch.warrantyDays))
+  }
+  for (const [column, key] of [
+    ['warranty_screen_excluded', 'warrantyScreenExcluded'],
+    ['warranty_no_after_review', 'warrantyNoAfterReview'],
+  ]) {
+    if (patch[key] === undefined) continue
+    sets.push(`${column} = ?`)
+    params.push(patch[key] ? 1 : 0)
   }
   for (const [column, key] of [['fault_tags', 'faultTags'], ['accessories', 'accessories']]) {
     if (patch[key] === undefined) continue

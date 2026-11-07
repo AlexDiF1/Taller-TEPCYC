@@ -3,6 +3,16 @@
  */
 import { Banknote, CreditCard, KeyRound, Smartphone, Wallet, type LucideIcon } from 'lucide-react'
 import { BUSINESS, formatDate } from './business'
+import {
+  TICKET,
+  buildTicketPdf,
+  center,
+  divider,
+  paragraph,
+  setTicketFont,
+  totalLine,
+  type TicketDoc,
+} from './ticket-pdf'
 
 export type PaymentMethod = 'efectivo' | 'nequi' | 'daviplata' | 'llave' | 'tarjeta'
 
@@ -197,132 +207,92 @@ export function saleReceiptFileName(venta: Venta) {
 
 /** Recibo de caja para el cliente (sin costos ni utilidad). */
 export async function buildSaleReceiptPdf(venta: Venta) {
-  const { jsPDF } = await import('jspdf')
-  const doc = new jsPDF({ unit: 'pt', format: 'a4' })
-  const pageWidth = doc.internal.pageSize.getWidth()
-  const pageHeight = doc.internal.pageSize.getHeight()
-  const margin = 42
-  const contentWidth = pageWidth - margin * 2
-  const gray = 110
-  const black = 20
-  let y = margin
+  const blob = await buildTicketPdf((doc) => drawSaleTicket(doc, venta))
+  return { blob, filename: saleReceiptFileName(venta) }
+}
 
-  function text(value: string, size: number, style: 'normal' | 'bold' = 'normal', color = black) {
-    doc.setFont('helvetica', style)
-    doc.setFontSize(size)
-    doc.setTextColor(color)
-    return doc
+/** Imprime el ticket de 80 mm usando el visor de PDF del navegador. */
+export async function printSaleReceiptPdf(venta: Venta) {
+  const { blob } = await buildSaleReceiptPdf(venta)
+  const url = URL.createObjectURL(blob)
+  const frame = document.createElement('iframe')
+  frame.style.position = 'fixed'
+  frame.style.right = '0'
+  frame.style.bottom = '0'
+  frame.style.width = '0'
+  frame.style.height = '0'
+  frame.style.border = '0'
+  frame.src = url
+  frame.onload = () => {
+    try {
+      frame.contentWindow?.focus()
+      frame.contentWindow?.print()
+    } catch {
+      /* el visor puede bloquear la impresión incrustada */
+    }
   }
+  document.body.appendChild(frame)
+  setTimeout(() => {
+    frame.remove()
+    URL.revokeObjectURL(url)
+  }, 120000)
+}
 
-  function ensureSpace(needed: number) {
-    if (y + needed > pageHeight - margin) {
-      doc.addPage()
-      y = margin
+function drawSaleTicket(doc: TicketDoc, venta: Venta): number {
+  let y: number = TICKET.margin
+  doc.setFillColor(255, 255, 255)
+  doc.rect(0, 0, TICKET.width, doc.internal.pageSize.getHeight(), 'F')
+
+  // Encabezado centrado
+  y = center(doc, BUSINESS.name, y, 12, 'bold', 'helvetica')
+  y = center(doc, BUSINESS.tagline, y, 7.5, 'normal', 'helvetica')
+  y = center(doc, `${BUSINESS.address}, ${BUSINESS.city}`, y, 7, 'normal', 'helvetica')
+  y = center(doc, `WhatsApp ${BUSINESS.phone}`, y, 7, 'normal', 'helvetica')
+  y = center(doc, formatDate(venta.createdAt, true), y, 7, 'normal', 'helvetica')
+  y = divider(doc, y)
+
+  y = center(doc, 'RECIBO DE VENTA', y, 8, 'bold', 'helvetica')
+  y = center(doc, venta.id, y, 14, 'bold', 'courier')
+  y = center(doc, venta.customerName?.trim() || 'Cliente ocasional', y, 9, 'bold', 'helvetica')
+  if (venta.customerPhone) {
+    y = center(doc, `Tel: ${venta.customerPhone}`, y, 7.5, 'normal', 'helvetica')
+  }
+  y = divider(doc, y)
+
+  // Detalle compacto: cantidad x artículo ....... subtotal
+  for (const item of venta.items) {
+    const price = plainMoney(item.subtotal)
+    const prefix = `${item.quantity} x `
+    const maxDesc = TICKET.content - (prefix.length + price.length) * 8 * 0.3528 * 0.6 - 2
+    setTicketFont(doc, 8, 'normal')
+    const lines = doc.splitTextToSize(item.name || '—', Math.max(20, maxDesc))
+    doc.text(prefix + lines[0], TICKET.margin, y)
+    doc.text(price, TICKET.width - TICKET.margin, y, { align: 'right' })
+    y += 8 * 0.3528 * 1.25
+    for (const extra of lines.slice(1)) {
+      doc.text('   ' + extra, TICKET.margin, y)
+      y += 8 * 0.3528 * 1.25
     }
   }
 
-  // Encabezado
-  text(BUSINESS.name, 17, 'bold')
-  doc.text(BUSINESS.name, margin, y)
-  y += 15
-  text(BUSINESS.tagline, 9, 'normal', gray)
-  doc.text(BUSINESS.tagline, margin, y)
-  y += 13
-  text(`${BUSINESS.taxId} · ${BUSINESS.address}, ${BUSINESS.city}`, 8, 'normal', gray)
-  doc.text(`${BUSINESS.taxId} · ${BUSINESS.address}, ${BUSINESS.city}`, margin, y)
-  y += 11
-  text(`WhatsApp ${BUSINESS.phone}`, 8, 'normal', gray)
-  doc.text(`WhatsApp ${BUSINESS.phone}`, margin, y)
-
-  let headY = margin
-  text('RECIBO DE VENTA', 8, 'bold', gray)
-  doc.text('RECIBO DE VENTA', pageWidth - margin, headY, { align: 'right' })
-  headY += 18
-  text(venta.id, 16, 'bold')
-  doc.text(venta.id, pageWidth - margin, headY, { align: 'right' })
-  headY += 14
-  text(formatDate(venta.createdAt, true), 8, 'normal', gray)
-  doc.text(formatDate(venta.createdAt, true), pageWidth - margin, headY, { align: 'right' })
-
-  y += 26
-  doc.setDrawColor(black)
-  doc.setLineWidth(1)
-  doc.line(margin, y, pageWidth - margin, y)
-  y += 20
-
-  // Cliente y pago
-  text('CLIENTE', 8, 'bold', gray)
-  doc.text('CLIENTE', margin, y)
-  text('MÉTODO DE PAGO', 8, 'bold', gray)
-  doc.text('MÉTODO DE PAGO', margin + contentWidth * 0.55, y)
-  y += 14
-  text(venta.customerName || 'Cliente ocasional', 10, 'bold')
-  doc.text(venta.customerName || 'Cliente ocasional', margin, y)
-  text(PAYMENT_MAP[venta.paymentMethod]?.label ?? venta.paymentMethod, 10, 'bold')
-  doc.text(PAYMENT_MAP[venta.paymentMethod]?.label ?? venta.paymentMethod, margin + contentWidth * 0.55, y)
-  y += 12
-  if (venta.customerPhone) {
-    text(venta.customerPhone, 9, 'normal', gray)
-    doc.text(venta.customerPhone, margin, y)
-    y += 12
-  }
-  y += 12
-
-  // Tabla de artículos
-  text('ARTÍCULO', 8, 'bold', gray)
-  doc.text('ARTÍCULO', margin, y)
-  text('CANT.', 8, 'bold', gray)
-  doc.text('CANT.', margin + contentWidth * 0.58, y, { align: 'right' })
-  text('UNITARIO', 8, 'bold', gray)
-  doc.text('UNITARIO', margin + contentWidth * 0.74, y, { align: 'right' })
-  text('SUBTOTAL', 8, 'bold', gray)
-  doc.text('SUBTOTAL', pageWidth - margin, y, { align: 'right' })
-  y += 6
-  doc.setDrawColor(220)
-  doc.setLineWidth(0.5)
-  doc.line(margin, y, pageWidth - margin, y)
-  y += 14
-
-  for (const item of venta.items) {
-    const lines = doc.splitTextToSize(item.name, contentWidth * 0.54)
-    const rowHeight = Math.max(14, lines.length * 12)
-    ensureSpace(rowHeight + 10)
-    text(item.name, 9)
-    doc.text(lines, margin, y)
-    text(String(item.quantity), 9)
-    doc.text(String(item.quantity), margin + contentWidth * 0.58, y, { align: 'right' })
-    text(plainMoney(item.price), 9)
-    doc.text(plainMoney(item.price), margin + contentWidth * 0.74, y, { align: 'right' })
-    text(plainMoney(item.subtotal), 9, 'bold')
-    doc.text(plainMoney(item.subtotal), pageWidth - margin, y, { align: 'right' })
-    y += rowHeight
-  }
-
-  y += 6
-  doc.setDrawColor(black)
-  doc.setLineWidth(0.8)
-  doc.line(margin + contentWidth * 0.55, y, pageWidth - margin, y)
-  y += 16
-  text('TOTAL', 11, 'bold')
-  doc.text('TOTAL', margin + contentWidth * 0.55, y)
-  text(plainMoney(venta.total), 14, 'bold')
-  doc.text(plainMoney(venta.total), pageWidth - margin, y, { align: 'right' })
-  y += 30
+  y = divider(doc, y)
+  setTicketFont(doc, 8, 'normal')
+  doc.text('MÉTODO DE PAGO', TICKET.margin, y)
+  doc.text(PAYMENT_MAP[venta.paymentMethod]?.label ?? venta.paymentMethod, TICKET.width - TICKET.margin, y, { align: 'right' })
+  y += 3.8
+  y = divider(doc, y)
+  y = totalLine(doc, 'TOTAL', plainMoney(venta.total), y, 14)
+  y += 1
 
   if (venta.notes) {
-    text('NOTA', 8, 'bold', gray)
-    doc.text('NOTA', margin, y)
-    y += 12
-    const noteLines = doc.splitTextToSize(venta.notes, contentWidth)
-    text(venta.notes, 9)
-    doc.text(noteLines, margin, y)
-    y += noteLines.length * 12 + 12
+    y = divider(doc, y)
+    y = paragraph(doc, `Nota: ${venta.notes}`, y, 7.5)
   }
 
-  text('Gracias por su compra. Garantía sujeta a las condiciones del producto.', 8, 'normal', gray)
-  doc.text('Gracias por su compra. Garantía sujeta a las condiciones del producto.', margin, y)
-
-  return { blob: doc.output('blob'), filename: saleReceiptFileName(venta) }
+  y = divider(doc, y)
+  y = center(doc, 'Gracias por su compra', y, 9, 'bold', 'helvetica')
+  y = center(doc, 'Garantía sujeta a las condiciones del producto', y, 6.5, 'normal', 'helvetica')
+  return y + 2
 }
 
 /** Mensaje de WhatsApp con el resumen de la venta. */

@@ -8,15 +8,14 @@ import {
   Trash2,
   ShoppingCart,
   Receipt,
-  MessageCircle,
-  FileDown,
   Loader2,
   UserRound,
   PackagePlus,
   Banknote,
   Send,
+  Printer,
 } from 'lucide-react'
-import { Button, buttonVariants } from '@/components/ui/button'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -29,6 +28,7 @@ import {
   buildSaleMessage,
   buildSaleReceiptPdf,
   createVenta,
+  printSaleReceiptPdf,
   type NewVentaInput,
   type PaymentMethod,
   type Venta,
@@ -508,22 +508,48 @@ function SaleSuccessDialog({
 }) {
   const [sending, setSending] = useState(false)
 
-  async function sendAutomatically() {
+  function downloadDelivery() {
+    if (!delivery) return
+    const link = document.createElement('a')
+    link.href = delivery.blobUrl
+    link.download = delivery.fileName
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+  }
+
+  async function handlePrint() {
+    if (!sale) return
+    try {
+      await printSaleReceiptPdf(sale)
+      toast.info('Ticket de 80 mm listo para imprimir.')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo preparar el ticket.')
+    }
+  }
+
+  async function handleDownloadOrSend() {
     if (!sale || !delivery) return
+    if (!sale.customerPhone) {
+      downloadDelivery()
+      toast.info('PDF descargado. El cliente no tiene WhatsApp registrado.')
+      return
+    }
     setSending(true)
     try {
       await waSendDocument({
-        phone: sale.customerPhone ?? '',
+        phone: sale.customerPhone,
         fileName: delivery.fileName,
         dataUrl: delivery.dataUrl,
         caption: buildSaleMessage(sale),
       })
       toast.success('Recibo enviado por WhatsApp.')
     } catch (error) {
+      downloadDelivery()
       if (error instanceof WaOfflineError) {
-        toast.info('WhatsApp no está conectado: descarga el PDF y envíalo a mano.')
+        toast.info('WhatsApp no está conectado: se descargó el PDF para enviarlo a mano.')
       } else if (error instanceof WaThrottleError) {
-        toast.info(`${error.message} Usa "Abrir chat y adjuntar a mano".`)
+        toast.info(`${error.message} Se descargó el PDF para enviarlo a mano.`)
       } else {
         toast.error(error instanceof Error ? error.message : 'No se pudo enviar el recibo.')
       }
@@ -565,52 +591,31 @@ function SaleSuccessDialog({
             </div>
 
             <DialogFooter className="flex-col gap-2 sm:flex-col">
-              {delivery ? (
-                <a
-                  href={delivery.blobUrl}
-                  download={delivery.fileName}
-                  className={buttonVariants({ variant: 'default', className: 'h-10 w-full rounded-xl' })}
-                >
-                  <FileDown className="size-4" aria-hidden="true" />
-                  Descargar recibo PDF
-                </a>
-              ) : (
-                <Button type="button" disabled className="h-10 w-full rounded-xl">
+              <Button
+                type="button"
+                className="h-11 w-full rounded-xl font-semibold"
+                onClick={handlePrint}
+                disabled={!delivery}
+              >
+                <Printer className="size-4" aria-hidden="true" />
+                Imprimir Ticket 80mm
+              </Button>
+              <Button
+                type="button"
+                className="h-11 w-full rounded-xl bg-whatsapp font-semibold text-black hover:bg-whatsapp/85"
+                onClick={handleDownloadOrSend}
+                disabled={!delivery || sending}
+              >
+                {sending ? (
                   <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                  Preparando recibo...
-                </Button>
-              )}
-
-              {delivery?.url && (
-                <>
-                  <Button
-                    type="button"
-                    className="h-10 w-full rounded-xl bg-whatsapp font-semibold text-black hover:bg-whatsapp/85"
-                    onClick={sendAutomatically}
-                    disabled={sending || !sale.customerPhone}
-                  >
-                    {sending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Send className="size-4" aria-hidden="true" />}
-                    {sending ? 'Enviando recibo...' : 'Enviar recibo automático'}
-                  </Button>
-                  <a
-                    href={delivery.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={buttonVariants({
-                      variant: 'outline',
-                      className: 'h-10 w-full rounded-xl border-whatsapp/40 text-whatsapp hover:bg-whatsapp/10',
-                    })}
-                  >
-                    <MessageCircle className="size-4" aria-hidden="true" />
-                    Abrir chat y adjuntar a mano
-                  </a>
-                </>
-              )}
+                ) : (
+                  <Send className="size-4" aria-hidden="true" />
+                )}
+                {sending ? 'Enviando recibo...' : 'Descargar / Enviar PDF por WhatsApp'}
+              </Button>
 
               <p className="text-center text-[11px] text-muted-foreground">
-                {delivery?.url
-                  ? 'Descarga el PDF y adjúntalo con el botón + en el chat de WhatsApp.'
-                  : 'Sin teléfono del cliente: solo se puede descargar el recibo.'}
+                Ticket térmico de 80 mm. Si WhatsApp no está conectado se descarga el PDF para enviarlo a mano.
               </p>
 
               <div className="flex w-full gap-2">

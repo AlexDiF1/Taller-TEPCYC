@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { Search, Plus, Inbox, Layers, TriangleAlert } from 'lucide-react'
+import { Search, Plus, Inbox, Layers, LayoutGrid, TriangleAlert } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { OrderCard } from './order-card'
@@ -16,7 +16,7 @@ import { openWhatsApp } from '@/lib/whatsapp'
 import type { Order, OrderStatus } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
-type Filter = 'activas' | OrderStatus
+type Filter = 'todas' | 'activas' | OrderStatus
 
 export function OrdersDashboard() {
   const { orders, isLoading, error, setStatus, updateOrder, deleteOrder } = useOrders()
@@ -35,7 +35,8 @@ export function OrdersDashboard() {
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase()
     return orders.filter((o) => {
-      const matchesFilter = filter === 'activas' ? !isClosed(o.status) : o.status === filter
+      const matchesFilter =
+        filter === 'todas' ? true : filter === 'activas' ? !isClosed(o.status) : o.status === filter
       if (!matchesFilter) return false
       if (!q) return true
       return [o.id, o.customer.name, o.customer.phone, o.device.brand, o.device.model, o.device.serial ?? '']
@@ -96,6 +97,15 @@ export function OrdersDashboard() {
 
         <div className="flex min-w-0 items-center gap-2">
           <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0" role="group" aria-label="Filtrar por estado">
+            <FilterTile
+              active={filter === 'todas'}
+              onClick={() => setFilter('todas')}
+              label="Todas"
+              count={orders.length}
+              icon={LayoutGrid}
+              accent="text-primary"
+              dot="bg-primary"
+            />
             <FilterTile
               active={filter === 'activas'}
               onClick={() => setFilter('activas')}

@@ -120,20 +120,91 @@
   }
 }
 
+/* Ticket térmico de 80 mm: pantalla y papel */
+.print-sheet {
+  width: 80mm;
+  max-width: 80mm;
+  margin: 0 auto;
+  padding: 4mm;
+  background: #ffffff;
+  color: #000000;
+  font-family: 'Courier New', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9pt;
+  line-height: 1.25;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.print-sheet * {
+  color: #000000;
+}
+
+.ticket-divider {
+  border: 0;
+  border-top: 1px dashed #000000;
+  margin: 2mm 0;
+}
+
+.ticket-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 2mm;
+  font-size: 8.5pt;
+}
+
+.ticket-label {
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.ticket-total {
+  font-size: 12pt;
+  font-weight: 700;
+}
+
 @media print {
   @page {
-    size: letter;
-    margin: 12mm;
+    size: 80mm auto;
+    margin: 0;
   }
   html,
   body {
-    background: white !important;
-    color: black !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  body * {
+    visibility: hidden !important;
+  }
+  .print-sheet,
+  .print-sheet * {
+    visibility: visible !important;
   }
   .print-sheet {
-    box-shadow: none !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 74mm;
+    max-width: 74mm;
+    margin: 0 auto;
+    padding: 2mm;
+    background: #ffffff !important;
+    color: #000000 !important;
     border: none !important;
-    margin: 0 !important;
-    max-width: none !important;
+    box-shadow: none !important;
+    font-size: 9pt;
+    line-height: 1.2;
+  }
+  .print-sheet img {
+    max-width: 100% !important;
+    filter: grayscale(100%) contrast(1.5);
+  }
+  .no-print,
+  .print\:hidden {
+    display: none !important;
+  }
+  .ticket-divider {
+    border-top: 1px dashed #000000 !important;
   }
 }

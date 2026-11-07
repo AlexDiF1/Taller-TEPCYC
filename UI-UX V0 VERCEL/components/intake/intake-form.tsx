@@ -122,10 +122,17 @@ export function IntakeForm() {
     if (errors.brand) setErrors((e) => ({ ...e, brand: undefined }))
   }
 
+  /** «Nada» es un accesorio más de la lista: se activa y se desactiva con el chip. */
+  function toggleAccessory(item: string) {
+    const selected = draft.accessories.includes(item)
+    set('accessories', selected ? draft.accessories.filter((a) => a !== item) : [...draft.accessories, item])
+  }
+
   function addCustomAccessory() {
     const value = customAccessory.trim()
     if (!value || draft.accessories.includes(value)) return
-    set('accessories', [...draft.accessories, value])
+    // Un accesorio real descarta «Nada»: no pueden coexistir.
+    set('accessories', [...draft.accessories.filter((a) => !ACCESSORIES.includes(a)), value])
     setCustomAccessory('')
   }
 
@@ -369,8 +376,8 @@ export function IntakeForm() {
               <ChipToggle
                 key={item}
                 label={item}
-                selected={draft.accessories.length === 0}
-                onToggle={() => set('accessories', [])}
+                selected={draft.accessories.includes(item)}
+                onToggle={() => toggleAccessory(item)}
               />
             ))}
           </div>

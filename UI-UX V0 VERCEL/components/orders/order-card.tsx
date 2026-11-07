@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button'
 import { StatusProgress } from '@/components/status-badge'
 import { StatusSelect } from './status-select'
 import { WhatsAppButton } from './whatsapp-button'
-import { DEVICE_ICON } from '@/lib/status'
+import { DEVICE_ICON, STATUS_MAP } from '@/lib/status'
 import type { Order, OrderStatus } from '@/lib/types'
+import { cn } from '@/lib/utils'
 
 function daysSince(iso: string) {
   const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000)
@@ -26,10 +27,12 @@ export function OrderCard({
   onOpen: (order: Order) => void
 }) {
   const Icon = DEVICE_ICON[order.device.type]
+  const status = STATUS_MAP[order.status]
   const receiptType = order.status === 'completada' ? 'entrega' : 'recepcion'
 
   return (
-    <article className="group flex flex-col justify-between h-full rounded-2xl border border-border/80 bg-card/70 p-4 transition-all duration-200 hover:border-border hover:bg-card hover:shadow-lg hover:shadow-black/20">
+    <article className="group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border-2 border-border bg-card p-4 pt-5 shadow-lg shadow-black/30 ring-1 ring-white/5 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-xl hover:shadow-primary/10">
+      <span className={cn('absolute inset-x-0 top-0 h-1', status.dot)} aria-hidden="true" />
       <button
         type="button"
         onClick={() => onOpen(order)}

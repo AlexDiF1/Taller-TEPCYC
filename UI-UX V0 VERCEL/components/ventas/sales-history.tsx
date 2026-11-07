@@ -18,6 +18,7 @@ import {
   Send,
   FileDown,
   Loader2,
+  Printer,
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -28,6 +29,7 @@ import {
   PAYMENT_MAP,
   buildSaleMessage,
   buildSaleReceiptPdf,
+  printSaleReceiptPdf,
   type Venta,
   type VentaFilters,
   type VentaSummary,
@@ -140,6 +142,16 @@ export function SalesHistory({
       toast.info(`Recibo ${venta.id} descargado en PDF.`)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudo generar el recibo.')
+    }
+  }
+
+  /** Abre el ticket de 80 mm en el visor de PDF para imprimir. */
+  async function printReceipt(venta: Venta) {
+    try {
+      await printSaleReceiptPdf(venta)
+      toast.info(`Ticket ${venta.id} listo para imprimir.`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo preparar el ticket.')
     }
   }
 
@@ -428,11 +440,21 @@ export function SalesHistory({
                             type="button"
                             variant="outline"
                             size="sm"
+                            onClick={() => printReceipt(venta)}
+                            className="h-8 rounded-lg"
+                          >
+                            <Printer className="size-3.5" aria-hidden="true" />
+                            Imprimir 80mm
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
                             onClick={() => downloadReceipt(venta)}
                             className="h-8 rounded-lg"
                           >
                             <FileDown className="size-3.5" aria-hidden="true" />
-                            Recibo PDF
+                            PDF
                           </Button>
                           <Button
                             type="button"

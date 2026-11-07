@@ -1,4 +1,3 @@
-import { Gamepad2, ShieldCheck } from 'lucide-react'
 import { BUSINESS, addDays, formatDate, formatMoney } from '@/lib/business'
 import { STATUS_MAP } from '@/lib/status'
 import type { DeviceType, Order, ServiceItem } from '@/lib/types'
@@ -13,201 +12,176 @@ const DEVICE_TYPE_LABEL: Record<DeviceType, string> = {
   accesorio: 'Accesorio',
 }
 
+/**
+ * Ticket térmico de 80 mm. Se usa como vista previa en pantalla y como
+ * documento de impresión directa (`window.print()`), con estilos monocromos
+ * definidos en `app/globals.css`.
+ */
 export function ReceiptDocument({ order, type, items }: { order: Order; type: ReceiptType; items: ServiceItem[] }) {
   const isDelivery = type === 'entrega'
   const subtotal = items.reduce((s, i) => s + i.price, 0)
   const total = isDelivery ? subtotal || order.estimatedCost : order.estimatedCost
   const balance = Math.max(total - order.deposit, 0)
   const deliveredAt = order.deliveredAt ?? new Date().toISOString()
-  const warrantyUntil = addDays(deliveredAt, BUSINESS.warrantyDays)
+  const warrantyDays = order.warrantyDays ?? BUSINESS.warrantyDays
+  const warrantyUntil = addDays(deliveredAt, warrantyDays)
+  const warrantyExclusions = [
+    'Cubre exclusivamente la reparación y los repuestos descritos en esta factura. No cubre golpes, humedad, manipulación por terceros, sellos rotos ni fallas distintas a la reparada.',
+  ]
+  if (order.device.type === 'celular' && order.warrantyScreenExcluded) {
+    warrantyExclusions.push('No se otorga garantía por pantallas cambiadas.')
+  }
+  if (order.warrantyNoAfterReview !== false) {
+    warrantyExclusions.push(
+      'Después de la entrega y revisión por parte del cliente no se otorga garantía por daños o fallas posteriores.',
+    )
+  }
 
   return (
-    <article className="print-sheet mx-auto w-full max-w-[816px] rounded-xl bg-white text-[13px] leading-relaxed text-neutral-900 shadow-2xl shadow-black/50">
-      <header className="flex flex-col gap-4 border-b-2 border-neutral-900 p-6 sm:flex-row sm:items-start sm:justify-between md:p-8">
-        <div className="flex items-start gap-3">
-          <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-neutral-900 text-[#c0262d]">
-            <Gamepad2 className="size-6" aria-hidden="true" />
-          </span>
-          <div>
-            <p className="text-lg font-bold tracking-tight">{BUSINESS.name}</p>
-            <p className="text-xs text-neutral-600">{BUSINESS.tagline}</p>
-            <p className="mt-1 text-xs text-neutral-600">
-              {BUSINESS.taxId} · {BUSINESS.address}, {BUSINESS.city} · {BUSINESS.phone}
-            </p>
-          </div>
-        </div>
-        <div className="sm:text-right">
-          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-neutral-500">
-            {isDelivery ? 'Factura de entrega' : 'Comprobante de recepción'}
-          </p>
-          <p className="font-mono text-2xl font-bold">{order.id}</p>
-          <p className="text-xs text-neutral-600">
-            {formatDate(isDelivery ? deliveredAt : order.createdAt, true)}
-          </p>
-        </div>
+    <article className="print-sheet">
+      <header className="text-center">
+        <p className="text-[13px] font-bold leading-tight">{BUSINESS.name}</p>
+        <p className="text-[8pt]">{BUSINESS.tagline}</p>
+        <p className="text-[7.5pt]">
+          {BUSINESS.address}, {BUSINESS.city}
+        </p>
+        <p className="text-[7.5pt]">WhatsApp {BUSINESS.phone}</p>
+        <p className="text-[7.5pt]">{formatDate(isDelivery ? deliveredAt : order.createdAt, true)}</p>
       </header>
 
-      <div className="grid gap-6 p-6 md:grid-cols-2 md:p-8">
-        <Block title="Cliente">
-          <Row label="Nombre" value={order.customer.name} />
-          <Row label="WhatsApp" value={`+${BUSINESS.countryCode} ${order.customer.phone}`} mono />
-          {order.customer.documentId && <Row label="Documento" value={order.customer.documentId} mono />}
-          {order.customer.email && <Row label="Correo" value={order.customer.email} />}
-        </Block>
-        <Block title="Equipo">
-          <Row label="Tipo" value={DEVICE_TYPE_LABEL[order.device.type]} />
-          <Row label="Marca / modelo" value={`${order.device.brand} ${order.device.model}`} />
-          {order.device.serial && <Row label="Serie" value={order.device.serial} mono />}
-          {order.device.color && <Row label="Color" value={order.device.color} />}
-        </Block>
+      <div className="ticket-divider" />
 
-        <Block title="Falla reportada" className="md:col-span-2">
-          <p>{order.reportedFault}</p>
-        </Block>
+      <p className="text-center text-[8pt] font-bold uppercase">
+        {isDelivery ? 'Factura de entrega' : 'Comprobante de recepción'}
+      </p>
+      <p className="text-center text-[15pt] font-bold leading-tight">{order.id}</p>
+      <p className="text-center text-[9pt] font-bold">{order.customer.name}</p>
+      <p className="text-center text-[7.5pt]">Tel: +{BUSINESS.countryCode} {order.customer.phone}</p>
+      {order.customer.documentId && <p className="text-center text-[7pt]">Doc: {order.customer.documentId}</p>}
 
-        {!isDelivery && (
-          <>
-            <Block title="Accesorios recibidos">
-              {order.accessories.length ? (
-                <ul className="grid grid-cols-2 gap-x-4 gap-y-1">
-                  {order.accessories.map((a) => (
-                    <li key={a} className="flex items-center gap-2">
-                      <span className="size-3 shrink-0 rounded-sm border border-neutral-900 bg-neutral-900" aria-hidden="true" />
-                      {a}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-neutral-500">El equipo ingresa sin accesorios.</p>
-              )}
-            </Block>
-            <Block title="Estado físico">
-              <p>{order.physicalNotes || 'Sin observaciones adicionales.'}</p>
-              <p className="mt-1 text-xs text-neutral-500">
-                {order.photos.length} foto{order.photos.length === 1 ? '' : 's'} de respaldo en el sistema.
-              </p>
-            </Block>
-            {order.photos.length > 0 && (
-              <div className="grid grid-cols-6 gap-2 md:col-span-2">
-                {order.photos.slice(0, 6).map((p, i) => (
-                  <img
-                    key={p.id}
-                    src={p.url || '/placeholder.svg'}
-                    alt={`Foto de ingreso ${i + 1}`}
-                    className="aspect-square w-full rounded border border-neutral-300 object-cover"
-                  />
-                ))}
-              </div>
-            )}
-          </>
-        )}
+      <div className="ticket-divider" />
 
-        {isDelivery && (
-          <div className="md:col-span-2">
-            <h3 className="mb-2 font-mono text-[10px] uppercase tracking-[0.2em] text-neutral-500">Detalle del servicio</h3>
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="border-b border-neutral-900 text-left text-xs uppercase tracking-wider text-neutral-500">
-                  <th className="py-2 font-medium">Descripción</th>
-                  <th className="py-2 font-medium">Tipo</th>
-                  <th className="py-2 text-right font-medium">Valor</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(items.length ? items : [{ id: 'est', description: 'Servicio técnico', kind: 'servicio' as const, price: order.estimatedCost }]).map(
-                  (item) => (
-                    <tr key={item.id} className="border-b border-neutral-200">
-                      <td className="py-2 pr-2">{item.description || '—'}</td>
-                      <td className="py-2 capitalize text-neutral-600">{item.kind}</td>
-                      <td className="py-2 text-right font-mono">{formatMoney(item.price)}</td>
-                    </tr>
-                  ),
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        <div className="flex flex-col gap-4 md:col-span-2 md:flex-row md:items-end md:justify-between">
-          <div className="text-xs text-neutral-600">
-            {!isDelivery && order.estimatedDate && <p>Entrega estimada: {formatDate(order.estimatedDate)}</p>}
-            <p>Estado actual: {STATUS_MAP[order.status].label}</p>
-          </div>
-          <dl className="w-full rounded-lg bg-neutral-100 p-4 md:w-72">
-            <div className="flex justify-between">
-              <dt className="text-neutral-600">{isDelivery ? 'Total servicio' : 'Costo estimado'}</dt>
-              <dd className="font-mono">{formatMoney(total)}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-neutral-600">Abono</dt>
-              <dd className="font-mono">- {formatMoney(order.deposit)}</dd>
-            </div>
-            <div className="mt-2 flex justify-between border-t border-neutral-900 pt-2 text-base font-bold">
-              <dt>{isDelivery ? 'Total pagado' : 'Saldo pendiente'}</dt>
-              <dd className="font-mono">{formatMoney(isDelivery ? total : balance)}</dd>
-            </div>
-          </dl>
+      <div className="flex flex-col gap-0.5 text-[8pt]">
+        <div className="ticket-row">
+          <span className="ticket-label">Equipo:</span>
+          <span className="text-right">{DEVICE_TYPE_LABEL[order.device.type] ?? order.device.type}</span>
         </div>
-
-        {isDelivery ? (
-          <div className="flex gap-3 rounded-lg border-2 border-neutral-900 p-4 md:col-span-2">
-            <ShieldCheck className="size-6 shrink-0" aria-hidden="true" />
-            <div>
-              <p className="font-bold">
-                Garantía de {BUSINESS.warrantyDays} días · válida hasta el {formatDate(warrantyUntil)}
-              </p>
-              <p className="mt-1 text-xs text-neutral-600">
-                Cubre exclusivamente la reparación y los repuestos descritos en esta factura. No cubre golpes, humedad,
-                manipulación por terceros, sellos rotos ni fallas distintas a la reparada. Presente esta factura para
-                hacerla efectiva.
-              </p>
-            </div>
-          </div>
-        ) : (
-          <div className="rounded-lg bg-neutral-100 p-4 text-xs text-neutral-600 md:col-span-2">
-            <p className="mb-1 font-semibold text-neutral-900">Condiciones del servicio</p>
-            <ul className="list-disc space-y-0.5 pl-4">
-              <li>Presente este comprobante para retirar el equipo.</li>
-              <li>El costo estimado puede variar después del diagnóstico; se le notificará antes de reparar.</li>
-              <li>Equipos no reclamados en 60 días generan cobro por bodegaje.</li>
-              <li>El taller no se responsabiliza por información o cuentas almacenadas en el equipo.</li>
-            </ul>
+        <div className="ticket-row">
+          <span className="ticket-label">Marca/modelo:</span>
+          <span className="text-right">
+            {order.device.brand} {order.device.model}
+          </span>
+        </div>
+        {order.device.serial && (
+          <div className="ticket-row">
+            <span className="ticket-label">Serie:</span>
+            <span className="text-right">{order.device.serial}</span>
           </div>
         )}
+        {order.device.color && (
+          <div className="ticket-row">
+            <span className="ticket-label">Color:</span>
+            <span className="text-right">{order.device.color}</span>
+          </div>
+        )}
+      </div>
 
-        <div className="grid grid-cols-2 gap-8 pt-10 md:col-span-2">
-          <Signature label={isDelivery ? 'Recibí a satisfacción · Cliente' : 'Firma del cliente'} />
-          <Signature label={isDelivery ? 'Entrega · Técnico' : 'Recibido por · Taller'} />
+      <div className="ticket-divider" />
+
+      <div className="text-[8pt]">
+        <p className="font-bold">Falla reportada:</p>
+        <p>{order.reportedFault || 'Sin descripción registrada.'}</p>
+      </div>
+
+      {!isDelivery ? (
+        <>
+          <div className="ticket-divider" />
+          <div className="text-[7.5pt]">
+            <p className="font-bold">Accesorios:</p>
+            <p>{order.accessories.length ? order.accessories.join(', ') : 'El equipo ingresa sin accesorios.'}</p>
+            <p className="mt-1 font-bold">Estado físico:</p>
+            <p>{order.physicalNotes || 'Sin observaciones adicionales.'}</p>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="ticket-divider" />
+          <p className="text-center text-[7.5pt] font-bold">DETALLE DEL SERVICIO</p>
+          <div className="mt-1 flex flex-col gap-0.5 text-[8pt]">
+            {(items.length
+              ? items
+              : [{ id: 'est', description: 'Servicio técnico', kind: 'servicio' as const, price: order.estimatedCost }]
+            ).map((item) => (
+              <div key={item.id} className="ticket-row">
+                <span className="pr-1">{item.description || '—'}</span>
+                <span className="shrink-0 font-mono">{formatMoney(item.price)}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      <div className="ticket-divider" />
+
+      <div className="flex flex-col gap-0.5 text-[8pt]">
+        <div className="ticket-row">
+          <span className="font-bold">{isDelivery ? 'TOTAL SERVICIO' : 'COSTO ESTIMADO'}</span>
+          <span className="font-mono">{formatMoney(total)}</span>
+        </div>
+        <div className="ticket-row">
+          <span>ABONO</span>
+          <span className="font-mono">- {formatMoney(order.deposit)}</span>
         </div>
       </div>
 
-      <footer className="border-t border-dashed border-neutral-300 px-6 py-3 text-center font-mono text-[10px] uppercase tracking-[0.2em] text-neutral-500 md:px-8">
-        Gracias por confiar en {BUSINESS.name}
+      <div className="ticket-divider" />
+
+      <div className="ticket-row ticket-total">
+        <span>{isDelivery ? 'TOTAL PAGADO' : 'SALDO PENDIENTE'}</span>
+        <span className="font-mono">{formatMoney(isDelivery ? total : balance)}</span>
+      </div>
+
+      <div className="ticket-divider" />
+
+      <div className="flex flex-col gap-0.5 text-[7.5pt]">
+        <div className="ticket-row">
+          <span>Estado:</span>
+          <span className="text-right font-bold">{STATUS_MAP[order.status]?.label ?? order.status}</span>
+        </div>
+        {!isDelivery && order.estimatedDate && (
+          <div className="ticket-row">
+            <span>Entrega estimada:</span>
+            <span className="text-right">{formatDate(order.estimatedDate)}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="ticket-divider" />
+
+      {isDelivery ? (
+        <div className="text-[7pt]">
+          <p className="text-center text-[8pt] font-bold">GARANTÍA</p>
+          <p className="mt-1">
+            Garantía de {warrantyDays} días · válida hasta el {formatDate(warrantyUntil)}
+          </p>
+          <ul className="mt-1 list-disc space-y-0.5 pl-4">
+            {warrantyExclusions.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <div className="text-[7pt]">
+          <p>El diagnóstico puede modificar el costo estimado. Equipos no reclamados en 60 días generan cobro por bodegaje. Presente este comprobante para retirar el equipo.</p>
+        </div>
+      )}
+
+      <div className="ticket-divider" />
+
+      <footer className="text-center">
+        <p className="text-[9pt] font-bold">¡Gracias por su preferencia!</p>
+        <p className="text-[6.5pt]">Comprobante generado por el sistema del taller</p>
       </footer>
     </article>
-  )
-}
-
-function Block({ title, children, className }: { title: string; children: React.ReactNode; className?: string }) {
-  return (
-    <section className={className}>
-      <h3 className="mb-2 font-mono text-[10px] uppercase tracking-[0.2em] text-neutral-500">{title}</h3>
-      {children}
-    </section>
-  )
-}
-
-function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
-  return (
-    <div className="flex justify-between gap-4 border-b border-neutral-200 py-1">
-      <span className="text-neutral-600">{label}</span>
-      <span className={mono ? 'text-right font-mono' : 'text-right font-medium'}>{value}</span>
-    </div>
-  )
-}
-
-function Signature({ label }: { label: string }) {
-  return (
-    <div className="border-t border-neutral-900 pt-2 text-center text-xs text-neutral-600">{label}</div>
   )
 }

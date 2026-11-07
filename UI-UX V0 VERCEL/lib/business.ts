@@ -1,6 +1,6 @@
 export const BUSINESS = {
-  name: 'TODOENPCYCONSOLAS',
-  tagline: 'Servicio técnico de consolas, controles y accesorios',
+  name: 'TODOENPCYCONSOLAS2',
+  tagline: 'Servicio Técnico y Venta de Videojuegos',
   taxId: 'NIT 1007624883-1',
   address: 'Cra 3 # 20-26 Barrio la Esperanza',
   city: 'Mosquera, Cundinamarca',

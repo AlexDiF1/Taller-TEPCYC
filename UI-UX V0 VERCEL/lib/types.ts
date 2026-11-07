@@ -57,6 +57,12 @@ export interface Order {
   estimatedCost: number
   deposit: number
   estimatedDate?: string
+  /** Días de garantía definidos por el taller. Vacío = valor por defecto del negocio. */
+  warrantyDays?: number
+  /** Solo celulares: no se otorga garantía por pantallas cambiadas. */
+  warrantyScreenExcluded?: boolean
+  /** Una vez entregado y revisado por el cliente no se otorga garantía (por defecto sí). */
+  warrantyNoAfterReview?: boolean
   technician?: string
   items: ServiceItem[]
   history: StatusEvent[]
@@ -80,6 +86,9 @@ export interface OrderPatch {
   estimatedCost?: number
   deposit?: number
   estimatedDate?: string
+  warrantyDays?: number | null
+  warrantyScreenExcluded?: boolean
+  warrantyNoAfterReview?: boolean
   technician?: string
 }
 
