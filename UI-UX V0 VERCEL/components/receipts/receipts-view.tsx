@@ -14,7 +14,7 @@ import { StatusSelect } from '@/components/orders/status-select'
 import { ReceiptDocument, type ReceiptType } from './receipt-document'
 import { ItemsEditor } from './items-editor'
 import { useOrders } from '@/hooks/use-orders'
-import { downloadReceiptPdf, prepareReceiptDelivery, type ReceiptDelivery } from '@/lib/receipt-pdf'
+import { downloadReceiptPdf, openReceiptPdf, prepareReceiptDelivery, type ReceiptDelivery } from '@/lib/receipt-pdf'
 import { buildReceiptMessage } from '@/lib/whatsapp'
 import { WaOfflineError, WaThrottleError, blobToDataUrl, waSendDocument } from '@/lib/wa'
 import type { Order, OrderPatch, ServiceItem } from '@/lib/types'
@@ -30,20 +30,27 @@ export function ReceiptsView({ initialOrderId, initialType }: { initialOrderId?:
   const { orders, isLoading, setItems, setStatus, updateOrder } = useOrders()
   const [type, setType] = useState<ReceiptType>(initialType ?? 'recepcion')
   const [delivery, setDelivery] = useState<ReceiptDelivery | null>(null)
+  const [ticketDelivery, setTicketDelivery] = useState<ReceiptDelivery | null>(null)
   const [sendingPdf, setSendingPdf] = useState(false)
   const orderId = initialOrderId ?? orders[0]?.id
   const order = orders.find((o) => o.id === orderId)
   const itemsKey = JSON.stringify(order?.items ?? [])
 
-  // El PDF se genera antes del clic: el manejador del clic descarga y navega a
-  // WhatsApp de inmediato, sin perder el gesto de usuario en el móvil.
+  // Se generan las dos versiones antes del clic: el PDF bonito (con fotos) para
+  // WhatsApp y el ticket térmico de 80 mm para imprimir o descargar.
   useEffect(() => {
     let alive = true
     setDelivery(null)
+    setTicketDelivery(null)
     if (!order) return
-    prepareReceiptDelivery(order, type, order.items)
-      .then((next) => {
-        if (alive) setDelivery(next)
+    Promise.all([
+      prepareReceiptDelivery(order, type, order.items, 'pretty'),
+      prepareReceiptDelivery(order, type, order.items, 'ticket'),
+    ])
+      .then(([pretty, ticket]) => {
+        if (!alive) return
+        setDelivery(pretty)
+        setTicketDelivery(ticket)
       })
       .catch(() => {
         if (alive) toast.error('No se pudo generar el comprobante en PDF.')
@@ -193,9 +200,28 @@ export function ReceiptsView({ initialOrderId, initialType }: { initialOrderId?:
                 className="h-11 bg-whatsapp font-semibold text-black hover:bg-whatsapp/85"
                 onClick={sendReceiptAutomatically}
                 disabled={!delivery || sendingPdf}
+                title={`PDF bonito con fotos (${order.photos.length} foto${order.photos.length === 1 ? '' : 's'})`}
               >
                 {sendingPdf ? <Loader2 data-icon="inline-start" className="animate-spin" /> : <Send data-icon="inline-start" />}
-                {sendingPdf ? 'Enviando comprobante...' : 'Descargar / Enviar PDF por WhatsApp'}
+                {sendingPdf ? 'Enviando comprobante...' : 'Enviar PDF bonito por WhatsApp'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 text-xs"
+                onClick={() => delivery && downloadReceiptPdf(delivery)}
+                disabled={!delivery}
+              >
+                Descargar PDF bonito (con fotos)
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 text-xs"
+                onClick={() => ticketDelivery && openReceiptPdf(ticketDelivery)}
+                disabled={!ticketDelivery}
+              >
+                Descargar / abrir ticket 80mm (PDF)
               </Button>
             </div>
           )}

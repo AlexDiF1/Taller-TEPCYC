@@ -7,6 +7,7 @@
  *   (Baileys) desde la interfaz del comprobante.
  */
 import { BUSINESS, addDays, formatDate } from './business'
+import { buildPrettyReceiptPdf } from './receipt-pdf-pro'
 import { buildReceiptMessage, buildWhatsAppUrl } from './whatsapp'
 import { STATUS_MAP } from './status'
 import type { Order, ServiceItem } from './types'
@@ -176,11 +177,15 @@ export function receiptFileName(order: Order, type: ReceiptType) {
   return `${type === 'entrega' ? 'Factura' : 'Comprobante'}-${order.id}.pdf`
 }
 
+/** 'ticket' = rollo térmico 80 mm · 'pretty' = A4 con fotos para WhatsApp. */
+export type ReceiptVariant = 'ticket' | 'pretty'
+
 export type ReceiptDelivery = {
   /** URL de WhatsApp con el chat del cliente y el mensaje ya escrito. */
   url: string
   blob: Blob
   fileName: string
+  variant: ReceiptVariant
 }
 
 function download(blob: Blob, filename: string) {
@@ -203,11 +208,14 @@ export async function prepareReceiptDelivery(
   order: Order,
   type: ReceiptType,
   items: ServiceItem[],
+  variant: ReceiptVariant = 'pretty',
 ): Promise<ReceiptDelivery> {
-  const { blob, filename } = await buildReceiptPdf(order, type, items)
+  const { blob, filename } =
+    variant === 'ticket' ? await buildReceiptPdf(order, type, items) : await buildPrettyReceiptPdf(order, type, items)
   return {
     blob,
     fileName: filename,
+    variant,
     url: buildWhatsAppUrl(order.customer.phone, buildReceiptMessage(order, type)),
   }
 }
