@@ -22,3 +22,6 @@ next-env.d.ts
 # credenciales firebase
 firebase-key.json
 *firebase-adminsdk*.json
+
+# datos de clientes (no publicar)
+firestore-backup/
