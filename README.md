@@ -13,11 +13,11 @@ Un solo proceso Node (`taller-tepcyc` en PM2, puerto **3005**) sirve:
 | `/uploads/*` | Fotos de los equipos (estáticas) |
 | `/api/health` | Estado y conteos de la base |
 
-- **Base de datos**: SQLite (`better-sqlite3`) en `UI-UX V0 VERCEL/data/taller.db`
+- **Base de datos**: SQLite (`better-sqlite3`) en `TallerTEPCYC APP/data/taller.db`
   con las tablas `customers`, `orders`, `order_items`, `order_photos`, `status_events`,
   `invoices` y `sales`.
 - **Fotos**: se comprimen en el navegador (`lib/image.ts`, máx. 1280 px, JPEG 0.72)
-  y se suben a `/api/uploads`, que las guarda en `UI-UX V0 VERCEL/uploads/`.
+  y se suben a `/api/uploads`, que las guarda en `TallerTEPCYC APP/uploads/`.
 - **Facturas**: se generan solas — `R-<orden>` al registrar el ingreso y `E-<orden>`
   al pasar la orden a `completada`.
 - **Estados**: `pendiente`, `enRevision`, `esperandoConfirmacion`, `completada`,
