@@ -16,14 +16,26 @@
   const soportado = typeof navigator.getGamepads === 'function';
   let bucle = 0, actual = '';
 
-  const mando = () => [...navigator.getGamepads()].find((g) => g && g.connected) || null;
+  /* Puede haber mandos virtuales: se elige el que tenga un botón presionado */
+  let elegido = null;
+  const mando = () => {
+    const lista = [...navigator.getGamepads()].filter((g) => g && g.connected);
+    if (!lista.length) { elegido = null; return null; }
+    const activo = lista.find((g) => g.buttons.some((b) => b.pressed));
+    if (activo) elegido = activo.index;
+    return lista.find((g) => g.index === elegido) || lista[0];
+  };
   const decir = (t) => { if (estado.textContent !== t) estado.textContent = t; };
+  const crudo = $('[data-crudo]');
+  const SIN_BOTONES = 'Botones recibidos: ninguno';
+  const mostrarCrudo = (t) => { if (crudo.textContent !== t) crudo.textContent = t; };
 
   function limpiar() {
     botones.forEach((b) => b.classList.remove('activo'));
     gatillos.forEach((g) => g.setAttribute('width', 0));
     palancas.forEach((p) => { p.g.setAttribute('transform', 'translate(0 0)'); p.texto.textContent = 'X 0.00 · Y 0.00'; });
     vibrar.hidden = true;
+    mostrarCrudo(SIN_BOTONES);
   }
 
   function leer() {
@@ -35,9 +47,12 @@
     }
     if (actual !== g.id) {
       actual = g.id;
-      decir(g.mapping === 'standard' ? 'Control conectado. Presiona cada botón para probarlo.' : 'Control conectado. En este modelo algunos botones pueden no coincidir con el dibujo.');
+      const nombre = g.id.replace(/\s*\(.*$/, '') || 'Control';
+      decir(g.mapping === 'standard' ? `Detectado: ${nombre}. Presiona cada botón para probarlo.` : `Detectado: ${nombre}. En este modelo algunos botones pueden no coincidir con el dibujo.`);
       vibrar.hidden = !g.vibrationActuator;
     }
+    const presionados = g.buttons.reduce((l, b, n) => { if (b.pressed) l.push(n); return l; }, []);
+    mostrarCrudo(presionados.length ? `Botones recibidos: ${presionados.join(', ')}` : SIN_BOTONES);
     botones.forEach((el) => {
       const b = g.buttons[Number(el.dataset.b)];
       el.classList.toggle('activo', !!b && (b.pressed || b.value > 0.1));

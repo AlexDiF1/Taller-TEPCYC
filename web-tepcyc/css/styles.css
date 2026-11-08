@@ -163,21 +163,20 @@ h1 .acento{color:var(--brand-texto)}
 /* ===== Barra de navegacion en celular ===== */
 .barra-nav{display:none}
 @media(max-width:899px){
-  .barra-nav{position:fixed;z-index:20;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom));width:min(100% - 24px,480px);height:66px;margin-inline:auto;padding:6px;display:flex;gap:2px;
-    background:rgba(26,11,16,.76);-webkit-backdrop-filter:blur(14px) saturate(1.4);backdrop-filter:blur(14px) saturate(1.4);border:1.5px solid rgba(240,48,58,.6);border-radius:999px;
-    box-shadow:0 10px 26px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.12);transition:translate .3s var(--ease)}
+  .barra-nav{position:fixed;z-index:20;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom));width:min(100% - 40px,300px);height:62px;margin-inline:auto;padding:0 6px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+    background:rgba(17,18,22,.95);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.16);border-radius:22px;
+    box-shadow:0 10px 24px rgba(0,0,0,.6);transition:translate .3s var(--ease)}
   .barra-nav.oculta{translate:0 170%}
-  .barra-nav a{position:relative;flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;border-radius:999px;color:#fff;text-decoration:none;font:800 clamp(12.5px,3.7vw,14px)/1 var(--font-body);-webkit-tap-highlight-color:transparent;transition:flex-grow .45s var(--ease)}
-  .barra-nav a::before{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(100deg,#8B1226,#D81E28);box-shadow:0 4px 14px rgba(216,30,40,.5),inset 0 1px 0 rgba(255,255,255,.3);opacity:0;transition:opacity .3s}
-  .barra-nav a[aria-current]{flex-grow:2.6}
-  .barra-nav a[aria-current]::before{opacity:1}
-  .barra-nav__icono{position:relative;width:24px;height:24px;flex:none;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;transition:scale .15s}
+  .barra-nav a{min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#A9ADB5;text-decoration:none;font:600 11.5px/1.1 var(--font-body);-webkit-tap-highlight-color:transparent}
+  .barra-nav a span{white-space:nowrap}
+  .barra-nav__caja{width:44px;height:30px;display:grid;place-items:center;border-radius:10px;transition:background .2s}
+  .barra-nav__icono{width:21px;height:21px;flex:none;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;transition:scale .15s}
   .barra-nav a:active .barra-nav__icono{scale:.84}
-  .barra-nav a span{position:relative;max-width:0;opacity:0;overflow:hidden;white-space:nowrap;transition:max-width .45s var(--ease),opacity .25s,margin-left .45s var(--ease)}
-  .barra-nav a[aria-current] span{max-width:96px;opacity:1;margin-left:8px}
+  .barra-nav a[aria-current]{color:#fff}
+  .barra-nav a[aria-current] .barra-nav__caja{background:#C61E28}
   .barra-nav a:focus-visible{outline-offset:-3px}
-  .pie{padding-bottom:calc(100px + env(safe-area-inset-bottom))}
-  .hero__grid{padding-bottom:96px}
+  .pie{padding-bottom:calc(92px + env(safe-area-inset-bottom))}
+  .hero__grid{padding-bottom:90px}
 }
 
 /* Celular: el logo grande abre la página y el 2 cae sobre él; la PS5 de portada solo se ve en computadora */

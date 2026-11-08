@@ -80,10 +80,11 @@
     </li>`).join('');
     vacio.hidden = cuenta > 0;
     lineas.hidden = pie.hidden = cuenta === 0;
-    $('[data-cuenta]').textContent = cuenta;
-    $('[data-total-boton]').textContent = pesos(total);
+    const globo = $('[data-cuenta]');
+    globo.textContent = cuenta > 99 ? '99+' : cuenta;
+    globo.hidden = cuenta === 0;
+    botonCarrito.setAttribute('aria-label', cuenta ? `Ver carrito, ${cuenta} en total` : 'Ver carrito, vacio');
     $('[data-total]').textContent = pesos(total);
-    botonCarrito.classList.toggle('oculta', cuenta === 0);
     if (cuenta) enviar.href = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(mensaje())}`;
     else enviar.removeAttribute('href');
     guardar();
@@ -104,7 +105,7 @@
     texto.textContent = 'Agregado';
     clearTimeout(b._t);
     b._t = setTimeout(() => { texto.textContent = 'Agregar'; }, 1000);
-    if (hayGsap) gsap.fromTo(botonCarrito, { scale: 1.06 }, { scale: 1, duration: 0.4, ease: 'back.out(2.4)', clearProps: 'scale' });
+    if (hayGsap) gsap.fromTo(botonCarrito, { scale: 1.22 }, { scale: 1, duration: 0.45, ease: 'back.out(2.4)', clearProps: 'scale' });
   });
   filtros.addEventListener('click', (e) => { const b = e.target.closest('[data-cat]'); if (b) elegirFiltro(b.dataset.cat); });
   botonCarrito.addEventListener('click', () => dialogo.showModal());
