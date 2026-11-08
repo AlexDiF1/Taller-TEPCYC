@@ -39,8 +39,13 @@ class Handler(SimpleHTTPRequestHandler):
         return None
 
     def end_headers(self):
-        ruta = self.path
-        if any(m in ruta for m in LARGA):
+        ruta = self.path.split("?", 1)[0]
+        es_html = ruta.endswith((".html", "/")) or ruta in ("", "/")
+        if es_html:
+            # El HTML nunca se cachea: Cloudflare (Browser Cache TTL por defecto) guardaba
+            # una copia 4 h en el edge y servía la version vieja tras cada cambio.
+            self.send_header("Cache-Control", "no-store, must-revalidate")
+        elif any(m in ruta for m in LARGA):
             self.send_header("Cache-Control", "public, max-age=2592000, immutable")
         elif ruta.endswith((".css", ".js")):
             self.send_header("Cache-Control", "public, max-age=3600")

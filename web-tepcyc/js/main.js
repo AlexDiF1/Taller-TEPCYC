@@ -66,10 +66,9 @@
   /* Firma: el logo se arma alrededor de la consola y la barra enciende el botón */
   const trazar = (lista) => lista.forEach((p) => { p.setAttribute('pathLength', 1); p.style.strokeDasharray = '1'; });
   function firmaPortada() {
-    const ondas = $$('.hero [data-ondas] path');
-    trazar(ondas);
     gsap.timeline({ defaults: { ease: M.ease } })
-      .fromTo(ondas, { strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: 1.5, stagger: 0.03, ease: M.easeIO }, 0)
+      .fromTo('[data-arcos-izq]', { x: -220, autoAlpha: 0 }, { x: 0, autoAlpha: 1, duration: 1.5, ease: M.easeIO }, 0)
+      .fromTo('[data-arcos-der]', { x: 220, autoAlpha: 0 }, { x: 0, autoAlpha: 1, duration: 1.5, ease: M.easeIO }, 0)
       .fromTo('[data-linea]', { yPercent: 112 }, { yPercent: 0, duration: M.dur, stagger: M.stagger * 2 }, 0.2)
       .fromTo('[data-sube]', { y: M.dist / 3, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: M.dur, stagger: 0.18 }, 0.42)
       .fromTo('[data-carga]', { scaleX: 0 }, { scaleX: 1, duration: 1.05, ease: CARGA }, 0.45)

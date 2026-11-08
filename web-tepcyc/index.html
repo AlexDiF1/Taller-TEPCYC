@@ -19,7 +19,7 @@
 <link rel="preload" href="fonts/bebas-neue-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/archivo-400.woff2" as="font" type="font/woff2" crossorigin>
 <script>document.documentElement.className=document.documentElement.className.replace('no-js','js');</script>
-<link rel="stylesheet" href="css/styles.css?v=20261108i">
+<link rel="stylesheet" href="css/styles.css?v=20261108m">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"ElectronicsStore","name":"TODOENPCYCONSOLAS 2","telephone":"+573180223184","openingHours":"Mo-Su 10:00-19:00","address":{"@type":"PostalAddress","streetAddress":"Cra 3 #20-26","addressLocality":"Mosquera","addressRegion":"Cundinamarca","addressCountry":"CO"}}</script>
 </head>
 <body>
@@ -29,13 +29,15 @@
 
 <!-- ===== INICIO Portada ===== -->
 <section class="hero">
-  <svg class="hero__fluido hero__fluido--a" viewBox="0 0 520 620" aria-hidden="true"><path opacity=".45" d="M120 0C190 170 300 250 390 390 450 480 490 560 520 620V0Z"/><path d="M300 0C350 120 440 200 520 330V0Z"/></svg>
-  <svg class="hero__fluido hero__fluido--b" viewBox="0 0 440 520" aria-hidden="true"><path opacity=".45" d="M0 40C40 240 190 340 290 520H0Z"/><path d="M0 300C50 390 110 440 150 520H0Z"/></svg>
-  <svg class="ondas ondas--a" viewBox="0 0 760 240" aria-hidden="true" data-ondas>
-    <path d="M-10 120C90 210 170 40 330 26 480 14 560 90 770 34"/><path transform="translate(0 9)" d="M-10 120C90 210 170 40 330 26 480 14 560 90 770 34"/><path transform="translate(0 18)" d="M-10 120C90 210 170 40 330 26 480 14 560 90 770 34"/><path transform="translate(0 27)" d="M-10 120C90 210 170 40 330 26 480 14 560 90 770 34"/><path transform="translate(0 36)" d="M-10 120C90 210 170 40 330 26 480 14 560 90 770 34"/><path transform="translate(0 45)" d="M-10 120C90 210 170 40 330 26 480 14 560 90 770 34"/><path transform="translate(0 54)" d="M-10 120C90 210 170 40 330 26 480 14 560 90 770 34"/>
-  </svg>
-  <svg class="ondas ondas--b" viewBox="0 0 760 240" aria-hidden="true" data-ondas>
-    <path d="M-10 120C90 210 170 40 330 26 480 14 560 90 770 34"/><path transform="translate(0 9)" d="M-10 120C90 210 170 40 330 26 480 14 560 90 770 34"/><path transform="translate(0 18)" d="M-10 120C90 210 170 40 330 26 480 14 560 90 770 34"/><path transform="translate(0 27)" d="M-10 120C90 210 170 40 330 26 480 14 560 90 770 34"/><path transform="translate(0 36)" d="M-10 120C90 210 170 40 330 26 480 14 560 90 770 34"/>
+  <svg class="hero__fondo" viewBox="0 0 740 423" preserveAspectRatio="none" aria-hidden="true">
+    <defs>
+      <linearGradient id="fondo-base" x1="0" y1="0" x2="0" y2="1"><stop offset=".38" stop-color="#0A0A0C"/><stop offset="1" stop-color="#2E0812"/></linearGradient>
+      <linearGradient id="fondo-arco" gradientUnits="userSpaceOnUse" x1="10" y1="20" x2="190" y2="340"><stop offset="0" stop-color="#5E0A26" stop-opacity="0"/><stop offset="1" stop-color="#5E0A26" stop-opacity=".5"/></linearGradient>
+      <g id="fondo-arcos" fill="url(#fondo-arco)"><circle cx="-10" cy="125" r="275"/><circle cx="-60" cy="130" r="238"/><circle cx="-45" cy="125" r="178"/><circle cx="105" cy="300" r="203"/></g>
+    </defs>
+    <rect width="740" height="423" fill="url(#fondo-base)"/>
+    <g data-arcos-izq><use href="#fondo-arcos"/></g>
+    <g data-arcos-der><use href="#fondo-arcos" transform="matrix(-1 0 0 1 740 0)"/></g>
   </svg>
 
   <header class="nav">
@@ -74,7 +76,7 @@
         </a>
       </div>
     </div>
-    <p class="hero__lugar">Mosquera, Cundinamarca · Todos los días, 10 a. m. a 7 p. m.</p>
+    <p class="hero__lugar">Mosquera · Todos los días, 10 a. m. a 7 p. m.</p>
   </div>
 </section>
 <!-- ===== FIN Portada ===== -->
@@ -269,6 +271,6 @@
 <script src="vendor/ScrollTrigger.min.js" defer></script>
 <script src="vendor/SplitText.min.js" defer></script>
 <script src="vendor/lenis.min.js" defer></script>
-<script src="js/main.js?v=20261108g" defer></script>
+<script src="js/main.js?v=20261108h" defer></script>
 </body>
 </html>
