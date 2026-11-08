@@ -1,0 +1,204 @@
+@font-face{font-family:"Bebas Neue";src:url(../fonts/bebas-neue-400.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Archivo";src:url(../fonts/archivo-400.woff2) format("woff2");font-weight:400 800;font-display:swap}
+:root{
+  --negro:#050303;--vino:#5C1813;--rojo:#C5171E;--brand:#EF4D00;--blanco:#fff;--muted:#CFC3C0;--surface:#120A09;--line:#4A1A16;--neon:#E0303A;
+  --cta:#EF4D00;--cta-hover:#FF6A1F;--cta-ink:#050303;
+  --font-display:"Bebas Neue",Impact,sans-serif;--font-body:"Archivo",system-ui,sans-serif;
+  --r-lg:22px;--r-md:14px;--r-sm:5px;
+  --ease:cubic-bezier(.22,1,.36,1);--t-hover:.3s;
+  --gutter:clamp(16px,4vw,56px);--maxw:1320px;--section-y:clamp(72px,10vw,140px);
+}
+*{box-sizing:border-box;margin:0}
+html.lenis,html.lenis body{height:auto}
+.lenis.lenis-smooth{scroll-behavior:auto!important}
+body{background:var(--negro);color:var(--blanco);font-family:var(--font-body);line-height:1.5;overflow-x:clip;-webkit-font-smoothing:antialiased}
+img,svg{display:block;max-width:100%}
+img{height:auto}
+a{color:inherit}
+:focus-visible{outline:3px solid #fff;outline-offset:3px}
+.envoltura{max-width:var(--maxw);margin-inline:auto;padding-inline:var(--gutter)}
+.seccion{position:relative;isolation:isolate;overflow:clip;padding-block:var(--section-y)}
+.ceja{color:var(--brand);font-weight:800;font-size:13px;letter-spacing:.14em;text-transform:uppercase}
+h2{font-family:var(--font-display);font-weight:400;font-size:clamp(52px,8vw,112px);line-height:.95;margin-top:6px}
+.ln-mask{padding-top:.14em;margin-top:-.14em}
+.texto{color:var(--muted);font-size:clamp(17px,1.4vw,20px);max-width:34em;margin-top:14px}
+.rayas{height:13px;border-radius:var(--r-sm);transform-origin:left center;background:linear-gradient(90deg,transparent 0,var(--brand) 92%),repeating-linear-gradient(115deg,#fff 0 5px,var(--brand) 5px 11px),var(--brand)}
+.seccion__carga{width:min(240px,60%);margin-top:18px}
+.ondas{position:absolute;z-index:-1;fill:none;stroke:var(--rojo);stroke-width:1.6;pointer-events:none}
+
+/* Botones */
+.boton{position:relative;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:58px;padding:12px 24px;border:0;border-radius:var(--r-md);
+  background:var(--cta);color:var(--cta-ink);font:800 17px/1.1 var(--font-body);text-decoration:none;cursor:pointer;transition:background var(--t-hover) var(--ease),scale .15s}
+.boton::after{content:"";position:absolute;inset:0;transform:translateX(-105%);opacity:.32;background:repeating-linear-gradient(115deg,#fff 0 6px,transparent 6px 14px);transition:transform .55s var(--ease)}
+.boton svg{width:22px;height:22px;fill:currentColor;flex:none}
+.boton span,.boton svg{position:relative;z-index:1}
+.boton:active{scale:.97}
+.boton--negro{background:var(--negro);color:#fff}
+@media(hover:hover){.boton:hover{background:var(--cta-hover)}.boton:hover::after{transform:none}.boton--negro:hover{background:#2a0d0b}}
+.seccion .boton{margin-top:26px;width:100%;max-width:390px;padding-inline:12px;white-space:nowrap}
+
+/* ===== Portada ===== */
+.hero{position:relative;isolation:isolate;overflow:clip;min-height:100svh;display:flex;flex-direction:column;
+  background:radial-gradient(90% 80% at 82% 48%,#7a1616 0,#3f120e 38%,#120605 68%,var(--negro) 88%)}
+.hero__fluido{position:absolute;z-index:-2;fill:var(--rojo);pointer-events:none}
+.hero__fluido--a{right:0;top:0;width:min(46vw,520px)}
+.hero__fluido--b{left:0;bottom:0;width:min(40vw,440px)}
+.ondas--a{left:-4%;top:0;width:min(82vw,760px);opacity:.75}
+.ondas--b{right:-4%;bottom:0;width:min(70vw,640px);opacity:.75;transform:rotate(180deg)}
+.nav{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px var(--gutter);max-width:var(--maxw);width:100%;margin-inline:auto}
+.nav__logo{height:58px;width:auto}
+.nav__enlaces{display:none;gap:28px;align-items:center;font-weight:600;font-size:15px}
+.nav__enlaces a{text-decoration:none}
+.nav__enlaces a:hover{color:var(--brand)}
+.nav__tel{font-family:var(--font-display);font-size:24px;letter-spacing:.04em;white-space:nowrap}
+.hero__grid{flex:1;display:grid;gap:30px;padding:6px var(--gutter) 44px;max-width:var(--maxw);width:100%;margin-inline:auto;align-content:start}
+h1{font-family:var(--font-display);font-weight:400;font-size:clamp(70px,20.5vw,150px);line-height:.9;margin-top:8px;letter-spacing:.005em}
+h1 .l{display:block;overflow:hidden;padding-top:.12em;margin-top:-.12em}
+h1 .l>span{display:block}
+h1 .acento{color:var(--brand)}
+.hero__sub{color:var(--muted);font-size:clamp(17px,1.4vw,20px);max-width:32em;margin-top:12px}
+.accion{margin-top:18px;max-width:390px}
+.accion .rayas{margin-bottom:10px}
+.accion .boton{width:100%;padding-inline:20px}
+.hero__lugar{margin-top:12px;font-size:14px;color:var(--muted)}
+.escena{position:relative;width:min(100%,520px);aspect-ratio:50/54;margin-inline:auto}
+.escena__marco{position:absolute;inset:0;width:100%;height:100%;fill:none;stroke:var(--brand);stroke-width:7;stroke-linecap:round}
+.escena__ps5{position:absolute;left:15%;top:7%;width:74%;filter:drop-shadow(0 26px 40px rgba(197,23,30,.55))}
+.escena__dos{position:absolute;width:31%;left:55%;bottom:-3%}
+.escena__control{position:absolute;width:19%;left:-3%;bottom:15%}
+.barra{position:absolute;bottom:calc(5.56% - 7px);left:12%;width:40%;height:14px;border-radius:var(--r-sm);transform-origin:left center;background:linear-gradient(90deg,transparent 0,var(--brand) 92%),repeating-linear-gradient(115deg,#fff 0 4px,var(--brand) 4px 9px),var(--brand)}
+
+/* ===== Franja ===== */
+.franja{padding-block:0;background:var(--surface)}
+.franja__linea{height:4px;background:var(--brand);border-radius:2px;transform-origin:left center}
+.franja__lista{list-style:none;padding:26px 0;display:grid;grid-template-columns:repeat(2,1fr);gap:24px 18px}
+.franja__lista b{display:block;font:400 clamp(30px,3vw,40px)/1 var(--font-display)}
+.franja__lista span{color:var(--muted);font-size:15px}
+
+/* ===== Consolas ===== */
+.consolas{background:radial-gradient(70% 60% at 20% 45%,#4a1310 0,var(--negro) 72%)}
+.consolas__grid{display:grid;gap:34px}
+.consolas .escena{width:min(76%,420px)}
+.modelos{list-style:none;padding:0;margin-top:26px}
+.modelos li{padding:14px 0 12px}
+.modelos b{display:block;font:400 clamp(46px,7vw,92px)/1 var(--font-display)}
+.modelos .rayas{height:7px;margin-top:8px}
+
+/* ===== Controles ===== */
+.controles{background:var(--rojo)}
+.controles .ceja{color:#fff}
+.controles .texto{color:#fff}
+.controles__grid{display:grid;gap:30px;align-items:center}
+.gamepad{width:min(100%,640px);margin-inline:auto;fill:none;stroke:#fff;stroke-width:7;stroke-linecap:round;stroke-linejoin:round}
+
+/* ===== Celulares ===== */
+.neon{position:relative;max-width:760px;margin-inline:auto;padding:58px 22px 34px;border:2px solid var(--neon);border-radius:var(--r-lg);box-shadow:0 0 22px rgba(224,48,58,.65),inset 0 0 16px rgba(224,48,58,.25);text-align:center}
+.neon h2{position:absolute;top:-.55em;left:50%;translate:-50% 0;background:var(--negro);padding:0 16px;font-size:clamp(44px,8vw,84px);white-space:nowrap;margin:0}
+.neon .ceja{margin-top:0}
+.neon .texto{margin-inline:auto}
+.telefonos{display:flex;justify-content:center;gap:22px;margin-top:18px}
+.telefonos svg{width:74px;fill:none;stroke:#fff;stroke-width:3;stroke-linecap:round}
+.neon .boton{margin-inline:auto}
+
+/* ===== Venta ===== */
+.venta{background:radial-gradient(80% 70% at 85% 30%,#651612 0,#1a0806 62%,var(--negro) 100%)}
+.venta__lista{display:grid;gap:16px;margin-top:34px}
+.oferta{display:flex;flex-direction:column;background:rgba(5,3,3,.78);border:1px solid var(--line);border-radius:var(--r-lg);padding:26px 22px;position:relative}
+.oferta h3{font:400 clamp(42px,4.4vw,60px)/1 var(--font-display)}
+.oferta p{color:var(--muted);margin-top:8px;flex:1}
+.oferta .sello{align-self:flex-start;margin-bottom:14px;background:var(--brand);color:var(--cta-ink);font-weight:800;font-size:14px;padding:5px 12px;border-radius:var(--r-sm)}
+.oferta .sello--suave{background:none;color:#fff;box-shadow:inset 0 0 0 1px var(--muted)}
+.oferta .boton{max-width:none;margin-top:20px}
+
+/* ===== Pasos ===== */
+.pasos__carril{position:relative;margin-top:40px}
+.pasos__lista{list-style:none;padding:0 0 0 34px;display:grid;gap:34px}
+.pasos__lista h3{font:400 clamp(38px,3.6vw,52px)/1 var(--font-display)}
+.pasos__lista p{color:var(--muted);margin-top:4px}
+.pasos__fondo,.pasos__avance{position:absolute;left:0;top:4px;bottom:4px;width:11px;border-radius:var(--r-sm)}
+.pasos__fondo{background:var(--line)}
+.pasos__avance{transform-origin:center top;background:repeating-linear-gradient(25deg,#fff 0 5px,var(--brand) 5px 11px)}
+
+/* ===== Visitanos ===== */
+.visita{background:var(--surface)}
+.visita__grid{display:grid;gap:34px}
+.visita__dato{margin-top:20px}
+.visita__dato b{display:block;font:400 clamp(34px,3.6vw,48px)/1.05 var(--font-display)}
+.visita__dato span{color:var(--muted)}
+.enlace{display:inline-block;min-height:44px;padding-block:10px;font-weight:700;color:var(--brand)}
+.garantia{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:26px}
+.garantia div{border:2px solid var(--brand);border-radius:var(--r-md);padding:16px}
+.garantia b{display:block;font:400 clamp(44px,5vw,70px)/1 var(--font-display)}
+.garantia span{color:var(--muted);font-size:15px}
+.garantia div:nth-child(3){grid-column:1/-1}
+
+/* ===== Preguntas ===== */
+.preguntas details{border-bottom:1px solid var(--line)}
+.preguntas summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:16px;align-items:center;min-height:64px;padding:12px 0;font:400 clamp(28px,3vw,38px)/1.05 var(--font-display)}
+.preguntas summary::-webkit-details-marker{display:none}
+.preguntas summary::after{content:"+";color:var(--brand);font-size:1.3em;line-height:1}
+.preguntas details[open] summary::after{content:"−"}
+.preguntas details p{color:var(--muted);padding-bottom:18px;max-width:42em}
+.preguntas__lista{margin-top:26px;max-width:880px}
+
+/* ===== Cierre ===== */
+.cierre{text-align:center;background:radial-gradient(70% 80% at 50% 100%,#8a1719 0,#3f120e 45%,var(--negro) 90%);padding-bottom:clamp(90px,10vw,130px)}
+.cierre h2{font-size:clamp(68px,13vw,190px)}
+.cierre__tel{display:block;margin-top:12px;font:400 clamp(50px,9vw,120px)/1 var(--font-display);text-decoration:none;letter-spacing:.02em}
+.cierre .boton{margin-inline:auto}
+.cierre__dos{width:clamp(110px,16vw,190px);margin:30px auto 0}
+.pie{padding:30px var(--gutter) 34px;text-align:center;color:var(--muted);font-size:14px;background:var(--negro)}
+.pie img{width:min(300px,70vw);margin:0 auto 14px}
+
+/* ===== Buscador de orden ===== */
+.oculto{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.orden{display:flex;align-items:center;width:min(100%,420px);height:52px;margin:16px auto 0;background:rgba(5,3,3,.72);border:2px solid var(--brand);border-radius:var(--r-md);overflow:hidden}
+.orden input[type=search]{flex:1;min-width:0;height:100%;padding:0 4px 0 12px;border:0;background:none;color:#fff;font:600 16px var(--font-body);outline:0;-webkit-appearance:none;appearance:none}
+.orden input::placeholder{color:var(--muted);opacity:1}
+.orden input::-webkit-search-cancel-button{display:none}
+.orden button{flex:none;width:44px;height:100%;border:0;background:var(--cta);color:var(--cta-ink);cursor:pointer;display:grid;place-items:center;transition:background var(--t-hover) var(--ease)}
+.orden button svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round}
+.orden:focus-within{outline:3px solid #fff;outline-offset:2px}
+.orden.error{border-color:#fff}
+@media(hover:hover){.orden button:hover{background:var(--cta-hover)}}
+
+/* ===== Barra fija celular ===== */
+.barra-movil{position:fixed;left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:20;transition:transform .35s var(--ease),opacity .25s}
+.barra-movil .boton{width:100%;box-shadow:0 10px 30px rgba(0,0,0,.6)}
+.barra-movil.oculta{transform:translateY(140%);opacity:0;pointer-events:none}
+
+/* Celular: el logo grande abre la página y el 2 cae sobre él; la PS5 de portada solo se ve en computadora */
+.hero__logo{position:relative;width:min(100%,560px);margin-inline:auto}
+.hero__logo-base{width:100%}
+.hero__logo-dos{position:absolute;left:43.67%;top:39.5%;width:21.83%}
+@media(max-width:899px){
+  .hero .nav{display:none}
+  /* Orden en celular: logo, textos con WhatsApp, buscador y ubicación */
+  .hero__marca{display:contents}
+  .hero__texto{order:1}
+  .hero .orden{order:2;margin:-14px 0 0;max-width:390px}
+  .hero__lugar{order:3;margin-top:-14px}
+  .hero__grid{gap:24px;padding-top:calc(18px + env(safe-area-inset-top));align-content:center}
+}
+@media(min-width:760px){
+  .franja__lista{grid-template-columns:repeat(4,1fr)}
+  .venta__lista{grid-template-columns:repeat(3,1fr)}
+  .controles__grid,.visita__grid{grid-template-columns:1fr 1fr}
+  .pasos__lista{grid-template-columns:repeat(4,1fr);gap:24px;padding:34px 0 0}
+  .pasos__fondo,.pasos__avance{left:0;right:0;top:0;bottom:auto;width:auto;height:11px}
+  .pasos__avance{transform-origin:left center;background:repeating-linear-gradient(115deg,#fff 0 5px,var(--brand) 5px 11px)}
+  .barra-movil{display:none}
+}
+@media(min-width:900px){
+  .nav__enlaces{display:flex}
+  .nav__enlaces{margin-left:auto}
+  .hero__grid{grid-template-columns:1fr 1fr;align-items:center;padding-bottom:30px}
+  .hero__marca{grid-column:2;grid-row:1/span 2;align-self:center}
+  .hero__texto{grid-column:1;grid-row:1;align-self:end}
+  .hero__lugar{grid-column:1;grid-row:2;align-self:start;margin-top:-18px}
+  .hero__logo{width:100%;max-width:none}
+  h1{font-size:clamp(90px,9.8vw,150px);white-space:nowrap}
+  .consolas__grid{grid-template-columns:.9fr 1.1fr;align-items:start}
+  .consolas__fija{position:sticky;top:12vh}
+  .modelos{margin-top:0}
+}
