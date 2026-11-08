@@ -197,6 +197,16 @@ export async function deleteVenta(id: string | number): Promise<void> {
 
 /* ------------------------------- recibos -------------------------------- */
 
+/** Días de garantía por defectos de fábrica en la venta de productos. */
+export const SALE_WARRANTY_DAYS = 30
+
+/** Cláusulas de garantía impresas al pie del recibo de venta (POS). */
+export const SALE_WARRANTY_TERMS = [
+  `Garantía de ${SALE_WARRANTY_DAYS} días calendario por defectos de fábrica, contados desde la fecha de esta compra.`,
+  'Cubre fallas de funcionamiento con uso normal del producto. Para hacerla efectiva presenta este recibo.',
+  'No cubre: golpes, humedad o líquidos, manipulación o reparación por terceros, sellos o tornillos alterados, daños estéticos, accesorios ni consumibles.',
+]
+
 function plainMoney(value: number) {
   return `$${Math.round(value).toLocaleString('es-CO')}`
 }
@@ -290,8 +300,12 @@ function drawSaleTicket(doc: TicketDoc, venta: Venta): number {
   }
 
   y = divider(doc, y)
+  y = center(doc, 'GARANTÍA', y, 8.5, 'bold', 'helvetica')
+  for (const term of SALE_WARRANTY_TERMS) {
+    y = paragraph(doc, term, y, term === SALE_WARRANTY_TERMS[2] ? 6.5 : 7)
+  }
+  y = divider(doc, y)
   y = center(doc, 'Gracias por su compra', y, 9, 'bold', 'helvetica')
-  y = center(doc, 'Garantía sujeta a las condiciones del producto', y, 6.5, 'normal', 'helvetica')
   return y + 2
 }
 
@@ -308,6 +322,7 @@ export function buildSaleMessage(venta: Venta) {
     `Total: ${plainMoney(venta.total)}\n` +
     `Método de pago: ${PAYMENT_MAP[venta.paymentMethod]?.label ?? venta.paymentMethod}\n\n` +
     `El recibo va adjunto en PDF.\n\n` +
+    `Garantía: ${SALE_WARRANTY_DAYS} días calendario por defectos de fábrica, presentando este recibo.\n\n` +
     `Cualquier inquietud adicional, estaremos atentos a sus mensajes. Gracias por su compra.`
   )
 }

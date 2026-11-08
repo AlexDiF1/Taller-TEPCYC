@@ -37,7 +37,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[264px_1fr]">
       <aside className="sticky top-0 hidden h-dvh flex-col border-r border-sidebar-border bg-sidebar p-5 print:hidden lg:flex">
-        <BrandLogo />
+        <BrandLogo href="/" />
         <nav aria-label="Principal" className="mt-8 flex flex-col gap-6">
           {NAV_SECTIONS.map((section) => (
             <div key={section.title} className="flex flex-col gap-1">
@@ -84,7 +84,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <div className="flex min-w-0 flex-col">
         <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background/80 px-4 py-3 backdrop-blur-lg print:hidden lg:hidden">
-          <BrandLogo />
+          <BrandLogo href="/" />
         </header>
 
         <main className="bg-grid min-h-dvh flex-1 pb-28 print:bg-none print:pb-0 lg:pb-0">{children}</main>
