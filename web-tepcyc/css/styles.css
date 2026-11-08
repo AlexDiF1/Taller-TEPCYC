@@ -160,10 +160,25 @@ h1 .acento{color:var(--brand-texto)}
 .orden.error{border-color:#fff}
 @media(hover:hover){.orden button:hover{background:var(--cta-hover)}}
 
-/* ===== Barra fija celular ===== */
-.barra-movil{position:fixed;left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:20;transition:transform .35s var(--ease),opacity .25s}
-.barra-movil .boton{width:100%;box-shadow:0 10px 30px rgba(0,0,0,.6)}
-.barra-movil.oculta{transform:translateY(140%);opacity:0;pointer-events:none}
+/* ===== Barra de navegacion en celular ===== */
+.barra-nav{display:none}
+@media(max-width:899px){
+  .barra-nav{position:fixed;z-index:20;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom));width:min(100% - 24px,480px);height:66px;margin-inline:auto;padding:6px;display:flex;gap:2px;
+    background:rgba(26,11,16,.76);-webkit-backdrop-filter:blur(14px) saturate(1.4);backdrop-filter:blur(14px) saturate(1.4);border:1.5px solid rgba(240,48,58,.6);border-radius:999px;
+    box-shadow:0 10px 26px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.12);transition:translate .3s var(--ease)}
+  .barra-nav.oculta{translate:0 170%}
+  .barra-nav a{position:relative;flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;border-radius:999px;color:#fff;text-decoration:none;font:800 clamp(12.5px,3.7vw,14px)/1 var(--font-body);-webkit-tap-highlight-color:transparent;transition:flex-grow .45s var(--ease)}
+  .barra-nav a::before{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(100deg,#8B1226,#D81E28);box-shadow:0 4px 14px rgba(216,30,40,.5),inset 0 1px 0 rgba(255,255,255,.3);opacity:0;transition:opacity .3s}
+  .barra-nav a[aria-current]{flex-grow:2.6}
+  .barra-nav a[aria-current]::before{opacity:1}
+  .barra-nav__icono{position:relative;width:24px;height:24px;flex:none;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;transition:scale .15s}
+  .barra-nav a:active .barra-nav__icono{scale:.84}
+  .barra-nav a span{position:relative;max-width:0;opacity:0;overflow:hidden;white-space:nowrap;transition:max-width .45s var(--ease),opacity .25s,margin-left .45s var(--ease)}
+  .barra-nav a[aria-current] span{max-width:96px;opacity:1;margin-left:8px}
+  .barra-nav a:focus-visible{outline-offset:-3px}
+  .pie{padding-bottom:calc(100px + env(safe-area-inset-bottom))}
+  .hero__grid{padding-bottom:96px}
+}
 
 /* Celular: el logo grande abre la página y el 2 cae sobre él; la PS5 de portada solo se ve en computadora */
 .hero__logo{position:relative;width:min(100%,560px);margin-inline:auto}
@@ -185,7 +200,6 @@ h1 .acento{color:var(--brand-texto)}
   .pasos__lista{grid-template-columns:repeat(4,1fr);gap:24px;padding:34px 0 0}
   .pasos__fondo,.pasos__avance{left:0;right:0;top:0;bottom:auto;width:auto;height:11px}
   .pasos__avance{transform-origin:left center;background:repeating-linear-gradient(115deg,#fff 0 5px,var(--brand) 5px 11px)}
-  .barra-movil{display:none}
 }
 @media(min-width:900px){
   .nav__enlaces{display:flex}

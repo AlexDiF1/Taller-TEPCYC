@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Solicita tu reparación | TODOENPCYCONSOLAS 2</title>
+<meta name="description" content="Cuéntanos qué le pasa a tu consola, control o celular y envíanos la solicitud por WhatsApp. Mosquera, Cundinamarca.">
+<meta name="theme-color" content="#050303">
+<link rel="canonical" href="https://tepcyc.com/reparacion.html">
+<meta property="og:title" content="Solicita tu reparación | TODOENPCYCONSOLAS 2">
+<meta property="og:url" content="https://tepcyc.com/reparacion.html">
+<meta property="og:image" content="https://tepcyc.com/img/og-imagen.jpg?v=20261108n">
+<link rel="icon" type="image/png" href="favicon.png?v=20261108n">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=20261108n">
+<link rel="stylesheet" href="css/styles.css?v=20261108r">
+<link rel="stylesheet" href="css/subpaginas.css?v=20261108e">
+</head>
+<body class="sub">
+
+<svg class="fondo-fijo" viewBox="0 0 740 423" preserveAspectRatio="none" aria-hidden="true">
+  <defs>
+    <linearGradient id="fondo-base" x1="0" y1="0" x2="0" y2="1"><stop offset=".38" stop-color="#0A0A0C"/><stop offset="1" stop-color="#2E0812"/></linearGradient>
+    <linearGradient id="fondo-arco" gradientUnits="userSpaceOnUse" x1="10" y1="20" x2="190" y2="340"><stop offset="0" stop-color="#5E0A26" stop-opacity="0"/><stop offset="1" stop-color="#5E0A26" stop-opacity=".5"/></linearGradient>
+    <g id="fondo-arcos" fill="url(#fondo-arco)"><circle cx="-10" cy="125" r="275"/><circle cx="-60" cy="130" r="238"/><circle cx="-45" cy="125" r="178"/><circle cx="105" cy="300" r="203"/></g>
+  </defs>
+  <rect width="740" height="423" fill="url(#fondo-base)"/>
+  <g data-arcos-izq><use href="#fondo-arcos"/></g>
+  <g data-arcos-der><use href="#fondo-arcos" transform="matrix(-1 0 0 1 740 0)"/></g>
+</svg>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-reparar" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></symbol><symbol id="i-tienda" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></symbol><symbol id="i-lugar" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></symbol><symbol id="i-inicio" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></symbol></svg>
+<header class="sub-nav">
+  <a href="index.html" aria-label="Volver al inicio"><img src="img/logo.png?v=20261108n" width="1200" height="415" alt="TODOENPCYCONSOLAS 2"></a>
+  <nav aria-label="Principal">
+    <a href="index.html">Inicio</a>
+    <a href="reparacion.html" aria-current="page">Reparación</a>
+    <a href="tienda.html">Tienda</a>
+  </nav>
+</header>
+
+<main class="sub-main sub-main--angosta">
+  <p class="ceja" data-entra>Solicitud de reparación</p>
+  <h1 class="sub-titulo" data-entra>Cuéntanos qué le pasa</h1>
+  <p class="texto" data-entra>Llena estos datos y los enviamos a nuestro WhatsApp. Allá te respondemos y puedes adjuntar fotos o videos del daño.</p>
+  <div class="rayas sub-carga" data-carga aria-hidden="true"></div>
+
+  <noscript><p class="aviso">Este formulario necesita JavaScript. También puedes <a href="https://wa.me/573180223184">escribirnos directo por WhatsApp</a>.</p></noscript>
+
+  <form class="form" data-form-reparacion novalidate>
+    <fieldset class="campo" data-entra>
+      <legend>¿Qué vas a reparar? <em>*</em></legend>
+      <div class="opciones opciones--tres">
+        <label class="opcion"><input type="radio" name="equipo" value="consola" checked><span>Consola</span></label>
+        <label class="opcion"><input type="radio" name="equipo" value="control"><span>Control</span></label>
+        <label class="opcion"><input type="radio" name="equipo" value="celular"><span>Celular</span></label>
+      </div>
+    </fieldset>
+
+    <div class="campo" data-entra data-campo-modelo>
+      <label for="modelo">Modelo <em>*</em></label>
+      <select id="modelo" name="modelo"></select>
+      <p class="error-texto" data-error="modelo" hidden>Elige el modelo.</p>
+    </div>
+
+    <div class="campo" data-campo-otro hidden>
+      <label for="modelo-otro" data-etiqueta-otro>¿Cuál modelo es? <em>*</em></label>
+      <input id="modelo-otro" name="modelo-otro" type="text" maxlength="60" autocomplete="off">
+      <p class="error-texto" data-error="modelo-otro" hidden>Escribe el modelo.</p>
+    </div>
+
+    <div class="campo" data-entra>
+      <label for="fallo">¿Qué fallo tiene? <em>*</em></label>
+      <textarea id="fallo" name="fallo" rows="4" maxlength="600" placeholder="Escribe aquí qué le pasa a tu equipo"></textarea>
+      <p class="error-texto" data-error="fallo" hidden>Cuéntanos qué fallo tiene.</p>
+    </div>
+
+    <div class="campo" data-entra>
+      <label for="desde">¿Desde cuándo falla? <small>Opcional</small></label>
+      <select id="desde" name="desde">
+        <option value="">Sin indicar</option>
+        <option>Hoy</option>
+        <option>Esta semana</option>
+        <option>Este mes</option>
+        <option>Hace más de un mes</option>
+      </select>
+    </div>
+
+    <div class="campo" data-entra>
+      <label for="nombre">Tu nombre <em>*</em></label>
+      <input id="nombre" name="nombre" type="text" maxlength="60" autocomplete="name">
+      <p class="error-texto" data-error="nombre" hidden>Escribe tu nombre.</p>
+    </div>
+
+    <button class="boton form__enviar" type="submit" data-entra>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2Zm5.8 14.2c-.2.7-1.4 1.3-2 1.4-.5.1-1.2.1-1.9-.1-3.3-1-5.6-3.6-6.5-5.3-.4-.7-.9-1.8-.9-2.9 0-1 .5-1.6.8-1.9.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .6l-.7.9c-.2.2-.2.4-.1.6.7 1.2 1.7 2.2 3 2.9.2.1.4.1.6-.1l.8-1c.2-.2.4-.3.6-.2l2 1c.3.1.5.2.5.4.1.2.1.9-.1 1.5Z"/></svg>
+      <span>Enviar por WhatsApp</span>
+    </button>
+
+    <p class="aviso" role="status" data-confirmacion hidden>Abrimos WhatsApp con tu solicitud; solo falta tocar enviar. Si no se abrió, <a data-enlace-wa target="_blank" rel="noopener">toca aquí</a>.</p>
+
+    <section class="probador" data-probador aria-labelledby="probador-titulo" hidden>
+      <h2 id="probador-titulo">Prueba tu control <small>Opcional</small></h2>
+      <p class="probador__estado" role="status" data-estado></p>
+      <svg class="pad" viewBox="60 8 520 376" aria-hidden="true">
+        <rect x="120" y="14" width="110" height="34" rx="9"/><rect class="pad__nivel" data-gatillo="6" x="120" y="14" width="0" height="34" rx="9"/>
+        <rect x="410" y="14" width="110" height="34" rx="9"/><rect class="pad__nivel" data-gatillo="7" x="410" y="14" width="0" height="34" rx="9"/>
+        <rect data-b="4" x="110" y="58" width="130" height="24" rx="12"/>
+        <rect data-b="5" x="400" y="58" width="130" height="24" rx="12"/>
+        <path d="M190 92h260c52 0 88 38 108 104 20 68 28 150-14 172-40 20-76-36-112-84H208c-36 48-72 104-112 84-42-22-34-104-14-172 20-66 56-104 108-104Z"/>
+        <circle cx="170" cy="168" r="42"/><g data-palanca="izq"><circle data-b="10" cx="170" cy="168" r="26"/></g>
+        <circle cx="400" cy="230" r="42"/><g data-palanca="der"><circle data-b="11" cx="400" cy="230" r="26"/></g>
+        <rect data-b="12" x="226" y="190" width="28" height="30" rx="5"/>
+        <rect data-b="13" x="226" y="240" width="28" height="30" rx="5"/>
+        <rect data-b="14" x="190" y="216" width="30" height="28" rx="5"/>
+        <rect data-b="15" x="260" y="216" width="30" height="28" rx="5"/>
+        <circle data-b="3" cx="470" cy="132" r="17"/>
+        <circle data-b="1" cx="508" cy="170" r="17"/>
+        <circle data-b="0" cx="470" cy="208" r="17"/>
+        <circle data-b="2" cx="432" cy="170" r="17"/>
+        <rect data-b="8" x="268" y="122" width="30" height="16" rx="8"/>
+        <rect data-b="9" x="342" y="122" width="30" height="16" rx="8"/>
+        <circle data-b="16" cx="320" cy="168" r="15"/>
+      </svg>
+      <dl class="probador__valores">
+        <div><dt>Palanca izquierda</dt><dd data-valor="izq">X 0.00 · Y 0.00</dd></div>
+        <div><dt>Palanca derecha</dt><dd data-valor="der">X 0.00 · Y 0.00</dd></div>
+      </dl>
+      <p class="probador__nota">Suelta las palancas: si los números no vuelven casi a 0.00, puede tener drift.</p>
+      <button class="probador__vibrar" type="button" data-vibrar hidden>Probar vibración</button>
+    </section>
+  </form>
+</main>
+
+<footer class="pie">Cra 3 #20-26, Mosquera, Cundinamarca · Todos los días, 10 a. m. a 7 p. m.</footer>
+
+<nav class="barra-nav" data-barra-nav aria-label="Men&uacute;">
+  <a href="index.html"><svg class="barra-nav__icono" aria-hidden="true"><use href="#i-inicio"/></svg><span>Inicio</span></a>
+  <a href="reparacion.html" aria-current="page"><svg class="barra-nav__icono" aria-hidden="true"><use href="#i-reparar"/></svg><span>Reparaci&oacute;n</span></a>
+  <a href="tienda.html"><svg class="barra-nav__icono" aria-hidden="true"><use href="#i-tienda"/></svg><span>Tienda</span></a>
+  <a href="index.html#visitanos"><svg class="barra-nav__icono" aria-hidden="true"><use href="#i-lugar"/></svg><span>Vis&iacute;tanos</span></a>
+</nav>
+
+<script src="vendor/gsap.min.js" defer></script>
+<script src="js/subpaginas.js?v=20261108b" defer></script>
+<script src="js/reparacion.js?v=20261108b" defer></script>
+<script src="js/probador.js?v=20261108a" defer></script>
+<script src="js/barra-nav.js?v=20261108b" defer></script>
+</body>
+</html>

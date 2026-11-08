@@ -49,18 +49,6 @@
     numero.addEventListener('input', () => form.classList.remove('error'));
   });
 
-  /* Barra fija: se esconde con el botón de portada a la vista y en el cierre */
-  safe(() => {
-    const barra = $('[data-barra-movil]');
-    if (!barra || !('IntersectionObserver' in window)) return;
-    const visibles = new Set();
-    const io = new IntersectionObserver((es) => {
-      es.forEach((e) => (e.isIntersecting ? visibles.add(e.target) : visibles.delete(e.target)));
-      barra.classList.toggle('oculta', visibles.size > 0);
-    });
-    $$('[data-boton],#contacto,.seccion .boton').forEach((el) => io.observe(el));
-  });
-
   if (!hasGSAP || RM) return;
 
   /* Firma: el logo se arma alrededor de la consola y la barra enciende el botón */
@@ -69,6 +57,7 @@
     gsap.timeline({ defaults: { ease: M.ease } })
       .fromTo('[data-arcos-izq]', { x: -220, autoAlpha: 0 }, { x: 0, autoAlpha: 1, duration: 1.5, ease: M.easeIO }, 0)
       .fromTo('[data-arcos-der]', { x: 220, autoAlpha: 0 }, { x: 0, autoAlpha: 1, duration: 1.5, ease: M.easeIO }, 0)
+      .fromTo('.nav__enlaces a', { y: -14, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.55, stagger: 0.08, ease: M.pop, clearProps: 'transform' }, 0.25)
       .fromTo('[data-linea]', { yPercent: 112 }, { yPercent: 0, duration: M.dur, stagger: M.stagger * 2 }, 0.2)
       .fromTo('[data-sube]', { y: M.dist / 3, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: M.dur, stagger: 0.18 }, 0.42)
       .fromTo('[data-carga]', { scaleX: 0 }, { scaleX: 1, duration: 1.05, ease: CARGA }, 0.45)

@@ -19,16 +19,16 @@
 <link rel="preload" href="fonts/bebas-neue-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/archivo-400.woff2" as="font" type="font/woff2" crossorigin>
 <script>document.documentElement.className=document.documentElement.className.replace('no-js','js');</script>
-<link rel="stylesheet" href="css/styles.css?v=20261108m">
+<link rel="stylesheet" href="css/styles.css?v=20261108r">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"ElectronicsStore","name":"TODOENPCYCONSOLAS 2","telephone":"+573180223184","openingHours":"Mo-Su 10:00-19:00","address":{"@type":"PostalAddress","streetAddress":"Cra 3 #20-26","addressLocality":"Mosquera","addressRegion":"Cundinamarca","addressCountry":"CO"}}</script>
 </head>
 <body>
 
 <!-- Icono de WhatsApp reutilizable -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="wa" viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2Zm5.8 14.2c-.2.7-1.4 1.3-2 1.4-.5.1-1.2.1-1.9-.1-3.3-1-5.6-3.6-6.5-5.3-.4-.7-.9-1.8-.9-2.9 0-1 .5-1.6.8-1.9.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .6l-.7.9c-.2.2-.2.4-.1.6.7 1.2 1.7 2.2 3 2.9.2.1.4.1.6-.1l.8-1c.2-.2.4-.3.6-.2l2 1c.3.1.5.2.5.4.1.2.1.9-.1 1.5Z"/></symbol></svg>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ir" viewBox="0 0 24 24"><path d="M4 11h11.2l-4.6-4.6L12 5l7 7-7 7-1.4-1.4 4.6-4.6H4z"/></symbol><symbol id="i-reparar" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></symbol><symbol id="i-tienda" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></symbol><symbol id="i-lugar" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></symbol><symbol id="i-inicio" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></symbol><symbol id="wa" viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2Zm5.8 14.2c-.2.7-1.4 1.3-2 1.4-.5.1-1.2.1-1.9-.1-3.3-1-5.6-3.6-6.5-5.3-.4-.7-.9-1.8-.9-2.9 0-1 .5-1.6.8-1.9.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .6l-.7.9c-.2.2-.2.4-.1.6.7 1.2 1.7 2.2 3 2.9.2.1.4.1.6-.1l.8-1c.2-.2.4-.3.6-.2l2 1c.3.1.5.2.5.4.1.2.1.9-.1 1.5Z"/></symbol></svg>
 
 <!-- ===== INICIO Portada ===== -->
-<section class="hero">
+<section class="hero" id="inicio">
   <svg class="hero__fondo" viewBox="0 0 740 423" preserveAspectRatio="none" aria-hidden="true">
     <defs>
       <linearGradient id="fondo-base" x1="0" y1="0" x2="0" y2="1"><stop offset=".38" stop-color="#0A0A0C"/><stop offset="1" stop-color="#2E0812"/></linearGradient>
@@ -42,7 +42,7 @@
 
   <header class="nav">
     <nav class="nav__enlaces" aria-label="Principal">
-      <a href="#reparacion">Reparación</a><a href="#venta">Venta</a><a href="#visitanos">Visítanos</a>
+      <a href="reparacion.html">Reparación</a><a class="nav__solo-pc" href="#venta">Venta</a><a href="tienda.html">Tienda</a><a href="#visitanos">Visítanos</a>
       <a class="nav__tel" href="tel:+573180223184">318 022 3184</a>
     </nav>
   </header>
@@ -71,8 +71,8 @@
       <p class="hero__sub" data-sube>Consolas y controles PlayStation, Xbox y Nintendo. Cuéntanos qué le pasa a la tuya.</p>
       <div class="accion">
         <div class="rayas" data-carga aria-hidden="true"></div>
-        <a class="boton" data-boton href="https://wa.me/573180223184?text=Hola%2C%20vengo%20de%20la%20p%C3%A1gina%20web%20y%20quiero%20informaci%C3%B3n" target="_blank" rel="noopener">
-          <svg aria-hidden="true"><use href="#wa"/></svg><span>Escríbenos por WhatsApp</span>
+        <a class="boton" data-boton href="reparacion.html">
+          <svg aria-hidden="true"><use href="#ir"/></svg><span>Solicitar reparaci&oacute;n</span>
         </a>
       </div>
     </div>
@@ -104,7 +104,7 @@
       <h2 data-titulo>Reparamos tu consola</h2>
       <div class="rayas seccion__carga" data-llena aria-hidden="true"></div>
       <p class="texto" data-reveal>Cuéntanos qué modelo tienes y qué le está pasando. Trabajamos con estas consolas:</p>
-      <a class="boton" href="https://wa.me/573180223184?text=Hola%2C%20quiero%20reparar%20mi%20consola.%20Es%20una%3A%20" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#wa"/></svg><span>Escríbenos por WhatsApp</span></a>
+      <a class="boton" href="reparacion.html?equipo=consola"><svg aria-hidden="true"><use href="#ir"/></svg><span>Solicitar reparaci&oacute;n</span></a>
     </div>
     <ul class="modelos">
       <li><b>PS5</b><div class="rayas" aria-hidden="true"></div></li>
@@ -124,7 +124,7 @@
       <p class="ceja">Controles de videojuegos</p>
       <h2 data-titulo>El control también tiene arreglo</h2>
       <p class="texto" data-reveal>Si dejó de responder como antes, no compres otro todavía. Reparamos controles de todas las consolas.</p>
-      <a class="boton boton--negro" href="https://wa.me/573180223184?text=Hola%2C%20quiero%20reparar%20un%20control%20de%3A%20" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#wa"/></svg><span>Escríbenos por WhatsApp</span></a>
+      <a class="boton boton--negro" href="reparacion.html?equipo=control"><svg aria-hidden="true"><use href="#ir"/></svg><span>Solicitar reparaci&oacute;n</span></a>
     </div>
     <svg class="gamepad" viewBox="0 0 600 400" aria-hidden="true" data-dibuja>
       <path d="M170 70H430C500 70 540 110 560 190 580 270 590 340 540 355 500 365 470 320 440 275H160C130 320 100 365 60 355 10 340 20 270 40 190 60 110 100 70 170 70Z"/>
@@ -147,7 +147,7 @@
         <svg viewBox="0 0 60 110" data-dibuja><path d="M9 3H51Q57 3 57 9V101Q57 107 51 107H9Q3 107 3 101V9Q3 3 9 3Z"/><circle cx="30" cy="11" r="2.5"/></svg>
       </div>
       <p class="texto">iPhone y Android. Reparamos todas las marcas.</p>
-      <a class="boton" href="https://wa.me/573180223184?text=Hola%2C%20quiero%20reparar%20mi%20celular.%20Es%20un%3A%20" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#wa"/></svg><span>Escríbenos por WhatsApp</span></a>
+      <a class="boton" href="reparacion.html?equipo=celular"><svg aria-hidden="true"><use href="#ir"/></svg><span>Solicitar reparaci&oacute;n</span></a>
     </div>
   </div>
 </section>
@@ -164,19 +164,19 @@
         <span class="sello">1 año de garantía</span>
         <h3>Consolas nuevas</h3>
         <p>Pregunta qué modelos tenemos disponibles y su precio de hoy.</p>
-        <a class="boton" href="https://wa.me/573180223184?text=Hola%2C%20quiero%20comprar%20una%20consola%20nueva.%20Busco%3A%20" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#wa"/></svg><span>Escríbenos por WhatsApp</span></a>
+        <a class="boton" href="tienda.html?cat=nuevas"><svg aria-hidden="true"><use href="#ir"/></svg><span>Ver en la tienda</span></a>
       </article>
       <article class="oferta">
         <span class="sello">4 meses de garantía</span>
         <h3>Consolas usadas</h3>
         <p>Una opción para jugar por menos, con garantía de nuestra tienda.</p>
-        <a class="boton" href="https://wa.me/573180223184?text=Hola%2C%20quiero%20comprar%20una%20consola%20usada.%20Busco%3A%20" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#wa"/></svg><span>Escríbenos por WhatsApp</span></a>
+        <a class="boton" href="tienda.html?cat=usadas"><svg aria-hidden="true"><use href="#ir"/></svg><span>Ver en la tienda</span></a>
       </article>
       <article class="oferta">
         <span class="sello sello--suave">Nuevos y usados</span>
         <h3>Controles</h3>
         <p>Dinos para qué consola lo necesitas y te contamos qué hay.</p>
-        <a class="boton" href="https://wa.me/573180223184?text=Hola%2C%20quiero%20comprar%20un%20control%20para%3A%20" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#wa"/></svg><span>Escríbenos por WhatsApp</span></a>
+        <a class="boton" href="tienda.html?cat=controles"><svg aria-hidden="true"><use href="#ir"/></svg><span>Ver en la tienda</span></a>
       </article>
     </div>
   </div>
@@ -251,7 +251,7 @@
   <div class="envoltura">
     <h2 data-titulo>¿Se apagó? Escríbenos</h2>
     <a class="cierre__tel" href="tel:+573180223184" data-reveal>318 022 3184</a>
-    <a class="boton" href="https://wa.me/573180223184?text=Hola%2C%20vi%20su%20p%C3%A1gina%20y%20quiero%20llevar%20mi%20equipo" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#wa"/></svg><span>Escríbenos por WhatsApp</span></a>
+    <a class="boton" href="reparacion.html"><svg aria-hidden="true"><use href="#ir"/></svg><span>Solicitar reparaci&oacute;n</span></a>
     <img class="cierre__dos" src="img/dos.png?v=20261108n" width="420" height="404" alt="" loading="lazy" data-sello>
   </div>
 </section>
@@ -263,14 +263,18 @@
   <p>PlayStation, Xbox y Nintendo son marcas de sus respectivos dueños.</p>
 </footer>
 
-<div class="barra-movil oculta" data-barra-movil>
-  <a class="boton" href="https://wa.me/573180223184?text=Hola%2C%20los%20contacto%20desde%20la%20p%C3%A1gina%20web" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#wa"/></svg><span>Escríbenos por WhatsApp</span></a>
-</div>
+<nav class="barra-nav" data-barra-nav aria-label="Men&uacute;">
+  <a href="#inicio" aria-current="page"><svg class="barra-nav__icono" aria-hidden="true"><use href="#i-inicio"/></svg><span>Inicio</span></a>
+  <a href="reparacion.html"><svg class="barra-nav__icono" aria-hidden="true"><use href="#i-reparar"/></svg><span>Reparaci&oacute;n</span></a>
+  <a href="tienda.html"><svg class="barra-nav__icono" aria-hidden="true"><use href="#i-tienda"/></svg><span>Tienda</span></a>
+  <a href="#visitanos"><svg class="barra-nav__icono" aria-hidden="true"><use href="#i-lugar"/></svg><span>Vis&iacute;tanos</span></a>
+</nav>
 
 <script src="vendor/gsap.min.js" defer></script>
 <script src="vendor/ScrollTrigger.min.js" defer></script>
 <script src="vendor/SplitText.min.js" defer></script>
 <script src="vendor/lenis.min.js" defer></script>
-<script src="js/main.js?v=20261108h" defer></script>
+<script src="js/main.js?v=20261108j" defer></script>
+<script src="js/barra-nav.js?v=20261108b" defer></script>
 </body>
 </html>
