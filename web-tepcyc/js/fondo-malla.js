@@ -156,7 +156,7 @@
 
   let espera = 0;
   addEventListener('resize', () => {
-    if (innerWidth === W && lienzo.clientHeight <= H) return;
+    if (innerWidth === W && (innerWidth < 900 ? lienzo.clientHeight <= H : innerHeight === H)) return;
     clearTimeout(espera);
     espera = setTimeout(construir, 180);
   });

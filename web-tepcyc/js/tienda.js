@@ -32,6 +32,10 @@
 
   function pintarProductos(cat) {
     const lista = datos.productos.filter((p) => cat === 'todos' || p.categoria === cat);
+    if (!lista.length) {
+      caja.innerHTML = `<p class="aviso productos__vacio">Por ahora no tenemos productos publicados aquí. <a href="https://wa.me/${WHATSAPP}" target="_blank" rel="noopener">Pregúntanos por WhatsApp</a>.</p>`;
+      return;
+    }
     caja.innerHTML = lista.map((p) => {
       const c = CATS[p.categoria] || { sello: '', garantia: '' };
       const foto = p.foto
@@ -90,6 +94,26 @@
     guardar();
   }
 
+  /* Un punto rojo sale del botón y aterriza en el carrito */
+  function volarAlCarrito(origen) {
+    const a = origen.getBoundingClientRect(), z = botonCarrito.getBoundingClientRect();
+    const x0 = a.left + a.width / 2, y0 = a.top + a.height / 2;
+    const punto = d.createElement('i');
+    punto.className = 'punto-vuelo';
+    punto.style.left = `${x0 - 9}px`;
+    punto.style.top = `${y0 - 9}px`;
+    d.body.append(punto);
+    gsap.timeline({
+      onComplete() {
+        punto.remove();
+        gsap.fromTo(botonCarrito, { scale: 1.22 }, { scale: 1, duration: 0.45, ease: 'back.out(2.4)', clearProps: 'scale' });
+      }
+    })
+      .to(punto, { x: z.left + z.width / 2 - x0, duration: 0.6, ease: 'power1.inOut' }, 0)
+      .to(punto, { y: z.top + z.height / 2 - y0, duration: 0.6, ease: 'back.in(1.3)' }, 0)
+      .to(punto, { scale: 0.35, duration: 0.6, ease: 'power2.in' }, 0);
+  }
+
   function cambiar(id, delta) {
     if (!catalogo.has(id)) return;
     const nueva = (carrito[id] || 0) + delta;
@@ -105,8 +129,12 @@
     texto.textContent = 'Agregado';
     clearTimeout(b._t);
     b._t = setTimeout(() => { texto.textContent = 'Agregar'; }, 1000);
-    if (hayGsap) gsap.fromTo(botonCarrito, { scale: 1.22 }, { scale: 1, duration: 0.45, ease: 'back.out(2.4)', clearProps: 'scale' });
+    if (hayGsap) volarAlCarrito(b);
   });
+  /* Si una foto no carga, se muestra el dibujo en lugar del ícono roto */
+  caja.addEventListener('error', (e) => {
+    if (e.target.tagName === 'IMG') e.target.outerHTML = `<div class="producto__falta">${DIBUJO}<span>Foto pendiente</span></div>`;
+  }, true);
   filtros.addEventListener('click', (e) => { const b = e.target.closest('[data-cat]'); if (b) elegirFiltro(b.dataset.cat); });
   botonCarrito.addEventListener('click', () => dialogo.showModal());
   $('[data-cerrar-carrito]').addEventListener('click', () => dialogo.close());

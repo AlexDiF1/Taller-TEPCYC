@@ -68,13 +68,26 @@
       .to('[data-logo-hero]', { keyframes: [{ x: -7, y: 5, duration: 0.05 }, { x: 6, y: -4, duration: 0.05 }, { x: -3, y: 2, duration: 0.05 }, { x: 0, y: 0, duration: 0.06 }], ease: 'none' }, 1.42);
   }
 
+  /* En computador el logo de la portada se mueve apenas con el mouse */
+  function logoSigueMouse() {
+    if (!matchMedia('(hover: hover) and (min-width: 900px)').matches) return;
+    const logo = $('[data-logo-hero]');
+    const irX = gsap.quickTo(logo, 'x', { duration: 0.9, ease: 'power3' }), irY = gsap.quickTo(logo, 'y', { duration: 0.9, ease: 'power3' });
+    gsap.delayedCall(2.2, () => addEventListener('pointermove', (e) => {
+      if (scrollY > innerHeight) return;
+      irX((e.clientX / innerWidth - 0.5) * -20);
+      irY((e.clientY / innerHeight - 0.5) * -14);
+    }, { passive: true }));
+  }
+
   const alEntrar = (el, start = 'top 82%') => ({ trigger: el, start, once: true });
 
   /* Títulos por líneas */
   const titulos = () => $$('[data-titulo]').forEach((el) => safe(() => {
     if (window.SplitText) {
       const s = new SplitText(el, { type: 'lines', mask: 'lines', linesClass: 'ln' });
-      gsap.from(s.lines, { yPercent: 115, duration: M.dur + 0.1, stagger: M.stagger * 2, ease: M.ease, scrollTrigger: alEntrar(el) });
+      /* Al terminar se quita la división: así el título se reacomoda si giran el celular */
+      gsap.from(s.lines, { yPercent: 115, duration: M.dur + 0.1, stagger: M.stagger * 2, ease: M.ease, scrollTrigger: alEntrar(el), onComplete: () => s.revert() });
     } else gsap.from(el, { y: M.dist / 2, autoAlpha: 0, duration: M.dur, scrollTrigger: alEntrar(el) });
   }));
 
@@ -94,7 +107,21 @@
       const tl = gsap.timeline({ scrollTrigger: alEntrar(svg, 'top 78%') });
       tl.fromTo(lineas, { strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: 0.8, stagger: 0.07, ease: M.easeIO });
       const colores = $$('.color', svg);
-      if (colores.length) tl.from(colores, { scale: 0, transformOrigin: 'center', stagger: 0.07, duration: 0.4, ease: M.pop }, '-=.25');
+      if (colores.length) {
+        tl.from(colores, { scale: 0, transformOrigin: 'center', stagger: 0.07, duration: 0.4, ease: M.pop }, '-=.25');
+        /* Los botones del control se encienden por turnos solo mientras se ven */
+        const turno = gsap.timeline({ paused: true, repeat: -1, repeatDelay: 1.2 })
+          .to(colores, { scale: 1.24, transformOrigin: 'center', duration: 0.2, stagger: 0.16, ease: 'power2.out', yoyo: true, repeat: 1 });
+        tl.call(() => {
+          const zona = ScrollTrigger.create({ trigger: svg, start: 'top bottom', end: 'bottom top', onToggle: (s) => (s.isActive ? turno.play() : turno.pause()) });
+          if (zona.isActive) turno.play();
+        });
+      }
+    });
+    /* Celulares: el marco de neón se enciende con un parpadeo */
+    $$('.neon').forEach((el) => {
+      gsap.set(el, { autoAlpha: 0 });
+      gsap.to(el, { keyframes: [{ autoAlpha: 0.75, duration: 0.07 }, { autoAlpha: 0.15, duration: 0.1 }, { autoAlpha: 1, duration: 0.14 }], ease: 'none', scrollTrigger: alEntrar(el, 'top 85%') });
     });
     /* Modelos: cada barra avanza con el scroll */
     $$('.modelos li').forEach((li) => {
@@ -104,9 +131,18 @@
     /* Pasos: la barra avanza de paso en paso */
     const carril = $('[data-carril]');
     if (carril) {
-      const vertical = matchMedia('(max-width: 759px)').matches;
-      gsap.fromTo('[data-avance]', vertical ? { scaleY: 0 } : { scaleX: 0 }, { ...(vertical ? { scaleY: 1 } : { scaleX: 1 }), ease: 'none', scrollTrigger: { trigger: carril, start: 'top 70%', end: vertical ? 'bottom 60%' : 'top 25%', scrub: true } });
+      const pasos = $$('.pasos__lista li', carril);
+      carril.classList.add('animado');
+      const marcar = function () { const p = this.progress(); pasos.forEach((li, i) => li.classList.toggle('activo', p >= i / pasos.length)); };
+      const avanzar = (eje, fin) => gsap.fromTo('[data-avance]', { [eje]: 0 }, { [eje]: 1, ease: 'none', onUpdate: marcar, scrollTrigger: { trigger: carril, start: 'top 70%', end: fin, scrub: true } });
+      /* Se rehace si cambia el diseño, por ejemplo al girar el celular */
+      const medios = gsap.matchMedia();
+      medios.add('(max-width: 759px)', () => { avanzar('scaleY', 'bottom 60%'); });
+      medios.add('(min-width: 760px)', () => { avanzar('scaleX', 'top 25%'); });
     }
+    /* Preguntas: al abrir una, la página cambia de alto y hay que recalcular las animaciones */
+    let recalculo = 0;
+    $$('.preguntas details').forEach((d) => d.addEventListener('toggle', () => { clearTimeout(recalculo); recalculo = setTimeout(() => ScrollTrigger.refresh(), 420); }));
     /* Ondas que se dibujan con el scroll */
     $$('[data-ondas-scroll]').forEach((svg) => {
       const p = $$('path', svg); trazar(p);
@@ -119,7 +155,7 @@
 
   safe(() => {
     Promise.race([d.fonts ? d.fonts.ready : Promise.resolve(), new Promise((r) => setTimeout(r, 1200))]).then(() => {
-      safe(firmaPortada); safe(titulos); safe(efectos);
+      safe(firmaPortada); safe(titulos); safe(efectos); safe(logoSigueMouse);
       ScrollTrigger.refresh();
     });
     addEventListener('load', () => ScrollTrigger.refresh());

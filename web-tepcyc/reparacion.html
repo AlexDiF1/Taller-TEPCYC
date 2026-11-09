@@ -8,16 +8,23 @@
 <meta name="theme-color" content="#050303">
 <link rel="canonical" href="https://tepcyc.com/reparacion.html">
 <meta property="og:title" content="Solicita tu reparación | TODOENPCYCONSOLAS 2">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="TODOENPCYCONSOLAS 2">
+<meta property="og:locale" content="es_CO">
+<meta property="og:description" content="Cuéntanos qué le pasa a tu consola, control o celular y envíanos la solicitud por WhatsApp.">
 <meta property="og:url" content="https://tepcyc.com/reparacion.html">
 <meta property="og:image" content="https://tepcyc.com/img/og-imagen.jpg?v=20261108n">
 <link rel="icon" type="image/png" href="favicon.png?v=20261108n">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20261108n">
-<link rel="stylesheet" href="css/styles.css?v=20261108t">
-<link rel="stylesheet" href="css/subpaginas.css?v=20261108p">
+<link rel="preload" href="fonts/bebas-neue-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/archivo-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/styles.css?v=20261108v">
+<link rel="stylesheet" href="css/subpaginas.css?v=20261108v">
 </head>
 <body class="sub">
+<a class="saltar" href="#contenido">Saltar al contenido</a>
 
-<canvas class="fondo-fijo fondo-red" data-fondo-circuito aria-hidden="true"></canvas>
+<canvas class="fondo-fijo fondo-red" data-fondo-equis aria-hidden="true"></canvas>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-reparar" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></symbol><symbol id="i-tienda" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></symbol><symbol id="i-lugar" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></symbol><symbol id="i-carrito" viewBox="0 0 24 24"><circle cx="9" cy="20.5" r="1.4"/><circle cx="18" cy="20.5" r="1.4"/><path d="M2 3h3l2.7 12.4a2 2 0 0 0 2 1.6h7.9a2 2 0 0 0 2-1.6L21 7H6"/></symbol><symbol id="i-inicio" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></symbol></svg>
 <header class="sub-nav">
@@ -29,7 +36,7 @@
   </nav>
 </header>
 
-<main class="sub-main sub-main--angosta">
+<main id="contenido" class="sub-main sub-main--angosta">
   <p class="ceja" data-entra>Solicitud de reparación</p>
   <h1 class="sub-titulo" data-entra>Cuéntanos qué le pasa</h1>
   <p class="texto" data-entra>Llena estos datos y los enviamos a nuestro WhatsApp. Allá te respondemos y puedes adjuntar fotos o videos del daño.</p>
@@ -81,13 +88,6 @@
       <input id="nombre" name="nombre" type="text" maxlength="60" autocomplete="name">
       <p class="error-texto" data-error="nombre" hidden>Escribe tu nombre.</p>
     </div>
-
-    <button class="boton form__enviar" type="submit" data-entra>
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2Zm5.8 14.2c-.2.7-1.4 1.3-2 1.4-.5.1-1.2.1-1.9-.1-3.3-1-5.6-3.6-6.5-5.3-.4-.7-.9-1.8-.9-2.9 0-1 .5-1.6.8-1.9.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .6l-.7.9c-.2.2-.2.4-.1.6.7 1.2 1.7 2.2 3 2.9.2.1.4.1.6-.1l.8-1c.2-.2.4-.3.6-.2l2 1c.3.1.5.2.5.4.1.2.1.9-.1 1.5Z"/></svg>
-      <span>Enviar por WhatsApp</span>
-    </button>
-
-    <p class="aviso" role="status" data-confirmacion hidden>Abrimos WhatsApp con tu solicitud; solo falta tocar enviar. Si no se abrió, <a data-enlace-wa target="_blank" rel="noopener">toca aquí</a>.</p>
 
     <section class="probador" data-probador aria-labelledby="probador-titulo" hidden>
       <header class="prob-cab">
@@ -198,6 +198,14 @@
         </ul>
       </details>
     </section>
+
+    <button class="boton form__enviar" type="submit" data-entra>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2Zm5.8 14.2c-.2.7-1.4 1.3-2 1.4-.5.1-1.2.1-1.9-.1-3.3-1-5.6-3.6-6.5-5.3-.4-.7-.9-1.8-.9-2.9 0-1 .5-1.6.8-1.9.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .6l-.7.9c-.2.2-.2.4-.1.6.7 1.2 1.7 2.2 3 2.9.2.1.4.1.6-.1l.8-1c.2-.2.4-.3.6-.2l2 1c.3.1.5.2.5.4.1.2.1.9-.1 1.5Z"/></svg>
+      <span>Enviar por WhatsApp</span>
+    </button>
+
+    <p class="aviso" role="status" data-confirmacion hidden>Abrimos WhatsApp con tu solicitud; solo falta tocar enviar. Si no se abrió, <a data-enlace-wa target="_blank" rel="noopener">toca aquí</a>.</p>
+
   </form>
 </main>
 
@@ -210,10 +218,10 @@
 </nav>
 
 <script src="vendor/gsap.min.js" defer></script>
-<script src="js/fondo-circuito.js?v=20261108d" defer></script>
-<script src="js/subpaginas.js?v=20261108b" defer></script>
+<script src="js/fondo-equis.js?v=20261108d" defer></script>
+<script src="js/subpaginas.js?v=20261108c" defer></script>
 <script src="js/reparacion.js?v=20261108b" defer></script>
 <script src="js/probador.js?v=20261108c" defer></script>
-<script src="js/barra-nav.js?v=20261108b" defer></script>
+<script src="js/barra-nav.js?v=20261108c" defer></script>
 </body>
 </html>
