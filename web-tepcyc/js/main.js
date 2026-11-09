@@ -63,8 +63,14 @@
     function pintar(datos) {
       pon('estado', ETIQUETA[datos.estado] || datos.estado);
       if (res('estado')) res('estado').dataset.estado = datos.estado;
+      pon('cliente', datos.cliente || '');
+      const elCliente = res('cliente');
+      if (elCliente) elCliente.hidden = !datos.cliente;
       const eq = datos.equipo || {};
       pon('equipo', [eq.tipo, eq.marca, eq.modelo].filter(Boolean).join(' · ') || 'Equipo registrado');
+      pon('falla-texto', datos.falla || '');
+      const elFalla = res('falla');
+      if (elFalla) elFalla.hidden = !datos.falla;
       pon('total', pesos(datos.total));
       pon('abono', pesos(datos.abono));
       pon('saldo', pesos(datos.saldo));
@@ -84,6 +90,7 @@
       pon('estado', 'Sin resultados');
       if (res('estado')) res('estado').dataset.estado = '';
       pon('equipo', texto);
+      ['cliente', 'falla'].forEach((clave) => { const el = res(clave); if (el) el.hidden = true; });
       if (cifras) cifras.hidden = true;
       const elFecha = res('fecha');
       if (elFecha) elFecha.hidden = true;

@@ -21,7 +21,7 @@
 <link rel="preload" href="fonts/bebas-neue-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/archivo-400.woff2" as="font" type="font/woff2" crossorigin>
 <script>document.documentElement.className=document.documentElement.className.replace('no-js','js');</script>
-<link rel="stylesheet" href="css/styles.css?v=20261109b">
+<link rel="stylesheet" href="css/styles.css?v=20261109c">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"ElectronicsStore","name":"TODOENPCYCONSOLAS 2","url":"https://tepcyc.com/","image":"https://tepcyc.com/img/og-imagen.jpg?v=20261108n","hasMap":"https://maps.app.goo.gl/HscQdsBBjdPqjwCe6","telephone":"+573180223184","openingHours":"Mo-Su 10:00-19:00","address":{"@type":"PostalAddress","streetAddress":"Cra 3 #20-26","addressLocality":"Mosquera","addressRegion":"Cundinamarca","addressCountry":"CO"}}</script>
 </head>
 <body>
@@ -67,7 +67,9 @@
       <!-- Resultado de la consulta: lo rellena main.js con los datos del taller -->
       <div class="orden-res" role="status" aria-live="polite" data-orden-resultado hidden>
         <p class="orden-res__estado" data-res-estado></p>
+        <p class="orden-res__cliente" data-res-cliente hidden></p>
         <p class="orden-res__equipo" data-res-equipo></p>
+        <p class="orden-res__falla" data-res-falla hidden><span class="orden-res__rotulo">Falla reportada</span><span data-res-falla-texto></span></p>
         <dl class="orden-res__cifras" data-res-cifras>
           <div><dt>Total</dt><dd data-res-total>—</dd></div>
           <div><dt>Abono</dt><dd data-res-abono>—</dd></div>
@@ -291,7 +293,7 @@
 <script src="vendor/ScrollTrigger.min.js" defer></script>
 <script src="vendor/SplitText.min.js" defer></script>
 <script src="vendor/lenis.min.js" defer></script>
-<script src="js/main.js?v=20261109a" defer></script>
+<script src="js/main.js?v=20261109b" defer></script>
 <script src="js/barra-nav.js?v=20261108c" defer></script>
 </body>
 </html>

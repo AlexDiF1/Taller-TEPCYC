@@ -171,6 +171,11 @@ h1 .acento{color:var(--brand-texto)}
 .orden-res__estado[data-estado="completada"]::before{background:#3FBF6A}
 .orden-res__estado[data-estado="rechazada"]::before,.orden-res__estado[data-estado="fallida"]::before{background:#8F8280}
 .orden-res__equipo{color:var(--muted);font-size:15px;margin-top:2px}
+.orden-res__cliente{font-weight:700;font-size:16px;margin-top:6px}
+.orden-res__cliente[hidden]{display:none}
+.orden-res__falla{margin-top:10px;padding:10px 12px;background:rgba(255,255,255,.04);border-left:3px solid var(--brand-texto);border-radius:0 var(--r-sm) var(--r-sm) 0;color:var(--muted);font-size:14px}
+.orden-res__falla[hidden]{display:none}
+.orden-res__rotulo{display:block;color:var(--brand-texto);font-weight:800;font-size:12px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px}
 .orden-res__cifras{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:12px}
 .orden-res__cifras[hidden]{display:none}
 .orden-res__cifras dt{color:var(--muted);font-size:12px;letter-spacing:.08em;text-transform:uppercase}

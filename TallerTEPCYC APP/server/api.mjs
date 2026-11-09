@@ -73,8 +73,8 @@ api.get('/orders/:id/invoices', (req, res) => {
 
 /**
  * Buscador de órdenes de la web pública (tepcyc.com).
- * Devuelve SOLO datos no sensibles (estado, equipo y cifras): nunca nombre,
- * teléfono, documento, correo, fotos, historial ni notas internas.
+ * Devuelve estado, equipo, cifras, el nombre del cliente y la falla reportada;
+ * nunca teléfono, documento, correo, fotos, historial ni notas internas.
  * El sitio estático lo consume a través de su propio proxy (`/api/orden/...`),
  * así que no se emite CORS: nadie puede leerlo desde otro origen.
  */
@@ -97,7 +97,9 @@ api.get('/public/orden/:numero', (req, res) => {
     encontrada: true,
     numero: orden.id,
     estado: orden.status,
+    cliente: orden.customer.name || '',
     equipo: { tipo: orden.device.type, marca: orden.device.brand, modelo: orden.device.model },
+    falla: orden.reportedFault || '',
     total,
     abono,
     saldo: Math.max(total - abono, 0),
