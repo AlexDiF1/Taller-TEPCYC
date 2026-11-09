@@ -13,7 +13,7 @@
 <link rel="icon" type="image/png" href="favicon.png?v=20261108n">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20261108n">
 <link rel="stylesheet" href="css/styles.css?v=20261108t">
-<link rel="stylesheet" href="css/subpaginas.css?v=20261108o">
+<link rel="stylesheet" href="css/subpaginas.css?v=20261108p">
 </head>
 <body class="sub">
 
@@ -90,35 +90,113 @@
     <p class="aviso" role="status" data-confirmacion hidden>Abrimos WhatsApp con tu solicitud; solo falta tocar enviar. Si no se abrió, <a data-enlace-wa target="_blank" rel="noopener">toca aquí</a>.</p>
 
     <section class="probador" data-probador aria-labelledby="probador-titulo" hidden>
-      <h2 id="probador-titulo">Prueba tu control <small>Opcional</small></h2>
+      <header class="prob-cab">
+        <div>
+          <p class="prob-rotulo">Diagnóstico en vivo</p>
+          <h2 id="probador-titulo">Prueba tu control <small>Opcional</small></h2>
+        </div>
+        <span class="prob-pill" data-pill><i></i><span data-pill-texto>Esperando</span></span>
+      </header>
       <p class="probador__estado" role="status" data-estado></p>
-      <svg class="pad" viewBox="60 8 520 376" aria-hidden="true">
-        <rect x="120" y="14" width="110" height="34" rx="9"/><rect class="pad__nivel" data-gatillo="6" x="120" y="14" width="0" height="34" rx="9"/>
-        <rect x="410" y="14" width="110" height="34" rx="9"/><rect class="pad__nivel" data-gatillo="7" x="410" y="14" width="0" height="34" rx="9"/>
-        <rect data-b="4" x="110" y="58" width="130" height="24" rx="12"/>
-        <rect data-b="5" x="400" y="58" width="130" height="24" rx="12"/>
-        <path d="M190 92h260c52 0 88 38 108 104 20 68 28 150-14 172-40 20-76-36-112-84H208c-36 48-72 104-112 84-42-22-34-104-14-172 20-66 56-104 108-104Z"/>
-        <circle cx="170" cy="168" r="42"/><g data-palanca="izq"><circle data-b="10" cx="170" cy="168" r="26"/></g>
-        <circle cx="400" cy="230" r="42"/><g data-palanca="der"><circle data-b="11" cx="400" cy="230" r="26"/></g>
-        <rect data-b="12" x="226" y="190" width="28" height="30" rx="5"/>
-        <rect data-b="13" x="226" y="240" width="28" height="30" rx="5"/>
-        <rect data-b="14" x="190" y="216" width="30" height="28" rx="5"/>
-        <rect data-b="15" x="260" y="216" width="30" height="28" rx="5"/>
-        <circle data-b="3" cx="470" cy="132" r="17"/>
-        <circle data-b="1" cx="508" cy="170" r="17"/>
-        <circle data-b="0" cx="470" cy="208" r="17"/>
-        <circle data-b="2" cx="432" cy="170" r="17"/>
-        <rect data-b="8" x="268" y="122" width="30" height="16" rx="8"/>
-        <rect data-b="9" x="342" y="122" width="30" height="16" rx="8"/>
-        <circle data-b="16" cx="320" cy="168" r="15"/>
-      </svg>
-      <dl class="probador__valores">
-        <div><dt>Palanca izquierda</dt><dd data-valor="izq">X 0.00 · Y 0.00</dd></div>
-        <div><dt>Palanca derecha</dt><dd data-valor="der">X 0.00 · Y 0.00</dd></div>
+      <div class="prob-mandos" data-mandos hidden></div>
+
+      <div class="prob-escena">
+        <svg class="pad" viewBox="60 8 520 376" aria-hidden="true">
+          <defs>
+            <linearGradient id="pad-cuerpo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2A1014"/><stop offset=".55" stop-color="#160A0C"/><stop offset="1" stop-color="#0B0506"/></linearGradient>
+            <radialGradient id="pad-palanca" cx=".4" cy=".35" r=".8"><stop offset="0" stop-color="#4A3236"/><stop offset="1" stop-color="#1A0E10"/></radialGradient>
+          </defs>
+          <rect class="pad__tecla" data-b="6" x="120" y="14" width="110" height="34" rx="10"/><rect class="pad__nivel" data-gatillo="6" x="120" y="14" width="0" height="34" rx="10"/><text data-et="6" x="175" y="37">LT</text>
+          <rect class="pad__tecla" data-b="7" x="410" y="14" width="110" height="34" rx="10"/><rect class="pad__nivel" data-gatillo="7" x="410" y="14" width="0" height="34" rx="10"/><text data-et="7" x="465" y="37">RT</text>
+          <rect class="pad__tecla" data-b="4" x="110" y="56" width="130" height="28" rx="14"/><text data-et="4" x="175" y="76">LB</text>
+          <rect class="pad__tecla" data-b="5" x="400" y="56" width="130" height="28" rx="14"/><text data-et="5" x="465" y="76">RB</text>
+          <path class="pad__cuerpo" d="M190 92h260c52 0 88 38 108 104 20 68 28 150-14 172-40 20-76-36-112-84H208c-36 48-72 104-112 84-42-22-34-104-14-172 20-66 56-104 108-104Z"/>
+          <circle class="pad__pozo" cx="170" cy="168" r="44"/>
+          <g data-palanca="izq"><circle class="pad__tecla pad__stick" data-b="10" cx="170" cy="168" r="29"/><circle class="pad__aro" cx="170" cy="168" r="17"/></g>
+          <circle class="pad__pozo" cx="400" cy="230" r="44"/>
+          <g data-palanca="der"><circle class="pad__tecla pad__stick" data-b="11" cx="400" cy="230" r="29"/><circle class="pad__aro" cx="400" cy="230" r="17"/></g>
+          <path class="pad__cruz" d="M224 188h32v30h34v32h-34v30h-32v-30h-34v-32h34z"/>
+          <path class="pad__tecla pad__dir" data-b="12" d="M228 192h24v26l-12 12-12-12z"/>
+          <path class="pad__tecla pad__dir" data-b="13" d="M228 276h-0v-26l12-12 12 12v26z"/>
+          <path class="pad__tecla pad__dir" data-b="14" d="M194 222h26l12 12-12 12h-26z"/>
+          <path class="pad__tecla pad__dir" data-b="15" d="M286 222h-26l-12 12 12 12h26z"/>
+          <circle class="pad__tecla" data-b="3" cx="470" cy="130" r="19"/><text data-et="3" x="470" y="135">Y</text>
+          <circle class="pad__tecla" data-b="1" cx="510" cy="170" r="19"/><text data-et="1" x="510" y="175">B</text>
+          <circle class="pad__tecla" data-b="0" cx="470" cy="210" r="19"/><text data-et="0" x="470" y="215">A</text>
+          <circle class="pad__tecla" data-b="2" cx="430" cy="170" r="19"/><text data-et="2" x="430" y="175">X</text>
+          <rect class="pad__tecla" data-b="8" x="266" y="122" width="34" height="17" rx="8.5"/>
+          <rect class="pad__tecla" data-b="9" x="340" y="122" width="34" height="17" rx="8.5"/>
+          <circle class="pad__tecla" data-b="16" cx="320" cy="172" r="16"/>
+        </svg>
+      </div>
+
+      <div class="prob-progreso">
+        <div class="prob-progreso__fila">
+          <strong>Botones probados <span data-progreso>0 de 17</span></strong>
+          <button class="prob-texto" type="button" data-reiniciar>Reiniciar</button>
+        </div>
+        <div class="prob-barra"><i data-barra></i></div>
+        <ul class="prob-chips" data-chips></ul>
+      </div>
+
+      <p class="prob-alerta" role="alert" data-alerta hidden></p>
+
+      <div class="prob-dos">
+        <article class="prob-tarjeta" data-tarjeta="izq">
+          <h3>Palanca izquierda</h3>
+          <canvas width="380" height="380" data-lienzo="izq" aria-hidden="true"></canvas>
+          <p class="prob-num" data-valor="izq">X 0.00 · Y 0.00</p>
+          <dl>
+            <div><dt>Centro</dt><dd data-centro="izq">Sin medir</dd></div>
+            <div><dt>Recorrido</dt><dd data-rango="izq">Gírala completa</dd></div>
+          </dl>
+        </article>
+        <article class="prob-tarjeta" data-tarjeta="der">
+          <h3>Palanca derecha</h3>
+          <canvas width="380" height="380" data-lienzo="der" aria-hidden="true"></canvas>
+          <p class="prob-num" data-valor="der">X 0.00 · Y 0.00</p>
+          <dl>
+            <div><dt>Centro</dt><dd data-centro="der">Sin medir</dd></div>
+            <div><dt>Recorrido</dt><dd data-rango="der">Gírala completa</dd></div>
+          </dl>
+        </article>
+      </div>
+
+      <div class="prob-gatillos">
+        <div class="prob-gatillo"><span data-gatillo-nombre="6">LT</span><div class="prob-barra"><i data-gatillo-barra="6"></i></div><b data-gatillo-valor="6">0%</b></div>
+        <div class="prob-gatillo"><span data-gatillo-nombre="7">RT</span><div class="prob-barra"><i data-gatillo-barra="7"></i></div><b data-gatillo-valor="7">0%</b></div>
+      </div>
+
+      <dl class="prob-datos">
+        <div><dt>Conexión</dt><dd data-dato="mapeo">—</dd></div>
+        <div><dt>Respuesta al mover</dt><dd data-dato="hz">—</dd></div>
+        <div><dt>Vibración</dt><dd data-dato="vibra">—</dd></div>
       </dl>
-      <p class="probador__nota" data-crudo aria-live="off">Botones recibidos: ninguno</p>
-      <p class="probador__nota">Suelta las palancas: si los números no vuelven casi a 0.00, puede tener drift.</p>
-      <button class="probador__vibrar" type="button" data-vibrar hidden>Probar vibración</button>
+
+      <div class="prob-vibrar" data-vibrar hidden>
+        <h3>Prueba la vibración</h3>
+        <div>
+          <button type="button" data-efecto="suave">Motor suave</button>
+          <button type="button" data-efecto="fuerte">Motor fuerte</button>
+          <button type="button" data-efecto="ambos">Ambos</button>
+          <button type="button" data-efecto="pulso">Pulsos</button>
+        </div>
+      </div>
+
+      <div class="prob-resultado">
+        <button class="probador__agregar" type="button" data-agregar-resultado disabled>Agregar resultado a mi solicitud</button>
+        <p class="probador__nota" role="status" data-resultado-aviso hidden>Listo, lo agregamos en «¿Qué fallo tiene?». <a href="#fallo" data-ir-fallo>Ir al formulario</a></p>
+      </div>
+
+      <details class="prob-ayuda">
+        <summary>¿No detecta tu control?</summary>
+        <ul>
+          <li>Abre esta página en Chrome o Edge desde un computador.</li>
+          <li>Conéctalo por cable y haz clic una vez en la página.</li>
+          <li>Presiona cualquier botón: el navegador solo lo muestra después de eso.</li>
+          <li>Cierra Steam u otros programas que usen el control.</li>
+        </ul>
+      </details>
     </section>
   </form>
 </main>
@@ -132,10 +210,10 @@
 </nav>
 
 <script src="vendor/gsap.min.js" defer></script>
-<script src="js/fondo-circuito.js?v=20261108a" defer></script>
+<script src="js/fondo-circuito.js?v=20261108d" defer></script>
 <script src="js/subpaginas.js?v=20261108b" defer></script>
 <script src="js/reparacion.js?v=20261108b" defer></script>
-<script src="js/probador.js?v=20261108b" defer></script>
+<script src="js/probador.js?v=20261108c" defer></script>
 <script src="js/barra-nav.js?v=20261108b" defer></script>
 </body>
 </html>

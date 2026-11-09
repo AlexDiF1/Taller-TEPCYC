@@ -1,4 +1,4 @@
-/* Fondo de Reparación: pistas de circuito que bajan, partículas rojas y energía que recorre las pistas */
+/* Fondo de Reparación: pistas de circuito que bajan y energía que recorre las pistas */
 (() => {
   'use strict';
   const lienzo = document.querySelector('[data-fondo-circuito]');
@@ -26,40 +26,39 @@
   cb.fillStyle = halo;
   cb.fillRect(0, 0, 64, 64);
 
-  let W = 0, H = 0, pr = 1, pistas = [], finales = [], energia = [], rnd = azar(11);
+  let W = 0, H = 0, pr = 1, pistas = [], energia = [], rnd = azar(11);
 
-  /* Grupos de pistas paralelas que comparten los mismos quiebres a 45 grados */
-  function grupo(x0) {
-    const n = 2 + Math.floor(rnd() * 4);
+  /* Grupos de pistas paralelas que entran desde un lado y se quiebran a 45 grados */
+  function grupo(y0, lado) {
+    const n = 2 + Math.floor(rnd() * 5);
     const movs = [];
-    let lado = rnd() < 0.5 ? -1 : 1;
-    const total = H * (0.26 + 0.42 * rnd());
+    let sentido = rnd() < 0.5 ? -1 : 1;
+    const total = W * (0.08 + 0.14 * rnd());
     let suma = 0;
     while (suma < total) {
-      const baja = 34 + rnd() * 92, cruza = 12 + rnd() * 30;
-      movs.push({ baja, cruza: cruza * lado });
-      suma += baja + cruza;
-      lado = -lado;
+      const corre = 30 + rnd() * 84, cruza = 10 + rnd() * 30;
+      movs.push({ corre, cruza: cruza * sentido });
+      suma += corre + cruza;
+      sentido = -sentido;
     }
     for (let i = 0; i < n; i++) {
-      let x = x0 + i * SEPARA, y = -12;
+      let x = lado > 0 ? -12 : W + 12, y = y0 + i * SEPARA;
       const pts = [{ x, y }];
-      const corte = Math.max(1, movs.length - Math.floor(rnd() * Math.min(4, movs.length)));
+      const corte = Math.max(1, movs.length - Math.floor(rnd() * Math.min(3, movs.length)));
       for (let m = 0; m < corte; m++) {
-        y += movs[m].baja;
+        x += movs[m].corre * lado;
         pts.push({ x, y });
-        x += movs[m].cruza;
-        y += Math.abs(movs[m].cruza);
+        y += movs[m].cruza;
+        x += Math.abs(movs[m].cruza) * lado;
         pts.push({ x, y });
       }
-      y += 16 + rnd() * 40;
+      x += (10 + rnd() * 18) * lado;
       pts.push({ x, y });
       let largo = 0;
       const acum = pts.map((p, k) => (k ? (largo += Math.hypot(p.x - pts[k - 1].x, p.y - pts[k - 1].y)) : 0));
-      pistas.push({ pts, acum, largo });
-      finales.push({ x, y, r: 1.7 + rnd() * 1.5 });
+      pistas.push({ pts, acum, largo, grueso: rnd() < 0.2 });
     }
-    return x0 + n * SEPARA;
+    return y0 + n * SEPARA;
   }
 
   function construir() {
@@ -73,41 +72,37 @@
     c.setTransform(pr, 0, 0, pr, 0, 0);
     c.fillStyle = '#060102';
     c.fillRect(0, 0, W, H);
-    const luz = c.createLinearGradient(0, 0, 0, H * 0.5);
-    luz.addColorStop(0, 'rgba(92,12,10,.5)');
-    luz.addColorStop(1, 'rgba(92,12,10,0)');
+    const luz = c.createLinearGradient(0, 0, W, 0);
+    luz.addColorStop(0, 'rgba(92,12,10,.42)');
+    luz.addColorStop(0.24, 'rgba(92,12,10,0)');
+    luz.addColorStop(0.76, 'rgba(92,12,10,0)');
+    luz.addColorStop(1, 'rgba(92,12,10,.42)');
     c.fillStyle = luz;
-    c.fillRect(0, 0, W, H * 0.5);
+    c.fillRect(0, 0, W, H);
 
-    pistas = []; finales = [];
-    for (let x = -30 + rnd() * 20; x < W + 20;) x = grupo(x) + 12 + rnd() * 34;
+    pistas = [];
+    [1, -1].forEach((lado) => { for (let y = -30 + rnd() * 30; y < H + 20;) y = grupo(y, lado) + 16 + rnd() * 46; });
 
-    /* Color: naranja arriba, rojo al bajar */
+    /* Color: naranja rojizo en los bordes, se apaga hacia el centro */
     const tinta = (a) => {
-      const g = c.createLinearGradient(0, 0, 0, H * 0.72);
-      g.addColorStop(0, `rgba(255,128,42,${a})`);
-      g.addColorStop(0.35, `rgba(232,34,36,${a})`);
-      g.addColorStop(1, `rgba(150,16,24,${a * 0.75})`);
+      const g = c.createLinearGradient(0, 0, W, 0);
+      g.addColorStop(0, `rgba(255,112,42,${a})`);
+      g.addColorStop(0.12, `rgba(232,34,36,${a})`);
+      g.addColorStop(0.3, 'rgba(150,16,24,0)');
+      g.addColorStop(0.7, 'rgba(150,16,24,0)');
+      g.addColorStop(0.88, `rgba(232,34,36,${a})`);
+      g.addColorStop(1, `rgba(255,112,42,${a})`);
       return g;
     };
     c.lineJoin = 'round';
-    const trazar = () => {
+    const trazar = (lista) => {
       c.beginPath();
-      pistas.forEach((p) => p.pts.forEach((q, i) => (i ? c.lineTo(q.x, q.y) : c.moveTo(q.x, q.y))));
+      lista.forEach((p) => p.pts.forEach((q, i) => (i ? c.lineTo(q.x, q.y) : c.moveTo(q.x, q.y))));
       c.stroke();
     };
-    c.strokeStyle = tinta(0.07); c.lineWidth = 4; trazar();
-    c.strokeStyle = tinta(0.46); c.lineWidth = 1.2; trazar();
-    c.fillStyle = 'rgba(205,28,36,.72)';
-    finales.forEach((f) => { c.beginPath(); c.arc(f.x, f.y, f.r, 0, Math.PI * 2); c.fill(); });
-
-    /* Partículas repartidas, más abundantes hacia abajo a la derecha */
-    const area = W * H;
-    for (let i = 0, t = area / 1500; i < t; i++) {
-      const x = W * Math.pow(rnd(), 0.72), y = H * (0.12 + 0.88 * Math.pow(rnd(), 0.8));
-      c.fillStyle = `rgba(255,${40 + Math.floor(rnd() * 90)},44,${(0.1 + rnd() * 0.38).toFixed(3)})`;
-      c.beginPath(); c.arc(x, y, 0.4 + rnd() * 1.1, 0, Math.PI * 2); c.fill();
-    }
+    c.strokeStyle = tinta(0.07); c.lineWidth = 5; trazar(pistas);
+    c.strokeStyle = tinta(0.5); c.lineWidth = 1.1; trazar(pistas.filter((p) => !p.grueso));
+    c.strokeStyle = tinta(0.62); c.lineWidth = 2.4; trazar(pistas.filter((p) => p.grueso));
 
     energia = Array.from({ length: Math.min(14, Math.max(5, Math.round(W / 90))) }, () => nueva({}, true));
     pintar(0);
