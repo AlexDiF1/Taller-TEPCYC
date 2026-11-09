@@ -69,6 +69,45 @@ api.get('/orders/:id/invoices', (req, res) => {
   res.json(store.listInvoices(req.params.id))
 })
 
+/* ----------------------- consulta pública (web externa) ------------------- */
+
+/**
+ * Buscador de órdenes de la web pública (tepcyc.com).
+ * Devuelve SOLO datos no sensibles (estado, equipo y cifras): nunca nombre,
+ * teléfono, documento, correo, fotos, historial ni notas internas.
+ * El sitio estático lo consume a través de su propio proxy (`/api/orden/...`),
+ * así que no se emite CORS: nadie puede leerlo desde otro origen.
+ */
+function numeroDeOrden(valor) {
+  const limpio = String(valor ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 32)
+  if (!limpio) return ''
+  if (/^ORD\d+$/.test(limpio)) return `ORD-${limpio.slice(3)}`
+  if (/^\d+$/.test(limpio)) return `ORD-${limpio}`
+  return limpio
+}
+
+api.get('/public/orden/:numero', (req, res) => {
+  const numero = numeroDeOrden(req.params.numero)
+  const orden = numero ? store.getOrder(numero) : undefined
+  if (!orden) return res.status(404).json({ encontrada: false })
+  const subtotal = (orden.items ?? []).reduce((suma, item) => suma + (Number(item.price) || 0), 0)
+  const total = subtotal || Number(orden.estimatedCost) || 0
+  const abono = Number(orden.deposit) || 0
+  res.json({
+    encontrada: true,
+    numero: orden.id,
+    estado: orden.status,
+    equipo: { tipo: orden.device.type, marca: orden.device.brand, modelo: orden.device.model },
+    total,
+    abono,
+    saldo: Math.max(total - abono, 0),
+    recibidaEl: orden.createdAt,
+    estimadaEl: orden.estimatedDate ?? null,
+    entregadaEl: orden.deliveredAt ?? null,
+    garantiaDias: orden.warrantyDays ?? null,
+  })
+})
+
 /* --------------------------------- ventas -------------------------------- */
 
 function isIsoDate(value) {

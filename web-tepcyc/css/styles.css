@@ -161,7 +161,26 @@ h1 .acento{color:var(--brand-texto)}
 .orden button svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round}
 .orden:focus-within{outline:3px solid #fff;outline-offset:2px}
 .orden.error{border-color:#fff}
+.orden.consultando button{opacity:.55}
 @media(hover:hover){.orden button:hover{background:var(--cta-hover)}}
+
+/* ===== Resultado del buscador de orden ===== */
+.orden-res{width:min(100%,420px);margin:10px auto 0;padding:14px 16px;background:rgba(5,3,3,.84);border:1px solid var(--line);border-radius:var(--r-md)}
+.orden-res__estado{display:flex;align-items:center;gap:8px;font:400 26px/1.1 var(--font-display);letter-spacing:.02em}
+.orden-res__estado::before{content:"";flex:none;width:10px;height:10px;border-radius:50%;background:var(--brand-texto)}
+.orden-res__estado[data-estado="completada"]::before{background:#3FBF6A}
+.orden-res__estado[data-estado="rechazada"]::before,.orden-res__estado[data-estado="fallida"]::before{background:#8F8280}
+.orden-res__equipo{color:var(--muted);font-size:15px;margin-top:2px}
+.orden-res__cifras{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:12px}
+.orden-res__cifras[hidden]{display:none}
+.orden-res__cifras dt{color:var(--muted);font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+.orden-res__cifras dd{margin:0;font-weight:800;font-size:17px}
+.orden-res__fecha{color:var(--muted);font-size:14px;margin-top:10px}
+.orden-res__pie{font-size:14px;color:var(--muted);margin-top:10px}
+.orden-res__pie a{color:var(--brand-texto);font-weight:700}
+.orden-res--error{border-color:var(--brand-texto)}
+.orden-res--error .orden-res__estado{font-size:20px;color:var(--muted)}
+.orden-res--error .orden-res__estado::before{background:#8F8280}
 
 /* ===== Barra de navegacion en celular ===== */
 .barra-nav{display:none}
@@ -192,6 +211,7 @@ h1 .acento{color:var(--brand-texto)}
   .hero__marca{display:contents}
   .hero__texto{order:1}
   .hero .orden{order:2;margin:-14px 0 0;max-width:390px}
+  .hero .orden-res{order:2;margin:-6px 0 0;max-width:390px}
   .hero__lugar{order:3;margin-top:-14px}
   .hero__grid{gap:24px;padding-top:calc(18px + env(safe-area-inset-top));align-content:center}
 }

@@ -8,12 +8,19 @@
 import mimetypes
 import os
 import posixpath
+import re
 import sys
+import urllib.error
+import urllib.parse
+import urllib.request
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 PORT = int(os.environ.get("PORT", "8097"))
 HOST = os.environ.get("HOST", "127.0.0.1")
+# App del taller (Express + SQLite) para la consulta pública de una orden.
+TALLER = os.environ.get("TALLER_URL", "http://127.0.0.1:3005").rstrip("/")
+PREFIJO_ORDEN = "/api/orden/"
 
 mimetypes.add_type("font/woff2", ".woff2")
 mimetypes.add_type("image/webp", ".webp")
@@ -37,6 +44,42 @@ class Handler(SimpleHTTPRequestHandler):
     def list_directory(self, path):
         self.serve_404()
         return None
+
+    def do_GET(self):
+        ruta = self.path.split("?", 1)[0]
+        if ruta.startswith(PREFIJO_ORDEN):
+            return self.consultar_orden(ruta)
+        return super().do_GET()
+
+    def do_HEAD(self):
+        if self.path.split("?", 1)[0].startswith(PREFIJO_ORDEN):
+            return self.consultar_orden(self.path.split("?", 1)[0])
+        return super().do_HEAD()
+
+    def consultar_orden(self, ruta):
+        """Puente con la app del taller: consulta una orden por su número.
+
+        Se hace aquí (mismo origen) para no exponer la app interna ni depender
+        de CORS. La app responde solo con datos no sensibles.
+        """
+        numero = re.sub(r"[^A-Za-z0-9-]", "", ruta[len(PREFIJO_ORDEN):])[:32].upper()
+        cuerpo, estado = b'{"encontrada":false}', 404
+        if numero:
+            url = f"{TALLER}/api/public/orden/{urllib.parse.quote(numero)}"
+            try:
+                with urllib.request.urlopen(url, timeout=8) as resp:
+                    cuerpo, estado = resp.read(), resp.status
+            except urllib.error.HTTPError as err:
+                cuerpo, estado = (err.read() or b'{"encontrada":false}'), err.code
+            except (urllib.error.URLError, OSError, TimeoutError):
+                cuerpo, estado = b'{"error":"taller no disponible"}', 503
+        self._api = True
+        self.send_response(estado)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(cuerpo)))
+        self.end_headers()
+        if self.command != "HEAD":
+            self.wfile.write(cuerpo)
 
     def serve_404(self):
         """Sirve el 404.html del sitio (la ruta /no-existe la atiende este origen, no el Worker)."""
@@ -62,7 +105,7 @@ class Handler(SimpleHTTPRequestHandler):
     def end_headers(self):
         ruta = self.path.split("?", 1)[0]
         es_html = ruta.endswith((".html", "/")) or ruta in ("", "/")
-        if getattr(self, "_es_404", False):
+        if getattr(self, "_api", False) or getattr(self, "_es_404", False):
             self.send_header("Cache-Control", "no-store, must-revalidate")
         elif es_html:
             # El HTML nunca se cachea: Cloudflare (Browser Cache TTL por defecto) guardaba

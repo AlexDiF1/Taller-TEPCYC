@@ -35,16 +35,78 @@
     else el.scrollIntoView({ behavior: RM ? 'auto' : 'smooth' });
   });
 
-  /* Buscador de orden: arma el mensaje de WhatsApp con el número */
+  /* Buscador de orden: consulta el estado real en la app del taller
+     (/api/orden/... lo sirve este mismo sitio, que hace de puente) y deja
+     WhatsApp como respaldo. Sin JS, el formulario sigue abriendo WhatsApp. */
   safe(() => {
     const form = $('[data-orden]');
     if (!form) return;
     const numero = $('[data-orden-numero]', form), mensaje = $('[data-orden-mensaje]', form);
+    const caja = $('[data-orden-resultado]');
+    const WA = '573180223184';
+    const ETIQUETA = {
+      pendiente: 'Pendiente',
+      enRevision: 'En revisión',
+      esperandoConfirmacion: 'Esperando confirmación',
+      completada: 'Completada',
+      rechazada: 'Rechazada por el cliente',
+      fallida: 'Reparación fallida',
+    };
+    const pesos = (n) => '$' + Number(n || 0).toLocaleString('es-CO');
+    const wa = (texto) => `https://wa.me/${WA}?text=${encodeURIComponent(texto)}`;
+    const res = (clave) => (caja ? caja.querySelector(`[data-res-${clave}]`) : null);
+    const pon = (clave, texto) => { const el = res(clave); if (el) el.textContent = texto; };
+    const dia = (iso) => (iso ? String(iso).slice(0, 10) : '');
+    const cifras = res('cifras');
+    let consultando = false;
+
+    function pintar(datos) {
+      pon('estado', ETIQUETA[datos.estado] || datos.estado);
+      if (res('estado')) res('estado').dataset.estado = datos.estado;
+      const eq = datos.equipo || {};
+      pon('equipo', [eq.tipo, eq.marca, eq.modelo].filter(Boolean).join(' · ') || 'Equipo registrado');
+      pon('total', pesos(datos.total));
+      pon('abono', pesos(datos.abono));
+      pon('saldo', pesos(datos.saldo));
+      if (cifras) cifras.hidden = false;
+      const fechas = [];
+      if (datos.estimadaEl) fechas.push(`Entrega estimada: ${dia(datos.estimadaEl)}`);
+      if (datos.entregadaEl) fechas.push(`Entregada el ${dia(datos.entregadaEl)}`);
+      pon('fecha', fechas.join(' · '));
+      const elFecha = res('fecha');
+      if (elFecha) elFecha.hidden = fechas.length === 0;
+      const pie = res('pie');
+      if (pie) pie.innerHTML = `¿Algo no cuadra? <a href="${wa(`Hola, quiero consultar mi orden ${datos.numero}`)}" target="_blank" rel="noopener">Escríbenos por WhatsApp</a>.`;
+      if (caja) { caja.classList.remove('orden-res--error'); caja.hidden = false; }
+    }
+
+    function avisar(texto, valor) {
+      pon('estado', 'Sin resultados');
+      if (res('estado')) res('estado').dataset.estado = '';
+      pon('equipo', texto);
+      if (cifras) cifras.hidden = true;
+      const elFecha = res('fecha');
+      if (elFecha) elFecha.hidden = true;
+      const pie = res('pie');
+      if (pie) pie.innerHTML = `<a href="${wa(`Hola, quiero consultar mi orden ${valor}`)}" target="_blank" rel="noopener">Consúltanos por WhatsApp</a> y la revisamos contigo.`;
+      if (caja) { caja.classList.add('orden-res--error'); caja.hidden = false; }
+    }
+
     form.addEventListener('submit', (e) => {
       const valor = numero.value.trim();
       if (!valor) { e.preventDefault(); form.classList.add('error'); numero.focus(); return; }
       form.classList.remove('error');
       mensaje.value = `Hola, quiero consultar mi orden de reparación número: ${valor}`;
+      if (!caja || typeof fetch !== 'function') return; /* respaldo: el formulario abre WhatsApp */
+      e.preventDefault();
+      if (consultando) return;
+      consultando = true;
+      form.classList.add('consultando');
+      fetch(`/api/orden/${encodeURIComponent(valor)}`, { headers: { Accept: 'application/json' } })
+        .then((r) => r.json())
+        .then((d) => (d && d.encontrada ? pintar(d) : avisar('No encontramos una orden con ese número.', valor)))
+        .catch(() => avisar('No pudimos consultar la orden en este momento.', valor))
+        .finally(() => { consultando = false; form.classList.remove('consultando'); });
     });
     numero.addEventListener('input', () => form.classList.remove('error'));
   });
