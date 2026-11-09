@@ -157,6 +157,8 @@ h1 .acento{color:var(--brand-texto)}
 .orden input[type=search]{flex:1;min-width:0;height:100%;padding:0 4px 0 12px;border:0;background:none;color:#fff;font:600 16px var(--font-body);outline:0;-webkit-appearance:none;appearance:none}
 .orden input::placeholder{color:var(--muted);opacity:1}
 .orden input::-webkit-search-cancel-button{display:none}
+.orden__sufijo{flex:0 0 112px;min-width:0;height:100%;padding:0 8px;border:0;border-left:1px solid rgba(255,255,255,.22);background:none;color:#fff;font:600 15px var(--font-body);letter-spacing:.04em;outline:0;-webkit-appearance:none;appearance:none}
+.orden__sufijo::placeholder{color:var(--muted);opacity:1;letter-spacing:0;font-size:13px}
 .orden button{flex:none;width:44px;height:100%;border:0;background:#C5171E;color:var(--cta-ink);cursor:pointer;display:grid;place-items:center;transition:background var(--t-hover) var(--ease)}
 .orden button svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round}
 .orden:focus-within{outline:3px solid #fff;outline-offset:2px}

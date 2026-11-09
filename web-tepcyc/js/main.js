@@ -41,7 +41,7 @@
   safe(() => {
     const form = $('[data-orden]');
     if (!form) return;
-    const numero = $('[data-orden-numero]', form), mensaje = $('[data-orden-mensaje]', form);
+    const numero = $('[data-orden-numero]', form), sufijo = $('[data-orden-sufijo]', form), mensaje = $('[data-orden-mensaje]', form);
     const caja = $('[data-orden-resultado]');
     const WA = '573180223184';
     const ETIQUETA = {
@@ -101,21 +101,31 @@
 
     form.addEventListener('submit', (e) => {
       const valor = numero.value.trim();
-      if (!valor) { e.preventDefault(); form.classList.add('error'); numero.focus(); return; }
+      const ultimos = sufijo.value.replace(/\D/g, '');
+      if (!valor || ultimos.length !== 4) {
+        e.preventDefault();
+        form.classList.add('error');
+        if (caja) caja.hidden = true;
+        (!valor ? numero : sufijo).focus();
+        return;
+      }
       form.classList.remove('error');
-      mensaje.value = `Hola, quiero consultar mi orden de reparación número: ${valor}`;
+      mensaje.value = `Hola, quiero consultar mi orden de reparación número: ${valor} (mi teléfono termina en ${ultimos})`;
       if (!caja || typeof fetch !== 'function') return; /* respaldo: el formulario abre WhatsApp */
       e.preventDefault();
       if (consultando) return;
       consultando = true;
       form.classList.add('consultando');
-      fetch(`/api/orden/${encodeURIComponent(valor)}`, { headers: { Accept: 'application/json' } })
+      fetch(`/api/orden/${encodeURIComponent(valor)}?t=${encodeURIComponent(ultimos)}`, { headers: { Accept: 'application/json' } })
         .then((r) => r.json())
-        .then((d) => (d && d.encontrada ? pintar(d) : avisar('No encontramos una orden con ese número.', valor)))
+        .then((d) => (d && d.encontrada ? pintar(d) : avisar('No encontramos una orden con ese número y esos 4 dígitos.', valor)))
         .catch(() => avisar('No pudimos consultar la orden en este momento.', valor))
         .finally(() => { consultando = false; form.classList.remove('consultando'); });
     });
-    numero.addEventListener('input', () => form.classList.remove('error'));
+    [numero, sufijo].forEach((campo) => campo.addEventListener('input', () => {
+      if (campo === sufijo) campo.value = campo.value.replace(/\D/g, '').slice(0, 4);
+      form.classList.remove('error');
+    }));
   });
 
   if (!hasGSAP || RM) return;

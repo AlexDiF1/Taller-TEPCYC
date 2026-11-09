@@ -63,9 +63,11 @@ class Handler(SimpleHTTPRequestHandler):
         de CORS. La app responde solo con datos no sensibles.
         """
         numero = re.sub(r"[^A-Za-z0-9-]", "", ruta[len(PREFIJO_ORDEN):])[:32].upper()
+        consulta = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
+        sufijo = re.sub(r"[^0-9]", "", (consulta.get("t") or [""])[0])[:4]
         cuerpo, estado = b'{"encontrada":false}', 404
-        if numero:
-            url = f"{TALLER}/api/public/orden/{urllib.parse.quote(numero)}"
+        if numero and len(sufijo) == 4:
+            url = f"{TALLER}/api/public/orden/{urllib.parse.quote(numero)}?t={urllib.parse.quote(sufijo)}"
             try:
                 with urllib.request.urlopen(url, timeout=8) as resp:
                     cuerpo, estado = resp.read(), resp.status

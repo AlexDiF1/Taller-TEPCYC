@@ -73,8 +73,10 @@ api.get('/orders/:id/invoices', (req, res) => {
 
 /**
  * Buscador de órdenes de la web pública (tepcyc.com).
- * Devuelve estado, equipo, cifras, el nombre del cliente y la falla reportada;
- * nunca teléfono, documento, correo, fotos, historial ni notas internas.
+ * Exige el número de orden **y** los últimos 4 dígitos del teléfono del cliente
+ * (`?t=1234`): sin la comprobación, los números secuenciales permitirían espiar
+ * órdenes ajenas. Devuelve estado, equipo, cifras, nombre del cliente y falla
+ * reportada; nunca teléfono, documento, correo, fotos, historial ni notas.
  * El sitio estático lo consume a través de su propio proxy (`/api/orden/...`),
  * así que no se emite CORS: nadie puede leerlo desde otro origen.
  */
@@ -88,8 +90,13 @@ function numeroDeOrden(valor) {
 
 api.get('/public/orden/:numero', (req, res) => {
   const numero = numeroDeOrden(req.params.numero)
+  const sufijo = String(req.query?.t ?? '').replace(/\D/g, '').slice(0, 4)
   const orden = numero ? store.getOrder(numero) : undefined
-  if (!orden) return res.status(404).json({ encontrada: false })
+  // Segunda llave: los últimos 4 dígitos del teléfono registrado en la orden.
+  const telefono = String(orden?.customer?.phone ?? '').replace(/\D/g, '')
+  if (!orden || sufijo.length !== 4 || !telefono.endsWith(sufijo)) {
+    return res.status(404).json({ encontrada: false })
+  }
   const subtotal = (orden.items ?? []).reduce((suma, item) => suma + (Number(item.price) || 0), 0)
   const total = subtotal || Number(orden.estimatedCost) || 0
   const abono = Number(orden.deposit) || 0
