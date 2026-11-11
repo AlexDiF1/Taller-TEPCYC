@@ -22,9 +22,24 @@ if (!dev && !existsSync(join(projectDir, '.next', 'BUILD_ID'))) {
 
 const app = express()
 app.disable('x-powered-by')
+app.use((_req, res, nextBinary) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN')
+  nextBinary()
+})
 app.use(express.json({ limit: jsonLimit }))
 app.use('/api', api)
 app.use('/uploads', express.static(uploadsDir, { maxAge: '7d', fallthrough: true }))
+
+// Error de API sin capturar → JSON 500 (nunca el HTML con la traza de Express).
+app.use('/api', (error, _req, res, _next) => {
+  console.error('[api] error no controlado:', error?.stack ?? error)
+  if (res.headersSent) return
+  res.status(error?.status && error.status >= 400 && error.status < 600 ? error.status : 500).json({
+    error: error?.message ?? 'Error interno del servidor.',
+  })
+})
 
 const nextApp = next({ dev, dir: projectDir, hostname, port })
 const handle = nextApp.getRequestHandler()

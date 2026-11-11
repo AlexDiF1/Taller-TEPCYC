@@ -274,18 +274,21 @@ function upsertCustomer(input) {
   return Number(info.lastInsertRowid)
 }
 
-function nextOrderNumber() {
-  // Ojo: la base importada trae números de Firestore con formatos variados
-  // (ORD-12341, ORD-93645, y algunos generados con letras), así que se toma el
-  // mayor valor numérico parseable y se busca el primer hueco libre.
-  const used = new Set(db.prepare('SELECT order_number FROM orders').all().map((r) => r.order_number))
-  const max = [...used].reduce((m, value) => {
-    const digits = Number(String(value).replace(/\D/g, ''))
-    return Number.isFinite(digits) ? Math.max(m, digits) : m
-  }, 0)
-  let candidate = Math.max(max + 1, 12341)
-  while (used.has(`ORD-${candidate}`)) candidate += 1
-  return `ORD-${candidate}`
+function allocateOrderNumber() {
+  // Fuera con UNIQUE en order_number: quien escribe comprueba y reserva dentro
+  // de la misma transacción, así dos altas simultáneas no chocan y, si aun así
+  // choca (otra conexión), se reintenta con el siguiente hueco.
+  for (let intento = 0; intento < 5; intento += 1) {
+    const used = new Set(db.prepare('SELECT order_number FROM orders').all().map((r) => r.order_number))
+    const max = [...used].reduce((m, value) => {
+      const digits = Number(String(value).replace(/\D/g, ''))
+      return Number.isFinite(digits) ? Math.max(m, digits) : m
+    }, 0)
+    let candidate = Math.max(max + 1, 12341) + intento
+    while (used.has(`ORD-${candidate}`)) candidate += 1
+    if (!used.has(`ORD-${candidate}`)) return `ORD-${candidate}`
+  }
+  throw new Error('No se pudo asignar número de orden libre.')
 }
 
 function invoiceTotals(orderId) {
@@ -308,8 +311,8 @@ function addInvoice(orderId, type, orderNumber) {
 
 export function createOrder(input) {
   const now = new Date().toISOString()
-  const orderNumber = nextOrderNumber()
-  const tx = db.transaction(() => {
+  const insert = db.transaction(() => {
+    const orderNumber = allocateOrderNumber()
     const customerId = upsertCustomer({ ...(input.customer ?? {}), type: 'clientePropio' })
     const info = db
       .prepare(`INSERT INTO orders (order_number, customer_id, device_type, device_brand, device_model,
@@ -355,9 +358,19 @@ export function createOrder(input) {
       'Equipo ingresado al taller',
     )
     addInvoice(orderId, 'recepcion', orderNumber)
-    return orderId
+    return orderNumber
   })
-  tx()
+  let orderNumber
+  for (let intento = 0; ; intento += 1) {
+    try {
+      orderNumber = insert()
+      break
+    } catch (error) {
+      // Colisión de número con otra conexión/proceso: se reintenta el alta entera.
+      const colision = String(error?.code ?? '').includes('SQLITE_CONSTRAINT') || /UNIQUE constraint failed: orders\.order_number/.test(String(error?.message))
+      if (!colision || intento >= 3) throw error
+    }
+  }
   return getOrder(orderNumber)
 }
 
@@ -607,8 +620,19 @@ export function listVentas(filters = {}) {
   return list.map((v) => rowToVenta(v, items.get(v.id) ?? []))
 }
 
+/** Acepta el id interno (9) o el número visible de la venta («VTA-1006»). */
+function ventaRowId(id) {
+  const raw = String(id ?? '').trim()
+  const numeric = Number(raw)
+  if (Number.isFinite(numeric) && numeric > 0) return numeric
+  const match = raw.toUpperCase().match(/^VTA-?(\d+)$/)
+  if (!match) return NaN
+  const row = db.prepare('SELECT id FROM ventas WHERE sale_number = ?').get(`VTA-${match[1]}`)
+  return row ? row.id : NaN
+}
+
 export function getVenta(id) {
-  const row = db.prepare('SELECT * FROM ventas WHERE id = ?').get(Number(id))
+  const row = db.prepare('SELECT * FROM ventas WHERE id = ?').get(ventaRowId(id))
   if (!row) return undefined
   const items = groupByVenta([row.id]).get(row.id) ?? []
   return rowToVenta(row, items)
@@ -653,7 +677,7 @@ export function createVenta(input = {}) {
 }
 
 export function deleteVenta(id) {
-  const row = db.prepare('SELECT id FROM ventas WHERE id = ?').get(Number(id))
+  const row = db.prepare('SELECT id FROM ventas WHERE id = ?').get(ventaRowId(id))
   if (!row) return false
   const tx = db.transaction(() => {
     db.prepare('DELETE FROM venta_items WHERE venta_id = ?').run(row.id)
@@ -668,7 +692,7 @@ export function deleteVenta(id) {
  * ítems (nunca se aceptan del cliente).
  */
 export function updateVenta(id, patch = {}) {
-  const row = db.prepare('SELECT id FROM ventas WHERE id = ?').get(Number(id))
+  const row = db.prepare('SELECT id FROM ventas WHERE id = ?').get(ventaRowId(id))
   if (!row) return undefined
 
   const tx = db.transaction(() => {

@@ -1,4 +1,3 @@
-import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { Space_Grotesk, JetBrains_Mono } from 'next/font/google'
 import { Toaster } from 'sonner'
@@ -45,7 +44,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <AppShell>{children}</AppShell>
         <Toaster theme="dark" position="top-center" richColors closeButton />
         <ServiceWorkerRegister />
-        {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
   )

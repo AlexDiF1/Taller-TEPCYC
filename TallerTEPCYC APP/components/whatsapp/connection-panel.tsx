@@ -89,8 +89,8 @@ export function ConnectionPanel({
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="order-2 flex flex-col gap-5">
-        <section className="rounded-2xl border border-border bg-card/70 p-4 ring-1 ring-foreground/5 md:p-5">
+      <div className="order-2 flex min-w-0 flex-col gap-5">
+        <section className="min-w-0 rounded-2xl border border-border bg-card/70 p-4 ring-1 ring-foreground/5 md:p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex items-center gap-3">
               <span
@@ -192,7 +192,7 @@ export function ConnectionPanel({
           )}
         </section>
 
-        <section className="rounded-2xl border border-border bg-card/70 p-4 ring-1 ring-foreground/5 md:p-5">
+        <section className="min-w-0 rounded-2xl border border-border bg-card/70 p-4 ring-1 ring-foreground/5 md:p-5">
           <header className="flex flex-wrap items-center gap-2">
             <span
               className={cn(
@@ -288,7 +288,7 @@ export function ConnectionPanel({
           )}
         </section>
 
-        <section className="rounded-2xl border border-border bg-card/70 p-4 ring-1 ring-foreground/5 md:p-5">
+        <section className="min-w-0 rounded-2xl border border-border bg-card/70 p-4 ring-1 ring-foreground/5 md:p-5">
           <header className="flex items-center gap-2">
             <span className="grid size-7 place-items-center rounded-lg bg-status-pending/12 text-status-pending">
               <Users className="size-4" aria-hidden="true" />
@@ -318,12 +318,12 @@ export function ConnectionPanel({
           </p>
 
           {contacts && contacts.length > 0 && (
-            <ul className="mt-3 max-h-64 divide-y divide-border/60 overflow-y-auto rounded-xl border border-border bg-background/40">
+            <ul className="mt-3 min-w-0 max-h-64 divide-y divide-border/60 overflow-y-auto overflow-x-hidden rounded-xl border border-border bg-background/40">
               {contacts.map((contact) => (
-                <li key={contact.phone} className="flex items-center justify-between gap-2 px-3 py-2">
+                <li key={contact.phone} className="flex min-w-0 items-center justify-between gap-2 px-3 py-2">
                   <div className="min-w-0">
-                    <p className="truncate text-sm">{contact.name || 'Sin nombre'}</p>
-                    <p className="font-mono text-[11px] text-muted-foreground">+{contact.phone}</p>
+                    <p className="line-clamp-2 text-sm leading-snug break-words">{contact.name || 'Sin nombre'}</p>
+                    <p className="truncate font-mono text-[11px] text-muted-foreground">+{contact.phone}</p>
                   </div>
                   <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
                     {contact.source}
@@ -334,7 +334,7 @@ export function ConnectionPanel({
           )}
         </section>
 
-        <section className="rounded-2xl border border-border bg-card/70 p-4 ring-1 ring-foreground/5 md:p-5">
+        <section className="min-w-0 rounded-2xl border border-border bg-card/70 p-4 ring-1 ring-foreground/5 md:p-5">
           <header className="flex items-center gap-2">
             <span className="grid size-7 place-items-center rounded-lg bg-secondary text-muted-foreground">
               <ScrollText className="size-4" aria-hidden="true" />
@@ -345,18 +345,18 @@ export function ConnectionPanel({
             {(state?.events ?? []).length === 0 && <li className="text-xs text-muted-foreground">Sin eventos todavía.</li>}
             {(state?.events ?? []).map((event, index) => (
               <li key={`${event.at}-${index}`} className="flex items-start justify-between gap-3 text-xs">
-                <span className="text-muted-foreground">
+                <span className="min-w-0 break-words text-muted-foreground">
                   <span className="text-foreground">{event.event}</span>
                   {event.detail ? ` · ${event.detail}` : ''}
                 </span>
-                <span className="shrink-0 font-mono text-[10px] text-muted-foreground/70">{formatDate(event.at, true)}</span>
+                <span className="max-w-[45%] shrink-0 text-right font-mono text-[10px] leading-tight text-muted-foreground/70">{formatDate(event.at, true)}</span>
               </li>
             ))}
           </ul>
         </section>
       </div>
 
-      <aside className="order-1 flex flex-col gap-4 rounded-2xl border border-border bg-card/80 p-4 ring-1 ring-foreground/10">
+      <aside className="order-1 flex min-w-0 flex-col gap-4 rounded-2xl border border-border bg-card/80 p-4 ring-1 ring-foreground/10">
         <header className="flex items-center gap-2">
           <QrCode className="size-4 text-primary" aria-hidden="true" />
           <h2 className="text-sm font-semibold">Vinculación</h2>
