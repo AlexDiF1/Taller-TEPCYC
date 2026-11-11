@@ -2,11 +2,13 @@
  * Servidor único del taller: Express sirve /api, /uploads y delega el resto
  * a Next.js (frontend compilado). Escucha en el puerto 3005.
  */
+import './env.mjs'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import express from 'express'
 import next from 'next'
 import { api, uploadsDir } from './api.mjs'
+import { authApi, gate, authEnabled, readSession } from './auth.mjs'
 import { projectDir } from './db.mjs'
 import { startWhatsapp } from './whatsapp.mjs'
 
@@ -29,6 +31,9 @@ app.use((_req, res, nextBinary) => {
   nextBinary()
 })
 app.use(express.json({ limit: jsonLimit }))
+app.use('/api/auth', authApi)
+// Portero propio: sesión de Google para toda la app y la API (si está configurado).
+app.use(gate)
 app.use('/api', api)
 app.use('/uploads', express.static(uploadsDir, { maxAge: '7d', fallthrough: true }))
 
@@ -49,6 +54,7 @@ app.use((req, res) => handle(req, res))
 
 const server = app.listen(port, hostname, () => {
   console.log(`[server] Taller TEPCYC escuchando en http://${hostname}:${port} (${dev ? 'dev' : 'producción'})`)
+  console.log(`[server] acceso con Google: ${authEnabled ? 'activo' : 'sin configurar (app abierta)'}`)
   // WhatsApp arranca después de levantar el servidor: si falla, la app sigue viva.
   startWhatsapp()
     .then((status) => console.log(`[whatsapp] estado inicial: ${status.status}`))

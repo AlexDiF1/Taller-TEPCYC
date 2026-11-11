@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LayoutGrid, Plus, ReceiptText, ShoppingCart, MessageCircle, MapPin, Phone } from 'lucide-react'
 import { BrandLogo } from '@/components/brand-logo'
+import { LogoutButton } from '@/components/auth/logout-button'
 import { BUSINESS } from '@/lib/business'
 import { cn } from '@/lib/utils'
 
@@ -33,6 +34,9 @@ function isActive(pathname: string, href: string) {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+
+  // La pantalla de acceso va sin sidebar ni barra inferior.
+  if (pathname === '/login') return <>{children}</>
 
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[264px_1fr]">
@@ -79,6 +83,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Phone className="size-3.5 shrink-0" aria-hidden="true" />
             {BUSINESS.phone}
           </p>
+          <LogoutButton />
         </div>
       </aside>
 
