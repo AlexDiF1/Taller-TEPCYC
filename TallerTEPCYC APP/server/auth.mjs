@@ -72,12 +72,16 @@ function sessionCookie(email) {
   return `${COOKIE}=${encodeURIComponent(`${body}.${sign(body)}`)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${COOKIE_MAX_AGE}; Secure`
 }
 
-/** Valida el ID token de Google contra la audiencia configurada. */
-export async function verifyGoogleCredential(credential) {
+/** Valida la sesión de Google (id token o access token) contra la audiencia configurada. */
+export async function verifyGoogleCredential(credential, accessToken) {
   if (!clientId) throw new Error('Falta GOOGLE_CLIENT_ID en el servidor.')
-  const token = String(credential ?? '').trim()
+  const asAccess = Boolean(String(accessToken ?? '').trim())
+  const token = String(asAccess ? accessToken : credential ?? '').trim()
   if (!token) return null
-  const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(token)}`)
+  const url = asAccess
+    ? `https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(token)}`
+    : `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(token)}`
+  const response = await fetch(url)
   if (!response.ok) return null
   const info = await response.json()
   if (info.aud !== clientId) return null
@@ -103,7 +107,7 @@ authApi.get('/me', (req, res) => {
 authApi.post('/google', async (req, res) => {
   if (!authEnabled) return res.status(503).json({ error: 'El acceso con Google aún no está configurado.' })
   try {
-    const email = await verifyGoogleCredential(req.body?.credential)
+    const email = await verifyGoogleCredential(req.body?.credential, req.body?.accessToken)
     if (!email) {
       return res.status(401).json({ error: 'Ese correo no tiene acceso al taller.' })
     }
