@@ -121,6 +121,22 @@ export const DEVICE_ICON = Object.fromEntries(
 
 export const BRANDS = ['PlayStation', 'Xbox', 'Nintendo', 'Otra']
 
+/**
+ * Une marca y modelo sin repetir la marca: «Xbox» + «Xbox 360» → «Xbox 360»,
+ * «PlayStation» + «PlayStation 4» → «PlayStation 4», «Nintendo» + «Wii» → «Nintendo Wii».
+ */
+export function deviceLabel(device: { brand?: string; model?: string }) {
+  const brand = (device.brand ?? '').trim()
+  const model = (device.model ?? '').trim()
+  if (!brand) return model
+  if (!model) return brand
+  const b = brand.toLowerCase()
+  const m = model.toLowerCase()
+  if (m.startsWith(b)) return model
+  if (b.startsWith(m)) return brand
+  return `${brand} ${model}`
+}
+
 /** Modelos disponibles por marca de consola (Xbox 360 → Series X/S, PS3 → PS5, Wii → Switch 2). */
 export const CONSOLE_MODELS: Record<string, string[]> = {
   Xbox: ['Xbox 360', 'Xbox One', 'Xbox One S', 'Xbox One X', 'Xbox Series S', 'Xbox Series X'],

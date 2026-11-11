@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { StatusProgress } from '@/components/status-badge'
 import { StatusSelect } from './status-select'
 import { WhatsAppButton } from './whatsapp-button'
-import { DEVICE_ICON, STATUS_MAP } from '@/lib/status'
+import { DEVICE_ICON, STATUS_MAP, deviceLabel } from '@/lib/status'
 import type { Order, OrderStatus } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -40,7 +40,7 @@ export function OrderCard({
         aria-label={`Ver detalle de la orden ${order.id}`}
       >
         <div className="flex items-center justify-between gap-2">
-          <span className="font-mono text-xs font-bold tracking-wider text-primary">{order.id}</span>
+          <span className="font-mono text-sm font-bold tracking-wider text-primary">{order.id}</span>
           <span className="flex items-center gap-1 text-[11px] font-mono text-muted-foreground">
             <Clock className="size-3" aria-hidden="true" />
             {daysSince(order.createdAt)}
@@ -52,17 +52,17 @@ export function OrderCard({
             <Icon className="size-5 text-foreground" aria-hidden="true" />
           </span>
           <div className="min-w-0 flex-1">
-            <h3 className="truncate text-sm font-semibold leading-tight text-foreground group-hover:text-primary transition-colors">
-              {order.device.brand} {order.device.model}
+            <h3 className="truncate text-base font-semibold leading-tight text-foreground group-hover:text-primary transition-colors">
+              {deviceLabel(order.device)}
             </h3>
-            <p className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-muted-foreground">
-              <UserRound className="size-3 shrink-0" aria-hidden="true" />
+            <p className="mt-1 flex items-center gap-1.5 truncate text-sm font-semibold text-foreground/90">
+              <UserRound className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
               {order.customer.name}
             </p>
           </div>
         </div>
 
-        <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground/90">{order.reportedFault}</p>
+        <p className="line-clamp-3 text-sm leading-relaxed text-muted-foreground">{order.reportedFault}</p>
 
         <div className="mt-auto pt-2 flex items-center justify-between text-xs text-muted-foreground">
           {order.photos.length > 0 ? (

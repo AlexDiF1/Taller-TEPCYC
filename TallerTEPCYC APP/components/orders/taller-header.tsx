@@ -1,12 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { LayoutGrid, Plus, ReceiptText } from 'lucide-react'
+import { ReceiptText } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const TALLER_TABS = [
-  { id: 'ordenes', label: 'Órdenes de trabajo', href: '/', icon: LayoutGrid },
-  { id: 'ingreso', label: 'Nuevo ingreso', href: '/ingreso', icon: Plus },
   { id: 'comprobantes', label: 'Comprobantes y facturas', href: '/comprobantes', icon: ReceiptText },
 ]
 

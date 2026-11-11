@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { Button, buttonVariants } from '@/components/ui/button'
 import { StatusBadge } from '@/components/status-badge'
 import { WhatsAppButton } from './whatsapp-button'
-import { DEVICE_ICON, STATUS_MAP } from '@/lib/status'
+import { DEVICE_ICON, STATUS_MAP, deviceLabel } from '@/lib/status'
 import { formatDate, formatMoney } from '@/lib/business'
 import { downloadReceiptPdf, prepareReceiptDelivery, type ReceiptDelivery } from '@/lib/receipt-pdf'
 import type { Order } from '@/lib/types'
@@ -104,7 +104,7 @@ function Detail({
           </span>
           <div className="min-w-0">
             <DialogTitle className="text-xl font-bold tracking-tight">
-              {order.device.brand} {order.device.model}
+              {deviceLabel(order.device)}
             </DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground">
               Ingresó el {formatDate(order.createdAt, true)}

@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { TallerHeader } from '@/components/orders/taller-header'
 import { StatusBadge } from '@/components/status-badge'
 import { StatusSelect } from '@/components/orders/status-select'
+import { deviceLabel } from '@/lib/status'
 import { ReceiptDocument, type ReceiptType } from './receipt-document'
 import { ItemsEditor } from './items-editor'
 import { useOrders } from '@/hooks/use-orders'
@@ -129,7 +130,7 @@ export function ReceiptsView({ initialOrderId, initialType }: { initialOrderId?:
             {order && (
               <div className="flex items-center justify-between gap-2 text-sm">
                 <span className="truncate text-muted-foreground">
-                  {order.device.brand} {order.device.model}
+                  {deviceLabel(order.device)}
                 </span>
                 <StatusBadge status={order.status} />
               </div>
