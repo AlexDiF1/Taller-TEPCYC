@@ -8,14 +8,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { TallerHeader } from '@/components/orders/taller-header'
 import { StatusBadge } from '@/components/status-badge'
 import { StatusSelect } from '@/components/orders/status-select'
+import { WhatsAppButton } from '@/components/orders/whatsapp-button'
 import { deviceLabel } from '@/lib/status'
 import { ReceiptDocument, type ReceiptType } from './receipt-document'
 import { ItemsEditor } from './items-editor'
 import { useOrders } from '@/hooks/use-orders'
-import { downloadReceiptPdf, openReceiptPdf, prepareReceiptDelivery, type ReceiptDelivery } from '@/lib/receipt-pdf'
+import { downloadReceiptPdf, prepareReceiptDelivery, type ReceiptDelivery } from '@/lib/receipt-pdf'
 import { buildReceiptMessage } from '@/lib/whatsapp'
 import { WaOfflineError, WaThrottleError, blobToDataUrl, waSendDocument } from '@/lib/wa'
 import type { Order, OrderPatch, ServiceItem } from '@/lib/types'
@@ -31,27 +31,19 @@ export function ReceiptsView({ initialOrderId, initialType }: { initialOrderId?:
   const { orders, isLoading, setItems, setStatus, updateOrder } = useOrders()
   const [type, setType] = useState<ReceiptType>(initialType ?? 'recepcion')
   const [delivery, setDelivery] = useState<ReceiptDelivery | null>(null)
-  const [ticketDelivery, setTicketDelivery] = useState<ReceiptDelivery | null>(null)
   const [sendingPdf, setSendingPdf] = useState(false)
   const orderId = initialOrderId ?? orders[0]?.id
   const order = orders.find((o) => o.id === orderId)
   const itemsKey = JSON.stringify(order?.items ?? [])
 
-  // Se generan las dos versiones antes del clic: el PDF bonito (con fotos) para
-  // WhatsApp y el ticket térmico de 80 mm para imprimir o descargar.
+  // El PDF bonito (con fotos) se genera antes del clic para enviarlo por WhatsApp.
   useEffect(() => {
     let alive = true
     setDelivery(null)
-    setTicketDelivery(null)
     if (!order) return
-    Promise.all([
-      prepareReceiptDelivery(order, type, order.items, 'pretty'),
-      prepareReceiptDelivery(order, type, order.items, 'ticket'),
-    ])
-      .then(([pretty, ticket]) => {
-        if (!alive) return
-        setDelivery(pretty)
-        setTicketDelivery(ticket)
+    prepareReceiptDelivery(order, type, order.items, 'pretty')
+      .then((pretty) => {
+        if (alive) setDelivery(pretty)
       })
       .catch(() => {
         if (alive) toast.error('No se pudo generar el comprobante en PDF.')
@@ -107,8 +99,6 @@ export function ReceiptsView({ initialOrderId, initialType }: { initialOrderId?:
 
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8 md:py-8 print:max-w-none print:p-0">
-      <TallerHeader activeTab="comprobantes" />
-
       <div className="grid gap-6 lg:grid-cols-[340px_1fr] print:block">
         <aside className="flex flex-col gap-4 lg:sticky lg:top-6 lg:self-start print:hidden" aria-label="Opciones del comprobante">
           <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card/90 p-4">
@@ -206,24 +196,7 @@ export function ReceiptsView({ initialOrderId, initialType }: { initialOrderId?:
                 {sendingPdf ? <Loader2 data-icon="inline-start" className="animate-spin" /> : <Send data-icon="inline-start" />}
                 {sendingPdf ? 'Enviando comprobante...' : 'Enviar PDF bonito por WhatsApp'}
               </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-10 text-xs"
-                onClick={() => delivery && downloadReceiptPdf(delivery)}
-                disabled={!delivery}
-              >
-                Descargar PDF bonito (con fotos)
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-10 text-xs"
-                onClick={() => ticketDelivery && openReceiptPdf(ticketDelivery)}
-                disabled={!ticketDelivery}
-              >
-                Descargar / abrir ticket 80mm (PDF)
-              </Button>
+              <WhatsAppButton order={order} label="Enviar estado manual" className="h-11 w-full text-sm" />
             </div>
           )}
         </aside>

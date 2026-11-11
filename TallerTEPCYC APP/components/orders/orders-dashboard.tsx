@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button'
 import { OrderCard } from './order-card'
 import { OrderDetailDialog } from './order-detail-dialog'
 import { OrderEditDialog } from './order-edit-dialog'
-import { TallerHeader } from './taller-header'
 import { useOrders } from '@/hooks/use-orders'
 import { STATUSES, STATUS_MAP, isClosed } from '@/lib/status'
 import { openWhatsApp } from '@/lib/whatsapp'
@@ -76,8 +75,6 @@ export function OrdersDashboard() {
 
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8 md:py-8">
-      <TallerHeader activeTab="ordenes" />
-
       {/* Barra superior unificada: Buscador, Píldoras de Filtro y Botón Nuevo Ingreso */}
       <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card/70 p-3.5 backdrop-blur-md lg:flex-row lg:items-center lg:justify-between">
         <div className="relative min-w-[280px] flex-1">

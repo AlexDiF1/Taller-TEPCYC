@@ -12,14 +12,14 @@ const NAV_SECTIONS = [
     title: 'Módulo Taller',
     items: [
       { href: '/', label: 'Órdenes de trabajo', short: 'Órdenes', icon: LayoutGrid },
-      { href: '/ingreso', label: 'Nuevo ingreso', short: 'Ingreso', icon: Plus, raised: true },
+      { href: '/ingreso', label: 'Nuevo ingreso', short: 'Ingreso', icon: Plus },
       { href: '/comprobantes', label: 'Comprobantes', short: 'Recibos', icon: ReceiptText },
     ],
   },
   {
     title: 'Comercial & Comunicación',
     items: [
-      { href: '/ventas', label: 'Ventas POS', short: 'Ventas', icon: ShoppingCart, raised: true },
+      { href: '/ventas', label: 'Ventas POS', short: 'Ventas', icon: ShoppingCart },
       { href: '/whatsapp', label: 'WhatsApp', short: 'WhatsApp', icon: MessageCircle },
     ],
   },
@@ -94,9 +94,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         aria-label="Navegación móvil"
         className="fixed inset-x-3 bottom-3 z-40 flex items-center justify-around rounded-2xl border border-border bg-popover/90 px-2 py-2 shadow-2xl shadow-black/40 backdrop-blur-xl print:hidden lg:hidden"
       >
-        {MOBILE_NAV.map(({ href, label, short, icon: Icon, raised }) => {
+        {MOBILE_NAV.map(({ href, label, short, icon: Icon }) => {
           const active = isActive(pathname, href)
-          const isPrimary = Boolean(raised)
           return (
             <Link
               key={href}
@@ -109,11 +108,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             >
               <span
                 className={cn(
-                  'grid place-items-center rounded-lg transition-all',
-                  isPrimary
-                    ? 'size-10 -mt-6 bg-primary text-primary-foreground shadow-[0_0_24px_-4px] shadow-primary/70'
-                    : 'size-7',
-                  active && !isPrimary && 'text-primary',
+                  'grid size-7 place-items-center rounded-lg transition-all',
+                  active && 'text-primary',
                 )}
               >
                 <Icon className="size-5" aria-hidden="true" />
