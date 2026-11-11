@@ -2,21 +2,26 @@
  * Comprobante "bonito" (A4) pensado para enviarse por WhatsApp.
  *
  * Diferencias con el ticket térmico de 80 mm:
- * - Página A4 con diseño a color, bloques y jerarquía visual.
+ * - Página A5 vertical (mitad de A4) con diseño a color, compacta y legible
+ *   en el celular: la hoja entra completa en pantalla.
  * - Incluye las fotos del ingreso del equipo con su fecha.
  * - Muestra todos los datos de la orden (cliente, equipo, falla, accesorios,
  *   observaciones, detalle facturado, abonos y garantía).
  * - Nunca imprime costos internos ni ganancias: solo lo que ve el cliente.
  */
 import { BUSINESS, addDays, formatDate, formatMoney } from './business'
-import { STATUS_MAP } from './status'
+import { STATUS_MAP, deviceLabel } from './status'
 import type { IntakePhoto, Order, ServiceItem } from './types'
 
 export type ReceiptType = 'recepcion' | 'entrega'
 
-const PAGE = { width: 210, height: 297, margin: 14 }
+/**
+ * A5 vertical (mitad de una A4): el mismo diseño, pero compacto. Al abrirla en
+ * un celular la hoja entra completa en pantalla y el texto se lee sin zoom.
+ */
+const PAGE = { width: 148, height: 210, margin: 8 }
 const CONTENT = PAGE.width - PAGE.margin * 2
-const BOTTOM = PAGE.height - 16
+const BOTTOM = PAGE.height - 10
 
 const INK: [number, number, number] = [17, 17, 17]
 const MUTED: [number, number, number] = [95, 95, 99]
@@ -33,6 +38,12 @@ const DEVICE_TYPE_LABEL: Record<string, string> = {
 }
 
 type Doc = import('jspdf').jsPDF
+
+/** Valores vacíos o «0» se muestran como «—» en la factura. */
+function shown(value?: string | null) {
+  const text = (value ?? '').trim()
+  return !text || text === '0' ? '—' : text
+}
 
 function setInk(doc: Doc, color: [number, number, number] = INK) {
   doc.setTextColor(color[0], color[1], color[2])
@@ -87,18 +98,18 @@ async function loadPhotos(photos: IntakePhoto[]): Promise<LoadedPhoto[]> {
 
 function divider(doc: Doc, y: number, color: [number, number, number] = [214, 214, 216]) {
   doc.setDrawColor(color[0], color[1], color[2])
-  doc.setLineWidth(0.3)
+  doc.setLineWidth(0.25)
   doc.line(PAGE.margin, y, PAGE.width - PAGE.margin, y)
-  return y + 5
+  return y + 2.8
 }
 
 function footer(doc: Doc, order: Order, page: number, type: ReceiptType) {
-  const y = PAGE.height - 10
+  const y = PAGE.height - 6
   doc.setDrawColor(220, 220, 222)
-  doc.setLineWidth(0.3)
-  doc.line(PAGE.margin, y - 4, PAGE.width - PAGE.margin, y - 4)
+  doc.setLineWidth(0.25)
+  doc.line(PAGE.margin, y - 2.6, PAGE.width - PAGE.margin, y - 2.6)
   setInk(doc, MUTED)
-  font(doc, 7, 'normal')
+  font(doc, 6, 'normal')
   doc.text(`${BUSINESS.name} · ${BUSINESS.phone}`, PAGE.margin, y)
   doc.text(
     `${type === 'entrega' ? 'Factura' : 'Comprobante'} ${order.id} · página ${page}`,
@@ -114,59 +125,59 @@ function newPage(doc: Doc, order: Order, page: number, type: ReceiptType) {
   doc.addPage()
   const next = page + 1
   doc.setFillColor(17, 17, 17)
-  doc.rect(0, 0, PAGE.width, 16, 'F')
+  doc.rect(0, 0, PAGE.width, 11, 'F')
   doc.setFillColor(ACCENT[0], ACCENT[1], ACCENT[2])
-  doc.rect(0, 16, PAGE.width, 1.6, 'F')
+  doc.rect(0, 11, PAGE.width, 1.2, 'F')
   setInk(doc, WHITE)
-  font(doc, 9, 'bold')
-  doc.text(BUSINESS.name, PAGE.margin, 10.5)
-  font(doc, 7, 'normal')
-  doc.text(`${type === 'entrega' ? 'Factura' : 'Comprobante'} ${order.id} (continuación)`, PAGE.width - PAGE.margin, 10.5, {
+  font(doc, 8, 'bold')
+  doc.text(BUSINESS.name, PAGE.margin, 7.4)
+  font(doc, 5.5, 'normal')
+  doc.text(`${type === 'entrega' ? 'Factura' : 'Comprobante'} ${order.id} (continuación)`, PAGE.width - PAGE.margin, 7.4, {
     align: 'right',
   })
-  return { y: 28, page: next }
+  return { y: 16.5, page: next }
 }
 
 function header(doc: Doc, order: Order, type: ReceiptType) {
   doc.setFillColor(17, 17, 17)
-  doc.rect(0, 0, PAGE.width, 30, 'F')
+  doc.rect(0, 0, PAGE.width, 17.5, 'F')
   doc.setFillColor(ACCENT[0], ACCENT[1], ACCENT[2])
-  doc.rect(0, 30, PAGE.width, 2, 'F')
+  doc.rect(0, 17.5, PAGE.width, 1.3, 'F')
 
   setInk(doc, WHITE)
-  font(doc, 16, 'bold')
-  doc.text(BUSINESS.name, PAGE.margin, 13)
-  font(doc, 8.5, 'normal')
-  doc.text(BUSINESS.tagline, PAGE.margin, 19.5)
-  font(doc, 7.5, 'normal')
-  doc.text(`${BUSINESS.taxId} · ${BUSINESS.address}, ${BUSINESS.city}`, PAGE.margin, 25.5)
-  doc.text(`WhatsApp ${BUSINESS.phone}`, PAGE.width - PAGE.margin, 19.5, { align: 'right' })
+  font(doc, 11.5, 'bold')
+  doc.text(BUSINESS.name, PAGE.margin, 7.8)
+  font(doc, 6, 'normal')
+  doc.text(BUSINESS.tagline, PAGE.margin, 11.6)
+  font(doc, 5.5, 'normal')
+  doc.text(`${BUSINESS.taxId} · ${BUSINESS.address}, ${BUSINESS.city}`, PAGE.margin, 15.2)
+  doc.text(`WhatsApp ${BUSINESS.phone}`, PAGE.width - PAGE.margin, 11.6, { align: 'right' })
   doc.text(
     formatDate(type === 'entrega' ? order.deliveredAt ?? new Date().toISOString() : order.createdAt, true),
     PAGE.width - PAGE.margin,
-    25.5,
+    15.2,
     { align: 'right' },
   )
 
-  let y = 41
+  let y = 23.8
   setInk(doc, ACCENT)
-  font(doc, 8, 'bold')
+  font(doc, 6, 'bold')
   doc.text(type === 'entrega' ? 'FACTURA DE ENTREGA' : 'COMPROBANTE DE RECEPCIÓN', PAGE.margin, y)
   setInk(doc, INK)
-  font(doc, 22, 'bold')
-  doc.text(order.id, PAGE.margin, y + 10)
+  font(doc, 15, 'bold')
+  doc.text(order.id, PAGE.margin, y + 5.9)
   setInk(doc, MUTED)
-  font(doc, 9, 'bold')
-  doc.text(STATUS_MAP[order.status]?.label ?? order.status, PAGE.width - PAGE.margin, y + 10, { align: 'right' })
-  return y + 19
+  font(doc, 7, 'bold')
+  doc.text(STATUS_MAP[order.status]?.label ?? order.status, PAGE.width - PAGE.margin, y + 5.9, { align: 'right' })
+  return y + 9.6
 }
 
 function sectionTitle(doc: Doc, title: string, y: number) {
   setInk(doc, ACCENT)
-  font(doc, 7.5, 'bold')
+  font(doc, 6, 'bold')
   doc.text(title.toUpperCase(), PAGE.margin, y)
   setInk(doc, INK)
-  return y + 5.5
+  return y + 3.8
 }
 
 function softBox(doc: Doc, y: number, height: number) {
@@ -176,42 +187,43 @@ function softBox(doc: Doc, y: number, height: number) {
 
 function keyValue(doc: Doc, label: string, value: string, x: number, y: number, width: number) {
   setInk(doc, MUTED)
-  font(doc, 7, 'normal')
+  font(doc, 5.5, 'normal')
   doc.text(label.toUpperCase(), x, y)
   setInk(doc, INK)
-  font(doc, 9.5, 'normal')
+  font(doc, 8, 'normal')
   const lines = doc.splitTextToSize(value || '—', width)
-  doc.text(lines, x, y + 4.8)
-  return y + 4.8 + Math.max(1, lines.length) * 4.4
+  doc.text(lines, x, y + 3.3)
+  return y + 3.3 + Math.max(1, lines.length) * 3.5
 }
 
-function bodyText(doc: Doc, text: string, x: number, y: number, width: number, size = 9.5) {
+function bodyText(doc: Doc, text: string, x: number, y: number, width: number, size = 8) {
   setInk(doc, INK)
   font(doc, size, 'normal')
   const lines = doc.splitTextToSize(text || '—', width)
   doc.text(lines, x, y)
-  return y + Math.max(1, lines.length) * size * 0.45
+  return y + Math.max(1, lines.length) * size * 0.42
 }
 
 function itemsHeader(doc: Doc, y: number) {
   doc.setFillColor(17, 17, 17)
-  doc.rect(PAGE.margin, y - 4.5, CONTENT, 7, 'F')
+  doc.rect(PAGE.margin, y - 3.6, CONTENT, 5.4, 'F')
   setInk(doc, WHITE)
-  font(doc, 7.5, 'bold')
+  font(doc, 6, 'bold')
   doc.text('DESCRIPCIÓN', PAGE.margin + 3, y)
-  doc.text('TIPO', PAGE.width - PAGE.margin - 33, y)
+  doc.text('TIPO', PAGE.width - PAGE.margin - 28, y)
   doc.text('VALOR', PAGE.width - PAGE.margin - 3, y, { align: 'right' })
-  return y + 7
+  return y + 5.2
 }
 
 function photosBlock(doc: Doc, photos: LoadedPhoto[], y: number): number {
-  const gap = 5
-  const cell = (CONTENT - gap) / 2
-  const maxHeight = 56
+  const gap = 3.5
+  const columns = 3
+  const cell = (CONTENT - gap * (columns - 1)) / columns
+  const maxHeight = 17
 
-  for (let index = 0; index < photos.length; index += 2) {
-    const row = photos.slice(index, index + 2)
-    const rowHeight = Math.min(maxHeight, cell * Math.max(...row.map((p) => p.ratio))) + 8
+  for (let index = 0; index < photos.length; index += columns) {
+    const row = photos.slice(index, index + columns)
+    const rowHeight = Math.min(maxHeight, cell * Math.max(...row.map((p) => p.ratio))) + 4.2
     if (y + rowHeight > BOTTOM) return -1
 
     row.forEach((photo, col) => {
@@ -232,8 +244,8 @@ function photosBlock(doc: Doc, photos: LoadedPhoto[], y: number): number {
       doc.setLineWidth(0.2)
       doc.rect(x, y, cell, height)
       setInk(doc, MUTED)
-      font(doc, 6.5, 'normal')
-      doc.text(`Ingreso: ${formatDate(photo.takenAt, true)}`, x, y + height + 3.4)
+      font(doc, 5.5, 'normal')
+      doc.text(`Ingreso: ${formatDate(photo.takenAt, true)}`, x, y + height + 3)
     })
     y += rowHeight
   }
@@ -242,7 +254,7 @@ function photosBlock(doc: Doc, photos: LoadedPhoto[], y: number): number {
 
 export async function buildPrettyReceiptPdf(order: Order, type: ReceiptType, items: ServiceItem[]) {
   const { jsPDF } = await import('jspdf')
-  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true })
+  const doc = new jsPDF({ unit: 'mm', format: [PAGE.width, PAGE.height], orientation: 'portrait', compress: true })
   const isDelivery = type === 'entrega'
   const deliveredAt = order.deliveredAt ?? new Date().toISOString()
   const total = isDelivery ? items.reduce((sum, i) => sum + i.price, 0) || order.estimatedCost : order.estimatedCost
@@ -258,48 +270,51 @@ export async function buildPrettyReceiptPdf(order: Order, type: ReceiptType, ite
   let y = header(doc, order, type)
 
   // ------------------------------- cliente ----------------------------------
-  const clientHeight = order.customer.documentId ? 30 : 25
+  const documentId = order.customer.documentId?.trim()
+  const hasDocument = Boolean(documentId && documentId !== '0')
+  font(doc, 10.5, 'bold')
+  const nameLines = doc.splitTextToSize(order.customer.name || '—', CONTENT - 8).slice(0, 2)
+  const nameHeight = nameLines.length * 4.6
+  const clientHeight = 10.4 + nameHeight + (hasDocument ? 4.2 : 0)
   softBox(doc, y, clientHeight)
   setInk(doc, ACCENT)
-  font(doc, 7.5, 'bold')
-  doc.text('CLIENTE', PAGE.margin + 5, y + 7)
+  font(doc, 6, 'bold')
+  doc.text('CLIENTE', PAGE.margin + 4, y + 5.2)
   setInk(doc, INK)
-  font(doc, 12.5, 'bold')
-  doc.text(order.customer.name, PAGE.margin + 5, y + 14.5)
+  font(doc, 10.5, 'bold')
+  doc.text(nameLines, PAGE.margin + 4, y + 10.6)
+  const contactY = y + 10.6 + nameHeight + 0.2
   setInk(doc, MUTED)
-  font(doc, 8.5, 'normal')
-  doc.text(`Tel/WhatsApp: +${BUSINESS.countryCode} ${order.customer.phone}`, PAGE.margin + 5, y + 20)
-  if (order.customer.documentId) doc.text(`Documento: ${order.customer.documentId}`, PAGE.margin + 5, y + 25)
-  if (order.customer.email) doc.text(order.customer.email, PAGE.width - PAGE.margin - 5, y + 20, { align: 'right' })
-  y += clientHeight + 9
+  font(doc, 7, 'normal')
+  doc.text(`Tel/WhatsApp: +${BUSINESS.countryCode} ${order.customer.phone}`, PAGE.margin + 4, contactY)
+  if (hasDocument) doc.text(`Documento: ${documentId}`, PAGE.margin + 4, contactY + 4)
+  if (order.customer.email) doc.text(order.customer.email, PAGE.width - PAGE.margin - 4, contactY, { align: 'right' })
+  y += clientHeight + 4.4
 
   // ------------------------------- equipo -----------------------------------
   y = sectionTitle(doc, 'Equipo recibido', y)
-  const colW = (CONTENT - 8) / 2
+  const colW = (CONTENT - 6) / 2
   const row1 = Math.max(
-    keyValue(doc, 'Tipo', DEVICE_TYPE_LABEL[order.device.type] ?? order.device.type, PAGE.margin, y, colW),
-    keyValue(doc, 'Marca', order.device.brand, PAGE.margin + colW + 8, y, colW),
+    keyValue(doc, 'Equipo', deviceLabel(order.device), PAGE.margin, y, colW),
+    keyValue(doc, 'Tipo', DEVICE_TYPE_LABEL[order.device.type] ?? order.device.type, PAGE.margin + colW + 6, y, colW),
   )
   const row2 = Math.max(
-    keyValue(doc, 'Modelo', order.device.model, PAGE.margin, row1 + 3, colW),
-    keyValue(doc, 'Serie', order.device.serial ?? 'No registra', PAGE.margin + colW + 8, row1 + 3, colW),
+    keyValue(doc, 'Serie', shown(order.device.serial), PAGE.margin, row1 + 2.2, colW),
+    keyValue(doc, 'Color', shown(order.device.color), PAGE.margin + colW + 6, row1 + 2.2, colW),
   )
-  const row3 = keyValue(doc, 'Color', order.device.color ?? 'No registra', PAGE.margin, row2 + 3, colW)
-  const row4 = order.technician
-    ? keyValue(doc, 'Técnico', order.technician, PAGE.margin + colW + 8, row2 + 3, colW)
-    : 0
-  y = divider(doc, Math.max(row3, row4) + 4)
+  const row3 = order.technician ? keyValue(doc, 'Técnico', order.technician, PAGE.margin, row2 + 2.2, colW) : 0
+  y = divider(doc, Math.max(row2, row3) + 2.6)
 
   // ------------------------- falla y observaciones ---------------------------
   y = sectionTitle(doc, isDelivery ? 'Diagnóstico y trabajo realizado' : 'Falla reportada', y)
-  y = bodyText(doc, order.reportedFault || 'Sin descripción registrada.', PAGE.margin, y, CONTENT, 9.5)
+  y = bodyText(doc, order.reportedFault || 'Sin descripción registrada.', PAGE.margin, y, CONTENT, 8.5)
   if (order.faultTags.length) {
     setInk(doc, MUTED)
-    font(doc, 7.5, 'normal')
-    doc.text(`Etiquetas: ${order.faultTags.join(' · ')}`, PAGE.margin, y + 2)
-    y += 6
+    font(doc, 6, 'normal')
+    doc.text(`Etiquetas: ${order.faultTags.join(' · ')}`, PAGE.margin, y + 1.2)
+    y += 4.2
   }
-  y += 2
+  y += 1.2
 
   if (!isDelivery) {
     y = sectionTitle(doc, 'Accesorios y estado físico', y)
@@ -309,20 +324,20 @@ export async function buildPrettyReceiptPdf(order: Order, type: ReceiptType, ite
       PAGE.margin,
       y,
       CONTENT,
-      8.5,
+      7.2,
     )
     y = bodyText(
       doc,
       `Observaciones: ${order.physicalNotes || 'Sin observaciones adicionales.'}`,
       PAGE.margin,
-      y + 1,
+      y + 0.8,
       CONTENT,
-      8.5,
+      7.2,
     )
     if (order.estimatedDate) {
-      y = bodyText(doc, `Entrega estimada: ${formatDate(order.estimatedDate)}`, PAGE.margin, y + 1, CONTENT, 8.5)
+      y = bodyText(doc, `Entrega estimada: ${formatDate(order.estimatedDate)}`, PAGE.margin, y + 0.8, CONTENT, 7.2)
     }
-    y = divider(doc, y + 2)
+    y = divider(doc, y + 1.2)
   }
 
   // -------------------------------- fotos ------------------------------------
@@ -334,9 +349,9 @@ export async function buildPrettyReceiptPdf(order: Order, type: ReceiptType, ite
       page = start.page
       y = start.y
       setInk(doc, MUTED)
-      font(doc, 7.5, 'bold')
+      font(doc, 6.5, 'bold')
       doc.text('FOTOS DEL EQUIPO (CONTINUACIÓN)', PAGE.margin, y)
-      y += 6
+      y += 5
       next = photosBlock(doc, photos, y)
     }
     y = divider(doc, (next === -1 ? BOTTOM : next) + 1)
@@ -347,35 +362,51 @@ export async function buildPrettyReceiptPdf(order: Order, type: ReceiptType, ite
     ? items
     : [{ id: 'est', description: 'Servicio técnico', kind: 'servicio', price: order.estimatedCost }]
 
+  // La tabla no se parte: si no entra completa con sus totales, pasa a la página siguiente.
+  const tableHeight =
+    list.reduce((sum, item) => {
+      const lines = doc.splitTextToSize(item.description || '—', CONTENT - 40)
+      return sum + Math.max(5.8, lines.length * 3.6 + 2.2)
+    }, 0) +
+    5.2 +
+    18 +
+    4.6 +
+    3.2
+  if (y + tableHeight > BOTTOM && tableHeight < BOTTOM - 20) {
+    const start = newPage(doc, order, page, type)
+    page = start.page
+    y = start.y
+  }
+
   y = sectionTitle(doc, isDelivery ? 'Detalle del servicio' : 'Presupuesto estimado', y)
   y = itemsHeader(doc, y)
 
   for (const item of list) {
-    const lines = doc.splitTextToSize(item.description || '—', CONTENT - 48)
-    const height = Math.max(7.5, lines.length * 4.4 + 3)
+    const lines = doc.splitTextToSize(item.description || '—', CONTENT - 40)
+    const height = Math.max(5.8, lines.length * 3.6 + 2.2)
     if (y + height > BOTTOM) {
       const start = newPage(doc, order, page, type)
       page = start.page
       y = itemsHeader(doc, start.y + 2)
     }
     setInk(doc, INK)
-    font(doc, 9.5, 'normal')
+    font(doc, 8, 'normal')
     doc.text(lines, PAGE.margin + 3, y + 1)
     setInk(doc, MUTED)
-    font(doc, 7.5, 'normal')
-    doc.text(item.kind === 'repuesto' ? 'Repuesto' : 'Servicio', PAGE.width - PAGE.margin - 33, y + 1)
+    font(doc, 6, 'normal')
+    doc.text(item.kind === 'repuesto' ? 'Repuesto' : 'Servicio', PAGE.width - PAGE.margin - 28, y + 1)
     setInk(doc, INK)
-    font(doc, 9.5, 'normal')
+    font(doc, 8, 'normal')
     doc.text(formatMoney(item.price), PAGE.width - PAGE.margin - 3, y + 1, { align: 'right' })
     y += height
     doc.setDrawColor(232, 232, 234)
     doc.setLineWidth(0.2)
     doc.line(PAGE.margin, y - 1, PAGE.width - PAGE.margin, y - 1)
   }
-  y += 6
+  y += 3.2
 
   // -------------------------------- totales ----------------------------------
-  const totalsHeight = 26
+  const totalsHeight = 18
   if (y + totalsHeight + 6 > BOTTOM) {
     const start = newPage(doc, order, page, type)
     page = start.page
@@ -383,20 +414,20 @@ export async function buildPrettyReceiptPdf(order: Order, type: ReceiptType, ite
   }
   softBox(doc, y, totalsHeight)
   setInk(doc, MUTED)
-  font(doc, 8, 'normal')
-  doc.text(isDelivery ? 'Total servicio' : 'Costo estimado', PAGE.margin + 5, y + 7)
-  doc.text(formatMoney(total), PAGE.width - PAGE.margin - 5, y + 7, { align: 'right' })
-  doc.text('Abono recibido', PAGE.margin + 5, y + 13)
-  doc.text(`- ${formatMoney(order.deposit)}`, PAGE.width - PAGE.margin - 5, y + 13, { align: 'right' })
+  font(doc, 7, 'normal')
+  doc.text(isDelivery ? 'Total servicio' : 'Costo estimado', PAGE.margin + 4, y + 4.8)
+  doc.text(formatMoney(total), PAGE.width - PAGE.margin - 4, y + 4.8, { align: 'right' })
+  doc.text('Abono recibido', PAGE.margin + 4, y + 9)
+  doc.text(`- ${formatMoney(order.deposit)}`, PAGE.width - PAGE.margin - 4, y + 9, { align: 'right' })
   doc.setDrawColor(200, 200, 202)
   doc.setLineWidth(0.2)
-  doc.line(PAGE.margin + 5, y + 17, PAGE.width - PAGE.margin - 5, y + 17)
+  doc.line(PAGE.margin + 4, y + 12, PAGE.width - PAGE.margin - 4, y + 12)
   setInk(doc, INK)
-  font(doc, 8.5, 'bold')
-  doc.text(isDelivery ? 'TOTAL PAGADO' : 'SALDO PENDIENTE', PAGE.margin + 5, y + 23)
-  font(doc, 14, 'bold')
-  doc.text(formatMoney(isDelivery ? total : balance), PAGE.width - PAGE.margin - 5, y + 23, { align: 'right' })
-  y += totalsHeight + 9
+  font(doc, 7.5, 'bold')
+  doc.text(isDelivery ? 'TOTAL PAGADO' : 'SALDO PENDIENTE', PAGE.margin + 4, y + 16.2)
+  font(doc, 11.5, 'bold')
+  doc.text(formatMoney(isDelivery ? total : balance), PAGE.width - PAGE.margin - 4, y + 16.2, { align: 'right' })
+  y += totalsHeight + 2.8
 
   // -------------------------------- garantía ---------------------------------
   const clauses: string[] = []
@@ -421,31 +452,33 @@ export async function buildPrettyReceiptPdf(order: Order, type: ReceiptType, ite
   }
 
   const warrantyText = clauses.map((line) => `• ${line}`).join('\n')
-  const warrantyHeight = 16 + doc.splitTextToSize(warrantyText, CONTENT - 10).length * 4.3
-  if (y + warrantyHeight + 24 > BOTTOM) {
+  const warrantyHeight = 8.6 + doc.splitTextToSize(warrantyText, CONTENT - 8).length * 3.2
+  if (y + warrantyHeight + 8.2 > BOTTOM) {
     const start = newPage(doc, order, page, type)
     page = start.page
     y = start.y
   }
   softBox(doc, y, warrantyHeight)
   setInk(doc, ACCENT)
-  font(doc, 8, 'bold')
-  doc.text(isDelivery ? 'GARANTÍA' : 'CONDICIONES', PAGE.margin + 5, y + 7)
+  font(doc, 6.2, 'bold')
+  doc.text(isDelivery ? 'GARANTÍA' : 'CONDICIONES', PAGE.margin + 4, y + 4.8)
   setInk(doc, INK)
-  font(doc, 8, 'normal')
-  doc.text(doc.splitTextToSize(warrantyText, CONTENT - 10), PAGE.margin + 5, y + 13)
-  y += warrantyHeight + 8
+  font(doc, 6.2, 'normal')
+  doc.text(doc.splitTextToSize(warrantyText, CONTENT - 8), PAGE.margin + 4, y + 8)
+  y += warrantyHeight + 2.6
 
   // --------------------------- contacto y cierre -----------------------------
   setInk(doc, INK)
-  font(doc, 11.5, 'bold')
+  font(doc, 9, 'bold')
   doc.text('¡Gracias por su preferencia!', PAGE.width / 2, y, { align: 'center' })
   setInk(doc, MUTED)
-  font(doc, 7.5, 'normal')
-  doc.text('Conserve este comprobante para hacer efectiva cualquier garantía.', PAGE.width / 2, y + 5.5, {
-    align: 'center',
-  })
-  doc.text(`Dudas o reclamos: WhatsApp ${BUSINESS.phone}`, PAGE.width / 2, y + 10.5, { align: 'center' })
+  font(doc, 6, 'normal')
+  doc.text(
+    `Conserve este comprobante para su garantía · Dudas o reclamos: WhatsApp ${BUSINESS.phone}`,
+    PAGE.width / 2,
+    y + 4.2,
+    { align: 'center' },
+  )
 
   footer(doc, order, page, type)
 
