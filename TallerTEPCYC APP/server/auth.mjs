@@ -25,6 +25,9 @@ const allowedEmails = (process.env.AUTH_ALLOWED_EMAILS ?? 'alexitodafa@gmail.com
 
 export const authEnabled = Boolean(clientId && sessionSecret)
 
+// Diagnóstico al arrancar: deja en el log quién puede entrar.
+if (authEnabled) console.log(`[auth] acceso con Google activo · correos permitidos: ${allowedEmails.join(', ')}`)
+
 function base64url(input) {
   return Buffer.from(input, 'utf8').toString('base64url')
 }
