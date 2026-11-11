@@ -141,8 +141,18 @@ function isPublic(pathname) {
 }
 
 /** Portero: API sin sesión → 401 JSON; página sin sesión → /login. */
+function isLoopback(req) {
+  // Ojo: el túnel de Cloudflare también conecta desde 127.0.0.1; el tráfico
+  // público se distingue porque trae Cf-Connecting-Ip / X-Forwarded-For.
+  if (req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for']) return false
+  const raw = String(req.socket?.remoteAddress ?? req.ip ?? '')
+  return raw === '127.0.0.1' || raw === '::1' || raw === '::ffff:127.0.0.1'
+}
+
 export function gate(req, res, next) {
   if (!authEnabled) return next()
+  // Desde el propio servidor (monitorización, proxy de la web, despliegues) no se pide sesión.
+  if (isLoopback(req)) return next()
   const pathname = String(req.path ?? '/')
   if (isPublic(pathname)) return next()
   if (readSession(req)) return next()
