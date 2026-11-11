@@ -79,7 +79,11 @@ export function EstadosPanel({
   function quickSchedule(kind: 'hour' | 'tonight' | 'tomorrow') {
     const date = new Date()
     if (kind === 'hour') date.setHours(date.getHours() + 1, 0, 0, 0)
-    if (kind === 'tonight') date.setHours(19, 0, 0, 0)
+    if (kind === 'tonight') {
+      date.setHours(19, 0, 0, 0)
+      // Si ya pasaron las 7 p. m., el «esta noche» real es el de mañana.
+      if (date.getTime() <= Date.now()) date.setDate(date.getDate() + 1)
+    }
     if (kind === 'tomorrow') {
       date.setDate(date.getDate() + 1)
       date.setHours(9, 0, 0, 0)
@@ -95,6 +99,10 @@ export function EstadosPanel({
     }
     if (mode === 'later' && !scheduledAt) {
       toast.error('Elige la hora de publicación.')
+      return
+    }
+    if (mode === 'later' && new Date(scheduledAt).getTime() <= Date.now()) {
+      toast.error('Esa hora ya pasó: elige una futura.')
       return
     }
     if (mode === 'now' && !connected) {

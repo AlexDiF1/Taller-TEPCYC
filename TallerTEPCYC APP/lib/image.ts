@@ -27,11 +27,25 @@ export function loadImage(src: string): Promise<HTMLImageElement> {
 
 export async function compressImage(file: File, { maxSize = 1280, quality = 0.72 }: CompressOptions = {}) {
   const dataUrl = await readAsDataUrl(file)
-  const image = await loadImage(dataUrl)
 
-  const scale = Math.min(1, maxSize / Math.max(image.width, image.height))
-  const width = Math.max(1, Math.round(image.width * scale))
-  const height = Math.max(1, Math.round(image.height * scale))
+  // createImageBitmap aplica la orientación EXIF: sin esto, las fotos
+  // verticales del celular salían giradas en el ingreso y el comprobante.
+  let source: HTMLImageElement | ImageBitmap
+  let width0: number
+  let height0: number
+  try {
+    source = await createImageBitmap(file, { imageOrientation: 'from-image' })
+    width0 = source.width
+    height0 = source.height
+  } catch {
+    source = await loadImage(dataUrl)
+    width0 = source.width
+    height0 = source.height
+  }
+
+  const scale = Math.min(1, maxSize / Math.max(width0, height0))
+  const width = Math.max(1, Math.round(width0 * scale))
+  const height = Math.max(1, Math.round(height0 * scale))
 
   const canvas = document.createElement('canvas')
   canvas.width = width
@@ -39,6 +53,7 @@ export async function compressImage(file: File, { maxSize = 1280, quality = 0.72
   const context = canvas.getContext('2d')
   if (!context) return dataUrl
 
-  context.drawImage(image, 0, 0, width, height)
+  context.drawImage(source, 0, 0, width, height)
+  if (typeof ImageBitmap !== 'undefined' && source instanceof ImageBitmap) source.close()
   return canvas.toDataURL('image/jpeg', quality)
 }

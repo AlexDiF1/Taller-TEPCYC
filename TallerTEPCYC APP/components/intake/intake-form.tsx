@@ -138,6 +138,7 @@ export function IntakeForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (submitting) return
     const found = validate(draft)
     setErrors(found)
     if (Object.keys(found).length > 0) {

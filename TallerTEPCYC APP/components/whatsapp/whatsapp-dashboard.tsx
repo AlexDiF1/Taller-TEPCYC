@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect } from 'react'
 import useSWR from 'swr'
 import { PageHeader } from '@/components/page-header'
 import { ConnectionPanel } from './connection-panel'
@@ -17,12 +16,6 @@ export function WhatsappDashboard() {
   const { data: estados, mutate: refreshEstados } = useSWR<EstadoProgramado[]>('wa-estados', waListEstados, {
     refreshInterval: (data) => ((data ?? []).some((e) => e.status === 'pendiente') ? 30_000 : 0),
   })
-
-  // Los estados programados se refrescan al entrar a la vista.
-  useEffect(() => {
-    void refreshEstados()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8 md:py-8">

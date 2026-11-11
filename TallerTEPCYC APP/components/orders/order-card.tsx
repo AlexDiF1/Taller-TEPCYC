@@ -27,7 +27,7 @@ export function OrderCard({
   onOpen: (order: Order) => void
 }) {
   const Icon = DEVICE_ICON[order.device.type]
-  const status = STATUS_MAP[order.status]
+  const status = STATUS_MAP[order.status] ?? STATUS_MAP.pendiente
   const receiptType = order.status === 'completada' ? 'entrega' : 'recepcion'
 
   return (

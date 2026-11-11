@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Printer, ClipboardList, ShieldCheck, Save, FileX, Loader2, Send } from 'lucide-react'
+import { Printer, ClipboardList, ShieldCheck, Save, FileX, Loader2, Send, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -32,27 +32,32 @@ export function ReceiptsView({ initialOrderId, initialType }: { initialOrderId?:
   const [type, setType] = useState<ReceiptType>(initialType ?? 'recepcion')
   const [delivery, setDelivery] = useState<ReceiptDelivery | null>(null)
   const [sendingPdf, setSendingPdf] = useState(false)
+  const [pdfError, setPdfError] = useState(false)
+  const [pdfAttempt, setPdfAttempt] = useState(0)
   const orderId = initialOrderId ?? orders[0]?.id
   const order = orders.find((o) => o.id === orderId)
   const itemsKey = JSON.stringify(order?.items ?? [])
 
   // El PDF bonito (con fotos) se genera antes del clic para enviarlo por WhatsApp.
   useEffect(() => {
-    let alive = true
+    let    alive = true
     setDelivery(null)
+    setPdfError(false)
     if (!order) return
     prepareReceiptDelivery(order, type, order.items, 'pretty')
       .then((pretty) => {
         if (alive) setDelivery(pretty)
       })
       .catch(() => {
-        if (alive) toast.error('No se pudo generar el comprobante en PDF.')
+        if (!alive) return
+        setPdfError(true)
+        toast.error('No se pudo generar el comprobante en PDF. Puedes reintentar.')
       })
     return () => {
       alive = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [order?.id, type, itemsKey])
+  }, [order?.id, type, itemsKey, pdfAttempt])
 
   /** Descarga o envía el PDF por WhatsApp; si no hay WhatsApp, descarga el archivo. */
   async function sendReceiptAutomatically() {
@@ -196,6 +201,12 @@ export function ReceiptsView({ initialOrderId, initialType }: { initialOrderId?:
                 {sendingPdf ? <Loader2 data-icon="inline-start" className="animate-spin" /> : <Send data-icon="inline-start" />}
                 {sendingPdf ? 'Enviando comprobante...' : 'Enviar PDF bonito por WhatsApp'}
               </Button>
+              {pdfError && (
+                <Button type="button" variant="outline" size="lg" className="h-11" onClick={() => setPdfAttempt((n) => n + 1)}>
+                  <RefreshCw data-icon="inline-start" />
+                  Reintentar PDF
+                </Button>
+              )}
               <WhatsAppButton order={order} label="Enviar estado manual" className="h-11 w-full text-sm" />
             </div>
           )}

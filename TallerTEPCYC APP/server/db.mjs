@@ -332,8 +332,8 @@ export function createOrder(input) {
         JSON.stringify(input.faultTags ?? []),
         JSON.stringify(input.accessories ?? []),
         input.physicalNotes ?? null,
-        Number(input.estimatedCost ?? 0),
-        Number(input.deposit ?? 0),
+        Number.isFinite(Number(input.estimatedCost)) ? Number(input.estimatedCost) : 0,
+        Number.isFinite(Number(input.deposit)) ? Number(input.deposit) : 0,
         input.estimatedDate ?? null,
         input.warrantyDays == null ? null : Number(input.warrantyDays),
         input.warrantyScreenExcluded ? 1 : 0,
@@ -345,9 +345,12 @@ export function createOrder(input) {
       )
     const orderId = Number(info.lastInsertRowid)
     for (const photo of input.photos ?? []) {
+      // Solo rutas propias de /uploads (sin «..»): la url acaba en readFileSync.
+      const url = typeof photo?.url === 'string' ? photo.url : ''
+      if (!url.startsWith('/uploads/') || url.includes('..')) continue
       db.prepare('INSERT INTO order_photos (order_id, url, taken_at) VALUES (?,?,?)').run(
         orderId,
-        photo.url,
+        url,
         photo.takenAt ?? now,
       )
     }

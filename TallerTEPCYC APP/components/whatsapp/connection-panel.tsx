@@ -85,7 +85,7 @@ export function ConnectionPanel({
     return () => {
       cancelled = true
     }
-  }, [state?.contacts, contacts, state])
+  }, [state?.contacts]) // solo el contador: `state` y `contacts` cambian en cada poll
 
   return (
     <div className="flex flex-col gap-5">

@@ -13,7 +13,8 @@ export function ItemsEditor({ items, onChange }: { items: ServiceItem[]; onChang
   }
 
   function add(kind: ServiceItem['kind']) {
-    onChange([...items, { id: crypto.randomUUID(), description: '', kind, price: 0 }])
+    const id = crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`
+    onChange([...items, { id, description: '', kind, price: 0 }])
   }
 
   const total = items.reduce((s, i) => s + i.price, 0)

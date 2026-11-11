@@ -18,7 +18,7 @@ export function StatusSelect({
   disabled?: boolean
   id?: string
 }) {
-  const meta = STATUS_MAP[value]
+  const meta = STATUS_MAP[value] ?? STATUS_MAP.pendiente
   return (
     <Select
       items={ITEMS}

@@ -47,10 +47,20 @@ await nextApp.prepare()
 
 app.use((req, res) => handle(req, res))
 
-app.listen(port, hostname, () => {
+const server = app.listen(port, hostname, () => {
   console.log(`[server] Taller TEPCYC escuchando en http://${hostname}:${port} (${dev ? 'dev' : 'producción'})`)
   // WhatsApp arranca después de levantar el servidor: si falla, la app sigue viva.
   startWhatsapp()
     .then((status) => console.log(`[whatsapp] estado inicial: ${status.status}`))
     .catch((error) => console.error('[whatsapp] no se pudo iniciar:', error?.message ?? error))
+})
+
+server.on('error', (error) => {
+  console.error(`[server] no se pudo escuchar en ${hostname}:${port}:`, error?.message ?? error)
+  process.exit(1)
+})
+
+// Red de seguridad: un fallo suelto no debe tumbar el taller.
+process.on('unhandledRejection', (reason) => {
+  console.error('[server] promesa rechazada sin capturar:', reason?.stack ?? reason)
 })

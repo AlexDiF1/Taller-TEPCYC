@@ -97,6 +97,7 @@ export function SalesHistory({
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const [sendingId, setSendingId] = useState<string | null>(null)
+  const [busyId, setBusyId] = useState<string | null>(null)
   const [period, setPeriod] = useState<Period>('todo')
 
   const maxMethod = useMemo(
@@ -129,6 +130,8 @@ export function SalesHistory({
 
   /** Descarga el recibo en PDF de una venta del historial. */
   async function downloadReceipt(venta: Venta) {
+    if (busyId === venta.id) return
+    setBusyId(venta.id)
     try {
       const { blob, filename } = await buildSaleReceiptPdf(venta)
       const url = URL.createObjectURL(blob)
@@ -142,16 +145,22 @@ export function SalesHistory({
       toast.info(`Recibo ${venta.id} descargado en PDF.`)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudo generar el recibo.')
+    } finally {
+      setBusyId(null)
     }
   }
 
   /** Abre el ticket de 80 mm en el visor de PDF para imprimir. */
   async function printReceipt(venta: Venta) {
+    if (busyId === venta.id) return
+    setBusyId(venta.id)
     try {
       await printSaleReceiptPdf(venta)
       toast.info(`Ticket ${venta.id} listo para imprimir.`)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudo preparar el ticket.')
+    } finally {
+      setBusyId(null)
     }
   }
 
@@ -441,6 +450,7 @@ export function SalesHistory({
                             variant="outline"
                             size="sm"
                             onClick={() => printReceipt(venta)}
+                            disabled={busyId === venta.id}
                             className="h-8 rounded-lg"
                           >
                             <Printer className="size-3.5" aria-hidden="true" />
@@ -451,6 +461,7 @@ export function SalesHistory({
                             variant="outline"
                             size="sm"
                             onClick={() => downloadReceipt(venta)}
+                            disabled={busyId === venta.id}
                             className="h-8 rounded-lg"
                           >
                             <FileDown className="size-3.5" aria-hidden="true" />

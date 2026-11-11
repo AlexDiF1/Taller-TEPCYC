@@ -3,7 +3,7 @@ import type { OrderStatus } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 export function StatusBadge({ status, className }: { status: OrderStatus; className?: string }) {
-  const meta = STATUS_MAP[status]
+  const meta = STATUS_MAP[status] ?? STATUS_MAP.pendiente
   return (
     <span
       className={cn(
@@ -22,7 +22,7 @@ export function StatusBadge({ status, className }: { status: OrderStatus; classN
 
 export function StatusProgress({ status }: { status: OrderStatus }) {
   const current = statusIndex(status)
-  const meta = STATUS_MAP[status]
+  const meta = STATUS_MAP[status] ?? STATUS_MAP.pendiente
   return (
     <div
       className="flex gap-1"

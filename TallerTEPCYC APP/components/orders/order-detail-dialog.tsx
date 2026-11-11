@@ -146,8 +146,8 @@ function Detail({
           <p className="text-pretty text-sm">{order.reportedFault}</p>
           {order.faultTags.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
-              {order.faultTags.map((t) => (
-                <span key={t} className="rounded-full bg-secondary px-2.5 py-1 text-xs text-muted-foreground">
+              {order.faultTags.map((t, i) => (
+                <span key={`${t}-${i}`} className="rounded-full bg-secondary px-2.5 py-1 text-xs text-muted-foreground">
                   {t}
                 </span>
               ))}
@@ -175,7 +175,7 @@ function Detail({
           <h3 className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Historial</h3>
           <ol className="relative flex flex-col gap-3 border-l border-border pl-4">
             {order.history.map((h, i) => {
-              const meta = STATUS_MAP[h.status]
+              const meta = STATUS_MAP[h.status] ?? STATUS_MAP.pendiente
               return (
                 <li key={`${h.status}-${i}`} className="relative">
                   <span

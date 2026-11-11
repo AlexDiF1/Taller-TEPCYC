@@ -11,7 +11,9 @@ import { cn } from '@/lib/utils'
 const MAX_PHOTOS = 12
 
 function newPhoto(url: string): IntakePhoto {
-  return { id: crypto.randomUUID(), url, takenAt: new Date().toISOString() }
+  // randomUUID no existe fuera de contexto seguro (http://<ip> en el celular).
+  const id = crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`
+  return { id, url, takenAt: new Date().toISOString() }
 }
 
 interface PhotoCaptureProps {

@@ -277,7 +277,7 @@ function EditForm({
             className="h-10"
           />
         </Field>
-        <Field label="Estado" htmlFor="edit-status" hint={`Actual: ${STATUS_MAP[order.status].label}`}>
+        <Field label="Estado" htmlFor="edit-status" hint={`Actual: ${STATUS_MAP[order.status]?.label ?? order.status}`}>
           <StatusSelect id="edit-status" value={form.status} onChange={(s) => set('status', s)} />
         </Field>
         <p className="text-xs text-muted-foreground md:col-span-2">

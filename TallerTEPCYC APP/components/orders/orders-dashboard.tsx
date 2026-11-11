@@ -64,7 +64,7 @@ export function OrdersDashboard() {
     toast.promise(promise, {
       loading: 'Actualizando estado...',
       success: (updated) => ({
-        message: `${updated.id} → ${STATUS_MAP[status].label}`,
+        message: `${updated.id} → ${STATUS_MAP[status]?.label ?? status}`,
         description: `¿Avisar a ${updated.customer.name.split(' ')[0]}?`,
         action: { label: 'Enviar WhatsApp', onClick: () => openWhatsApp(updated) },
         duration: 8000,

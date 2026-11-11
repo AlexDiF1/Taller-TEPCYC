@@ -526,7 +526,8 @@ function checkBulkGuard(text) {
   const hash = createHash('sha1').update(normalized).digest('hex').slice(0, 12)
   const now = Date.now()
   const hits = (recentTexts.get(hash) ?? []).filter((entry) => now - entry.at < CONFIG.duplicateWindowMs)
-  recentTexts.set(hash, hits)
+  if (hits.length === 0) recentTexts.delete(hash)
+  else recentTexts.set(hash, hits)
 
   const targets = new Set(hits.map((hit) => hit.phone))
   if (targets.size >= CONFIG.duplicateMaxTargets) {
@@ -863,7 +864,7 @@ export async function startWhatsapp() {
   if (!timersStarted) {
     timersStarted = true
     setInterval(() => {
-      void tickEstados()
+      tickEstados().catch((error) => pushEvent('publicación de estado fallida', error?.message ?? String(error)))
     }, ESTADOS_TICK_MS).unref?.()
     setInterval(
       () => {

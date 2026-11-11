@@ -55,7 +55,11 @@ api.patch('/orders/:id', (req, res) => {
 })
 
 api.put('/orders/:id', (req, res) => {
-  const order = store.updateOrderDetails(req.params.id, req.body ?? {})
+  const body = req.body ?? {}
+  if (body.status !== undefined && !STATUSES.includes(body.status)) {
+    return res.status(400).json({ error: `Estado inválido: ${body.status}` })
+  }
+  const order = store.updateOrderDetails(req.params.id, body)
   if (!order) return res.status(404).json({ error: 'Orden no encontrada.' })
   res.json(order)
 })
