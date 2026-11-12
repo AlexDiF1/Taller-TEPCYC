@@ -6,7 +6,7 @@
   --cta:#8B1226;--cta-hover:#C5171E;--cta-ink:#fff;
   --font-display:"Bebas Neue",Impact,sans-serif;--font-body:"Archivo",system-ui,sans-serif;
   --r-lg:22px;--r-md:14px;--r-sm:5px;
-  --ease:cubic-bezier(.22,1,.36,1);--t-hover:.3s;
+  --ease:cubic-bezier(.25,1,.5,1);--t-hover:.4s;
   --gutter:clamp(16px,4vw,56px);--maxw:1320px;--section-y:clamp(72px,10vw,140px);
 }
 *{box-sizing:border-box;margin:0}
@@ -33,11 +33,11 @@ h2{font-family:var(--font-display);font-weight:400;font-size:clamp(52px,8vw,112p
 
 /* Botones */
 .boton{position:relative;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:58px;padding:12px 24px;border:2px solid #fff;border-radius:var(--r-md);
-  background:var(--cta);color:var(--cta-ink);font:800 17px/1.1 var(--font-body);text-decoration:none;cursor:pointer;transition:background var(--t-hover) var(--ease),scale .15s}
-.boton::after{content:"";position:absolute;inset:0;transform:translateX(-105%);opacity:.32;background:repeating-linear-gradient(115deg,#fff 0 6px,transparent 6px 14px);transition:transform .55s var(--ease)}
+  background:var(--cta);color:var(--cta-ink);font:800 17px/1.1 var(--font-body);text-decoration:none;cursor:pointer;transition:background var(--t-hover) var(--ease),scale .3s var(--ease)}
+.boton::after{content:"";position:absolute;inset:0;transform:translateX(-105%);opacity:.32;background:repeating-linear-gradient(115deg,#fff 0 6px,transparent 6px 14px);transition:transform .75s var(--ease)}
 .boton svg{width:22px;height:22px;fill:currentColor;flex:none}
 .boton span,.boton svg{position:relative;z-index:1}
-.boton:active{scale:.97}
+.boton:active{scale:.98}
 .boton--negro{background:var(--negro);color:#fff}
 @media(hover:hover){.boton:hover{background:var(--cta-hover)}.boton:hover::after{transform:none}.boton--negro:hover{background:#2a0d0b}}
 .seccion .boton{margin-top:26px;width:100%;max-width:390px;padding-inline:12px;white-space:nowrap}
@@ -48,7 +48,7 @@ h2{font-family:var(--font-display);font-weight:400;font-size:clamp(52px,8vw,112p
 .hero__fondo{position:absolute;inset:0;width:100%;height:100%;z-index:-2;pointer-events:none}
 .nav{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px var(--gutter);max-width:var(--maxw);width:100%;margin-inline:auto}
 .nav__enlaces{display:none;gap:28px;align-items:center;font-weight:600;font-size:15px}
-.nav__enlaces a{text-decoration:none}
+.nav__enlaces a{text-decoration:none;transition:color var(--t-hover) var(--ease)}
 .nav__enlaces a:hover{color:var(--brand-texto)}
 .nav__tel{font-family:var(--font-display);font-size:24px;letter-spacing:.04em;white-space:nowrap}
 .hero__grid{flex:1;display:grid;gap:30px;padding:6px var(--gutter) 44px;max-width:var(--maxw);width:100%;margin-inline:auto;align-content:start}
@@ -89,7 +89,7 @@ h1 .acento{color:var(--brand-texto)}
 .gamepad{width:min(100%,640px);margin-inline:auto;fill:none;stroke:#fff;stroke-width:7;stroke-linecap:round;stroke-linejoin:round}
 
 /* ===== Celulares ===== */
-.neon{position:relative;max-width:760px;margin-inline:auto;padding:58px 22px 34px;border:2px solid var(--neon);border-radius:var(--r-lg);box-shadow:0 0 22px rgba(224,48,58,.65),inset 0 0 16px rgba(224,48,58,.25);text-align:center}
+.neon{position:relative;max-width:760px;margin-inline:auto;padding:58px 22px 34px;border:2px solid var(--neon);border-radius:var(--r-lg);box-shadow:0 0 16px rgba(224,48,58,.4),inset 0 0 12px rgba(224,48,58,.18);text-align:center}
 .neon h2{position:absolute;top:-.55em;left:50%;translate:-50% 0;background:var(--negro);padding:0 16px;font-size:clamp(44px,8vw,84px);white-space:nowrap;margin:0}
 .neon .ceja{margin-top:0}
 .neon .texto{margin-inline:auto}
@@ -112,7 +112,7 @@ h1 .acento{color:var(--brand-texto)}
 .pasos__lista{list-style:none;padding:0 0 0 34px;display:grid;gap:34px}
 .pasos__lista h3{font:400 clamp(38px,3.6vw,52px)/1 var(--font-display)}
 .pasos__lista p{color:var(--muted);margin-top:4px}
-.animado .pasos__lista h3{color:#8F8280;transition:color .3s}
+.animado .pasos__lista h3{color:#8F8280;transition:color .4s var(--ease)}
 .animado .pasos__lista li.activo h3{color:#fff}
 .pasos__fondo,.pasos__avance{position:absolute;left:0;top:4px;bottom:4px;width:11px;border-radius:var(--r-sm)}
 .pasos__fondo{background:var(--line)}
@@ -135,9 +135,9 @@ h1 .acento{color:var(--brand-texto)}
 .preguntas details{border-bottom:1px solid var(--line)}
 .preguntas summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:16px;align-items:center;min-height:64px;padding:12px 0;font:400 clamp(28px,3vw,38px)/1.05 var(--font-display)}
 .preguntas summary::-webkit-details-marker{display:none}
-.preguntas summary::after{content:"+";color:var(--brand-texto);font-size:1.3em;line-height:1;transition:rotate .3s var(--ease)}
+.preguntas summary::after{content:"+";color:var(--brand-texto);font-size:1.3em;line-height:1;transition:rotate .4s var(--ease)}
 .preguntas details[open] summary::after{content:"−";rotate:180deg}
-.preguntas details::details-content{block-size:0;overflow:clip;transition:block-size .35s var(--ease),content-visibility .35s allow-discrete}
+.preguntas details::details-content{block-size:0;overflow:clip;transition:block-size .45s var(--ease),content-visibility .45s allow-discrete}
 .preguntas details[open]::details-content{block-size:auto}
 .preguntas details p{color:var(--muted);padding-bottom:18px;max-width:42em}
 .preguntas__lista{margin-top:26px;max-width:880px}
@@ -194,13 +194,13 @@ h1 .acento{color:var(--brand-texto)}
 @media(max-width:899px){
   .barra-nav{position:fixed;z-index:20;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom));width:min(100% - 40px,300px);height:62px;margin-inline:auto;padding:0 6px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
     background:rgba(17,18,22,.95);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.16);border-radius:22px;
-    box-shadow:0 10px 24px rgba(0,0,0,.6);transition:translate .3s var(--ease)}
-  .barra-nav.oculta{translate:0 170%}
+    box-shadow:0 10px 24px rgba(0,0,0,.6);transition:translate .45s var(--ease)}
+  .barra-nav.oculta{translate:0 160%}
   .barra-nav a{min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#A9ADB5;text-decoration:none;font:600 11.5px/1.1 var(--font-body);-webkit-tap-highlight-color:transparent}
   .barra-nav a span{white-space:nowrap}
-  .barra-nav__caja{width:44px;height:30px;display:grid;place-items:center;border-radius:10px;transition:background .2s}
-  .barra-nav__icono{width:21px;height:21px;flex:none;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;transition:scale .15s}
-  .barra-nav a:active .barra-nav__icono{scale:.84}
+  .barra-nav__caja{width:44px;height:30px;display:grid;place-items:center;border-radius:10px;transition:background .3s var(--ease)}
+  .barra-nav__icono{width:21px;height:21px;flex:none;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;transition:scale .3s var(--ease)}
+  .barra-nav a:active .barra-nav__icono{scale:.92}
   .barra-nav a[aria-current]{color:#fff}
   .barra-nav a[aria-current] .barra-nav__caja{background:#C61E28}
   .barra-nav a:focus-visible{outline-offset:-3px}
@@ -246,17 +246,17 @@ h1 .acento{color:var(--brand-texto)}
 
 /* ===== Detalles al pasar el mouse ===== */
 @media(hover:hover){
-  .oferta,.garantia div{transition:translate .35s var(--ease),border-color .3s,box-shadow .35s}
-  .oferta:hover{translate:0 -6px;border-color:var(--brand-texto);box-shadow:0 16px 36px rgba(216,30,40,.24)}
-  .garantia div:hover{translate:0 -4px;box-shadow:0 12px 28px rgba(216,30,40,.28)}
-  .modelos b{transition:translate .35s var(--ease),color .25s}
-  .modelos li:hover b{translate:14px 0;color:var(--brand-texto)}
+  .oferta,.garantia div{transition:translate .4s var(--ease),border-color .3s,box-shadow .4s var(--ease)}
+  .oferta:hover{translate:0 -3px;border-color:var(--brand-texto);box-shadow:0 8px 20px rgba(216,30,40,.16)}
+  .garantia div:hover{translate:0 -2px;box-shadow:0 6px 18px rgba(216,30,40,.18)}
+  .modelos b{transition:translate .4s var(--ease),color .3s var(--ease)}
+  .modelos li:hover b{translate:6px 0;color:var(--brand-texto)}
 }
 
 /* ===== Cambio suave entre páginas ===== */
 @media(prefers-reduced-motion:no-preference){
   @view-transition{navigation:auto}
-  ::view-transition-old(root),::view-transition-new(root){animation-duration:.22s}
+  ::view-transition-old(root),::view-transition-new(root){animation-duration:.4s}
   .barra-nav{view-transition-name:barra}
 }
 
