@@ -193,7 +193,7 @@
 
 /* ===== Tienda: detalles ===== */
 .productos__vacio{grid-column:1/-1}
-.punto-vuelo{position:fixed;z-index:30;width:18px;height:18px;border-radius:50%;background:#FF3B45;box-shadow:0 0 16px rgba(255,59,69,.9);pointer-events:none}
+.punto-vuelo{position:fixed;z-index:30;width:18px;height:18px;border-radius:50%;background:#FF3B45;box-shadow:0 0 12px rgba(255,59,69,.6);pointer-events:none}
 @media(hover:hover){
   .producto{transition:translate .4s var(--ease),border-color .3s,box-shadow .4s var(--ease)}
   .producto:hover{translate:0 -3px;border-color:var(--brand-texto);box-shadow:0 8px 20px rgba(216,30,40,.16)}

@@ -141,9 +141,10 @@
       .fromTo('[data-sube]', { y: M.dist, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: M.dur, stagger: 0.15 }, 0.42)
       .fromTo('[data-carga]', { scaleX: 0 }, { scaleX: 1, duration: 1.3, ease: CARGA }, 0.45)
       .fromTo('[data-boton]', { scale: 0.96, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.7, ease: M.pop }, 1.2)
-      /* El logo se carga de izquierda a derecha y el 2 se desliza suavemente sobre él */
+      /* El logo se carga de izquierda a derecha y el 2 cae encima */
       .fromTo('[data-logo-base]', { clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0% 0 0)', duration: 1.3, ease: CARGA }, 0.05)
-      .fromTo('[data-logo-dos]', { y: -16, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.9, ease: M.ease }, 0.9);
+      .fromTo('[data-logo-dos]', { scale: 3, rotation: -16, autoAlpha: 0 }, { scale: 1, rotation: 0, autoAlpha: 1, duration: 0.32, ease: 'power4.in' }, 1.06)
+      .to('[data-logo-hero]', { keyframes: [{ x: -7, y: 5, duration: 0.05 }, { x: 6, y: -4, duration: 0.05 }, { x: -3, y: 2, duration: 0.05 }, { x: 0, y: 0, duration: 0.06 }], ease: 'none' }, 1.38);
   }
 
   /* En computador el logo de la portada se mueve apenas con el mouse */
@@ -196,9 +197,10 @@
         });
       }
     });
-    /* Celulares: el marco de neón se enciende progresiva y suavemente */
+    /* Celulares: el marco de neón se enciende con un parpadeo */
     $$('.neon').forEach((el) => {
-      gsap.fromTo(el, { autoAlpha: 0 }, { autoAlpha: 1, duration: 1.2, ease: M.ease, scrollTrigger: alEntrar(el, 'top 85%') });
+      gsap.set(el, { autoAlpha: 0 });
+      gsap.to(el, { keyframes: [{ autoAlpha: 0.75, duration: 0.07 }, { autoAlpha: 0.15, duration: 0.1 }, { autoAlpha: 1, duration: 0.14 }], ease: 'none', scrollTrigger: alEntrar(el, 'top 85%') });
     });
     /* Modelos: cada barra avanza con el scroll de forma suave */
     $$('.modelos li').forEach((li) => {

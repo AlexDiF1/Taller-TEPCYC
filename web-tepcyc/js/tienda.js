@@ -51,7 +51,7 @@
         </div>
       </article>`;
     }).join('');
-    if (hayGsap) gsap.from(caja.children, { y: 26, autoAlpha: 0, duration: 0.55, stagger: 0.05, ease: 'power4.out', clearProps: 'all' });
+    if (hayGsap) gsap.from(caja.children, { y: 14, autoAlpha: 0, duration: 0.7, stagger: 0.04, ease: 'power2.out', clearProps: 'all' });
   }
 
   function elegirFiltro(cat) {
@@ -106,12 +106,12 @@
     gsap.timeline({
       onComplete() {
         punto.remove();
-        gsap.fromTo(botonCarrito, { scale: 1.22 }, { scale: 1, duration: 0.45, ease: 'back.out(2.4)', clearProps: 'scale' });
+        gsap.fromTo(botonCarrito, { scale: 1.08 }, { scale: 1, duration: 0.5, ease: 'power2.out', clearProps: 'scale' });
       }
     })
-      .to(punto, { x: z.left + z.width / 2 - x0, duration: 0.6, ease: 'power1.inOut' }, 0)
-      .to(punto, { y: z.top + z.height / 2 - y0, duration: 0.6, ease: 'back.in(1.3)' }, 0)
-      .to(punto, { scale: 0.35, duration: 0.6, ease: 'power2.in' }, 0);
+      .to(punto, { x: z.left + z.width / 2 - x0, duration: 0.75, ease: 'power2.inOut' }, 0)
+      .to(punto, { y: z.top + z.height / 2 - y0, duration: 0.75, ease: 'power2.in' }, 0)
+      .to(punto, { scale: 0.6, duration: 0.75, ease: 'power1.in' }, 0);
   }
 
   function cambiar(id, delta) {

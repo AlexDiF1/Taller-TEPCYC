@@ -124,7 +124,7 @@
 
   function nueva(s) {
     const a = aristas[Math.floor(rnd() * aristas.length)];
-    s.a = a[0]; s.b = a[1]; s.p = rnd() * 0.4; s.v = 0.0005 + rnd() * 0.0006;
+    s.a = a[0]; s.b = a[1]; s.p = rnd() * 0.4; s.v = 0.0003 + rnd() * 0.0005;
     return s;
   }
 
@@ -133,7 +133,7 @@
     ctx.drawImage(capa, 0, 0);
     ctx.setTransform(pr, 0, 0, pr, 0, 0);
     destellos.forEach((d) => {
-      ctx.globalAlpha = RM ? 0.8 : 0.45 + 0.55 * Math.sin(ms * d.f + d.o);
+      ctx.globalAlpha = RM ? 0.7 : 0.5 + 0.3 * Math.sin(ms * d.f + d.o);
       ctx.drawImage(brillo, d.x - d.t / 2, d.y - d.t / 2, d.t, d.t);
     });
     ctx.globalAlpha = 1;
