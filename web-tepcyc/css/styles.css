@@ -92,7 +92,11 @@ h1 .acento{color:var(--brand-texto)}
 .controles .ceja{color:#fff}
 .controles .texto{color:#fff}
 .controles__grid{display:grid;gap:30px;align-items:center}
-.gamepad{width:min(100%,640px);margin-inline:auto;fill:none;stroke:#fff;stroke-width:7;stroke-linecap:round;stroke-linejoin:round}
+.control-foto{position:relative;display:grid;gap:16px;justify-items:center;width:min(100%,620px);margin-inline:auto;padding:10px 0 4px;border-radius:50%}
+.control-foto::before{content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(closest-side at 50% 42%,rgba(255,255,255,.20),rgba(255,255,255,.04) 62%,transparent 78%);pointer-events:none}
+.control-foto picture{position:relative;display:block;width:100%}
+.control-foto img{width:100%;height:auto;transform:rotate(-5deg);filter:drop-shadow(0 30px 38px rgba(0,0,0,.42));transition:transform .7s var(--ease)}
+.control-foto figcaption{position:relative;max-width:30ch;text-align:center;color:var(--muted);font-size:14px;line-height:1.4}
 
 /* ===== Celulares ===== */
 .neon{position:relative;max-width:760px;margin-inline:auto;padding:58px 22px 34px;border:2px solid var(--neon);border-radius:var(--r-lg);box-shadow:0 0 16px rgba(224,48,58,.4),inset 0 0 12px rgba(224,48,58,.18);text-align:center}
@@ -281,7 +285,8 @@ h1 .acento{color:var(--brand-texto)}
   .modelos__logo{height:19px}
   .modelos b{font-size:clamp(17px,4.6vw,21px)}
   .modelos .rayas{height:3px;margin-top:1px}
-  .gamepad{width:min(100%,250px)}
+  .control-foto{width:min(100%,270px);gap:10px}
+  .control-foto figcaption{font-size:13px}
   .neon{padding:44px 18px 24px}
   .telefonos svg{width:50px}
   .telefonos{margin-top:8px}
