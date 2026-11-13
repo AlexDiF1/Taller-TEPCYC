@@ -92,16 +92,13 @@ h1 .acento{color:var(--brand-texto)}
 .controles .ceja{color:#fff}
 .controles .texto{color:#fff}
 .controles__grid{display:grid;gap:30px;align-items:center}
-.controles__fotos{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:8px 6px;width:min(100%,780px);margin-inline:auto;padding:6px 0}
-.controles__fotos::before{content:"";position:absolute;inset:0;background:radial-gradient(closest-side at 50% 45%,rgba(255,255,255,.18),rgba(255,255,255,.04) 60%,transparent 78%);pointer-events:none}
-.mando{position:relative;display:grid;justify-items:center;gap:8px;margin:0}
+.controles__fotos{position:relative;display:grid;justify-items:center;gap:14px;width:min(100%,560px);margin-inline:auto;padding:4px 0}
+.controles__fotos::before{content:"";position:absolute;inset:-4% -6%;background:radial-gradient(closest-side at 50% 45%,rgba(255,255,255,.16),rgba(255,255,255,.04) 62%,transparent 78%);pointer-events:none}
+.mando{position:relative;display:block;margin:0;width:100%}
 .mando picture{display:block;width:100%}
-.mando img{width:100%;height:auto;filter:drop-shadow(0 20px 24px rgba(0,0,0,.45));transition:transform .7s var(--ease)}
-.mando:first-child img{transform:rotate(-4deg)}
-.mando:nth-child(2) img{transform:rotate(4deg)}
-@media(hover:hover){.mando:hover img{transform:rotate(0) scale(1.03)}}
-.mando figcaption{font:800 12px/1 var(--font-body);letter-spacing:.14em;text-transform:uppercase;color:#fff}
-.mando__credito{grid-column:1/-1;margin-top:6px;text-align:center;color:var(--muted);font-size:11px;opacity:.7}
+.mando img{width:100%;height:auto;filter:drop-shadow(0 18px 22px rgba(0,0,0,.45));transition:transform .7s var(--ease)}
+@media(hover:hover){.mando:hover img{transform:scale(1.03)}}
+.mando__credito{grid-column:1/-1;margin-top:2px;text-align:center;color:var(--muted);font-size:10px;opacity:.65}
 
 /* ===== Celulares ===== */
 .neon{position:relative;max-width:760px;margin-inline:auto;padding:58px 22px 34px;border:2px solid var(--neon);border-radius:var(--r-lg);box-shadow:0 0 16px rgba(224,48,58,.4),inset 0 0 12px rgba(224,48,58,.18);text-align:center}
@@ -290,8 +287,7 @@ h1 .acento{color:var(--brand-texto)}
   .modelos__logo{height:19px}
   .modelos b{font-size:clamp(17px,4.6vw,21px)}
   .modelos .rayas{height:3px;margin-top:1px}
-  .controles__fotos{width:min(100%,320px);gap:6px 4px}
-  .mando figcaption{font-size:10px;letter-spacing:.1em}
+  .controles__fotos{width:min(100%,300px);gap:10px}
   .mando__credito{font-size:9px}
   .neon{padding:44px 18px 24px}
   .telefonos svg{width:50px}
