@@ -76,7 +76,11 @@ h1 .acento{color:var(--brand-texto)}
 .consolas{background:radial-gradient(70% 60% at 20% 45%,#4a1310 0,var(--negro) 72%)}
 .consolas .ceja,.venta .ceja{color:#FF8088}
 .consolas__grid{display:grid;gap:34px}
-.modelos{list-style:none;padding:0;margin-top:26px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.modelos{margin-top:26px;display:grid;gap:24px}
+.modelos__grupo{display:grid;gap:10px}
+.modelos__titulo{display:flex;align-items:center;gap:12px;font:800 12px/1 var(--font-body);letter-spacing:.18em;text-transform:uppercase;color:var(--brand-texto)}
+.modelos__titulo::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+.modelos__lista{list-style:none;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .modelos li{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:8px 12px;padding:13px 14px 11px;border:1.5px solid var(--line);border-radius:var(--r-md);background:linear-gradient(155deg,rgba(255,255,255,.055),rgba(255,255,255,.012));transition:border-color .3s var(--ease),box-shadow .4s var(--ease)}
 .modelos__logo{width:auto;height:23px;fill:#fff;flex:none}
 .modelos__logo--xbox{fill:#52B043}
@@ -247,7 +251,8 @@ h1 .acento{color:var(--brand-texto)}
   h1{font-size:clamp(90px,9.8vw,150px);white-space:nowrap}
   .consolas__grid{grid-template-columns:.9fr 1.1fr;align-items:start}
   .consolas__fija{position:sticky;top:12vh}
-  .modelos{margin-top:0;grid-template-columns:repeat(3,minmax(0,1fr))}
+  .modelos{margin-top:0}
+  .modelos__lista{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 
 /* ===== Detalles al pasar el mouse ===== */
@@ -272,7 +277,9 @@ h1 .acento{color:var(--brand-texto)}
 @media(max-width:759px){
   :root{--section-y:50px}
   h2{font-size:clamp(42px,12vw,52px)}
-  .modelos{grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+  .modelos{gap:16px;margin-top:8px}
+  .modelos__grupo{gap:7px}
+  .modelos__lista{gap:8px}
   .modelos li{gap:6px 9px;padding:10px 10px 8px}
   .modelos__logo{height:19px}
   .modelos__logo--ancho{height:17px}
