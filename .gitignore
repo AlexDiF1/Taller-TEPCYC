@@ -25,3 +25,4 @@ firebase-key.json
 
 # datos de clientes (no publicar)
 firestore-backup/
+.gemini/
