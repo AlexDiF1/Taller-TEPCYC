@@ -84,10 +84,6 @@ h1 .acento{color:var(--brand-texto)}
 .modelos li{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:8px 12px;padding:13px 14px 11px;border:1.5px solid var(--line);border-radius:var(--r-md);background:linear-gradient(155deg,rgba(255,255,255,.055),rgba(255,255,255,.012));transition:border-color .3s var(--ease),box-shadow .4s var(--ease)}
 .modelos__logo{width:auto;height:23px;fill:#fff;flex:none}
 .modelos__logo--xbox{fill:#52B043}
-.modelos__logo--ancho{height:22px;fill:#fff;grid-column:1/-1;justify-self:center;margin-block:2px}
-.modelos__logo--wii path,.modelos__logo--wiiu path{fill:#fff}
-.modelos__logo--wiiu path.u{fill:#0096C8}
-.modelos .sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 .modelos b{font:400 clamp(19px,1.55vw,22px)/1.05 var(--font-display);letter-spacing:.01em;min-width:0}
 .modelos .rayas{grid-column:1/-1;height:4px;margin-top:2px;opacity:.75}
 
@@ -283,7 +279,6 @@ h1 .acento{color:var(--brand-texto)}
   .modelos__lista{gap:8px}
   .modelos li{gap:6px 9px;padding:10px 10px 8px}
   .modelos__logo{height:19px}
-  .modelos__logo--ancho{height:17px}
   .modelos b{font-size:clamp(17px,4.6vw,21px)}
   .modelos .rayas{height:3px;margin-top:1px}
   .gamepad{width:min(100%,250px)}
