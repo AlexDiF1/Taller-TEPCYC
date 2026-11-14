@@ -486,8 +486,16 @@ export function EstadosPanel({
             <ul className="flex flex-col gap-2">
               {planes.map((plan) => (
                 <li key={plan.id} className="flex items-start gap-2 rounded-lg border border-border bg-card/60 p-2">
+                  {plan.mediaUrl && (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={plan.mediaUrl} alt="" className="size-11 shrink-0 rounded object-cover" />
+                  )}
                   <div className="min-w-0 flex-1">
-                    <p className="line-clamp-2 text-xs">{plan.caption || plan.text || '—'}</p>
+                    <p className="line-clamp-2 text-xs">
+                      {plan.caption || plan.text || (
+                        <span className="text-muted-foreground">Solo imagen, sin texto</span>
+                      )}
+                    </p>
                     <p className="mt-1 font-mono text-[10px] text-muted-foreground">
                       {WEEK.filter((w) => plan.days.includes(w.day))
                         .map((w) => w.label)
