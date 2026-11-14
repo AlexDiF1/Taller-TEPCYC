@@ -30,6 +30,7 @@ import {
   waDeleteEstado,
   waDeletePlan,
   waSetPlanActive,
+  waUpdatePlan,
   type EstadoPlan,
   type EstadoProgramado,
 } from '@/lib/wa'
@@ -214,6 +215,20 @@ export function EstadosPanel({
       toast.error(error instanceof Error ? error.message : 'No se pudo guardar el automático.')
     } finally {
       setPlanBusy(null)
+    }
+  }
+
+  async function applyTimeToAll() {
+    if (!planes.length) return
+    setPlanToggling(-1)
+    try {
+      await Promise.all(planes.map((plan) => waUpdatePlan(plan.id, { time: planTime })))
+      toast.success(`Todos los automáticos quedaron a las ${planTime}.`)
+      onPlanesChange()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo cambiar la hora.')
+    } finally {
+      setPlanToggling(null)
     }
   }
 
@@ -432,6 +447,18 @@ export function EstadosPanel({
                 {planBusy ? <Loader2 className="size-4 animate-spin" /> : <Repeat className="size-4" />}
                 {planBusy ? 'Guardando…' : 'Guardar automático'}
               </Button>
+              {planes.length > 1 && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="h-10 rounded-xl text-xs"
+                  disabled={planToggling === -1}
+                  onClick={() => void applyTimeToAll()}
+                >
+                  {planToggling === -1 ? <Loader2 className="size-4 animate-spin" /> : <Clock className="size-4" />}
+                  Aplicar esta hora a los {planes.length}
+                </Button>
+              )}
             </div>
           </div>
 

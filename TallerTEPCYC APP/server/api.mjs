@@ -490,7 +490,17 @@ api.post('/whatsapp/planes', (req, res) => {
 
 api.patch('/whatsapp/planes/:id', (req, res) => {
   if (!store.getPlan(req.params.id)) return res.status(404).json({ error: 'Automatización no encontrada.' })
-  store.setPlanActive(req.params.id, Boolean(req.body?.active))
+  const body = req.body ?? {}
+  if (body.time !== undefined && !/^([01]\d|2[0-3]):[0-5]\d$/.test(String(body.time))) {
+    return res.status(400).json({ error: 'La hora debe ser HH:MM.' })
+  }
+  if (body.days !== undefined && (!Array.isArray(body.days) || !body.days.length)) {
+    return res.status(400).json({ error: 'Elige al menos un día de la semana.' })
+  }
+  if (body.time !== undefined || body.days !== undefined) {
+    store.updatePlan(req.params.id, { time: body.time, days: body.days })
+  }
+  if (body.active !== undefined) store.setPlanActive(req.params.id, Boolean(body.active))
   res.json(store.getPlan(req.params.id))
 })
 

@@ -1085,6 +1085,26 @@ export function setPlanActive(id, active) {
   )
 }
 
+/** Edita día/hora de un plan (lo que usa el «aplicar a todos» de la UI). */
+export function updatePlan(id, { days, time } = {}) {
+  const plan = getPlan(id)
+  if (!plan) return false
+  let nextDays = plan.days
+  if (Array.isArray(days)) {
+    nextDays = [...new Set(days.map(Number))]
+      .filter((d) => Number.isInteger(d) && d >= 0 && d <= 6)
+      .sort()
+    if (!nextDays.length) return false
+  }
+  const nextTime = /^([01]\d|2[0-3]):[0-5]\d$/.test(String(time ?? '')) ? String(time) : plan.time
+  db.prepare('UPDATE estados_planes SET days = ?, hora = ? WHERE id = ?').run(
+    nextDays.join(','),
+    nextTime,
+    Number(id),
+  )
+  return true
+}
+
 export function deletePlan(id) {
   return db.prepare('DELETE FROM estados_planes WHERE id = ?').run(Number(id)).changes > 0
 }

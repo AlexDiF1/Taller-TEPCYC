@@ -206,6 +206,10 @@ export function waSetPlanActive(id: number, active: boolean) {
   return request<EstadoPlan>(`${BASE}/planes/${id}`, { method: 'PATCH', body: JSON.stringify({ active }) })
 }
 
+export function waUpdatePlan(id: number, patch: { time?: string; days?: number[]; active?: boolean }) {
+  return request<EstadoPlan>(`${BASE}/planes/${id}`, { method: 'PATCH', body: JSON.stringify(patch) })
+}
+
 export function waDeletePlan(id: number) {
   return request<{ ok: boolean }>(`${BASE}/planes/${id}`, { method: 'DELETE' })
 }
