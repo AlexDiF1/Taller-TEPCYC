@@ -14,6 +14,8 @@ import {
   Clock,
   CheckCircle2,
   TriangleAlert,
+  Repeat,
+  Power,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,11 +23,30 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { formatDate } from '@/lib/business'
 import { compressImage } from '@/lib/image'
-import { blobToDataUrl, waCreateEstado, waDeleteEstado, waListEstados, type EstadoProgramado } from '@/lib/wa'
+import {
+  blobToDataUrl,
+  waCreateEstado,
+  waCreatePlan,
+  waDeleteEstado,
+  waDeletePlan,
+  waSetPlanActive,
+  type EstadoPlan,
+  type EstadoProgramado,
+} from '@/lib/wa'
 import { cn } from '@/lib/utils'
 
 const COLORS = ['#101014', '#7f1d1d', '#14532d', '#1e3a8a', '#3b0764', '#78350f']
 const MAX_VIDEO_BYTES = 12 * 1024 * 1024
+// Lunes primero: es como se lee la semana en el taller.
+const WEEK = [
+  { day: 1, label: 'Lun' },
+  { day: 2, label: 'Mar' },
+  { day: 3, label: 'Mié' },
+  { day: 4, label: 'Jue' },
+  { day: 5, label: 'Vie' },
+  { day: 6, label: 'Sáb' },
+  { day: 0, label: 'Dom' },
+]
 
 interface Media {
   dataUrl: string
@@ -36,12 +57,16 @@ interface Media {
 
 export function EstadosPanel({
   estados,
+  planes,
   connected,
   onChange,
+  onPlanesChange,
 }: {
   estados: EstadoProgramado[]
+  planes: EstadoPlan[]
   connected: boolean
   onChange: () => void
+  onPlanesChange: () => void
 }) {
   const [caption, setCaption] = useState('')
   const [media, setMedia] = useState<Media | null>(null)
@@ -49,6 +74,10 @@ export function EstadosPanel({
   const [scheduledAt, setScheduledAt] = useState('')
   const [busy, setBusy] = useState<'now' | 'later' | null>(null)
   const [removing, setRemoving] = useState<number | null>(null)
+  const [planDays, setPlanDays] = useState<number[]>([1])
+  const [planTime, setPlanTime] = useState('09:00')
+  const [planBusy, setPlanBusy] = useState<'save' | null>(null)
+  const [planToggling, setPlanToggling] = useState<number | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   async function pickFile(file: File | undefined) {
@@ -146,6 +175,70 @@ export function EstadosPanel({
       toast.error(error instanceof Error ? error.message : 'No se pudo eliminar.')
     } finally {
       setRemoving(null)
+    }
+  }
+
+  function toggleDay(day: number) {
+    setPlanDays((prev) => (prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day].sort()))
+  }
+
+  async function savePlan() {
+    if (!caption.trim() && !media) {
+      toast.error('Escribe un texto o adjunta una imagen/video para el estado automático.')
+      return
+    }
+    if (!planDays.length) {
+      toast.error('Elige al menos un día de la semana.')
+      return
+    }
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(planTime)) {
+      toast.error('Elige una hora válida.')
+      return
+    }
+    setPlanBusy('save')
+    try {
+      await waCreatePlan({
+        text: caption.trim(),
+        caption: caption.trim(),
+        mediaDataUrl: media?.dataUrl,
+        mediaType: media?.type,
+        backgroundColor: media ? undefined : color,
+        days: planDays,
+        time: planTime,
+      })
+      toast.success('Estado automático guardado.')
+      setCaption('')
+      setMedia(null)
+      onPlanesChange()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo guardar el automático.')
+    } finally {
+      setPlanBusy(null)
+    }
+  }
+
+  async function togglePlan(plan: EstadoPlan) {
+    setPlanToggling(plan.id)
+    try {
+      await waSetPlanActive(plan.id, !plan.active)
+      onPlanesChange()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo cambiar el automático.')
+    } finally {
+      setPlanToggling(null)
+    }
+  }
+
+  async function removePlan(plan: EstadoPlan) {
+    setPlanToggling(plan.id)
+    try {
+      await waDeletePlan(plan.id)
+      toast.success('Automático eliminado.')
+      onPlanesChange()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo eliminar.')
+    } finally {
+      setPlanToggling(null)
     }
   }
 
@@ -290,6 +383,58 @@ export function EstadosPanel({
             </p>
           </div>
 
+          <div className="flex flex-col gap-3 rounded-xl border border-border bg-background/40 p-3">
+            <div>
+              <p className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+                <Repeat className="size-3.5" aria-hidden="true" />
+                Repetir todas las semanas
+              </p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                Se publica cada día marcado a esa hora (hora de Colombia), con el texto y el archivo de arriba.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {WEEK.map(({ day, label }) => {
+                const on = planDays.includes(day)
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => toggleDay(day)}
+                    aria-pressed={on}
+                    className={cn(
+                      'h-9 min-w-11 rounded-lg border px-2 text-xs font-medium transition-colors',
+                      on
+                        ? 'border-primary bg-primary text-primary-foreground'
+                        : 'border-border bg-background/60 text-muted-foreground hover:border-primary/50',
+                    )}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Input
+                type="time"
+                value={planTime}
+                onChange={(e) => setPlanTime(e.target.value)}
+                aria-label="Hora del estado automático"
+                className="h-10 w-32 rounded-xl bg-background/60 text-base"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 rounded-xl"
+                disabled={planBusy !== null}
+                onClick={() => void savePlan()}
+              >
+                {planBusy ? <Loader2 className="size-4 animate-spin" /> : <Repeat className="size-4" />}
+                {planBusy ? 'Guardando…' : 'Guardar automático'}
+              </Button>
+            </div>
+          </div>
+
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button
               type="button"
@@ -331,6 +476,60 @@ export function EstadosPanel({
             </span>
           )}
         </header>
+
+        {planes.length > 0 && (
+          <section className="flex flex-col gap-2 rounded-xl border border-border bg-background/40 p-2.5">
+            <div className="flex items-center gap-1.5">
+              <Repeat className="size-3.5 text-primary" aria-hidden="true" />
+              <h3 className="text-xs font-semibold">Automáticos semanales</h3>
+            </div>
+            <ul className="flex flex-col gap-2">
+              {planes.map((plan) => (
+                <li key={plan.id} className="flex items-start gap-2 rounded-lg border border-border bg-card/60 p-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="line-clamp-2 text-xs">{plan.caption || plan.text || '—'}</p>
+                    <p className="mt-1 font-mono text-[10px] text-muted-foreground">
+                      {WEEK.filter((w) => plan.days.includes(w.day))
+                        .map((w) => w.label)
+                        .join(', ')}{' '}
+                      · {plan.time}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {plan.active
+                        ? plan.lastFiredDate
+                          ? `Último envío ${plan.lastFiredDate}`
+                          : 'Sin envíos todavía'
+                        : 'En pausa'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void togglePlan(plan)}
+                    disabled={planToggling === plan.id}
+                    aria-label={plan.active ? `Pausar automático ${plan.id}` : `Activar automático ${plan.id}`}
+                    className={cn(
+                      'grid size-7 shrink-0 place-items-center rounded-lg transition-colors',
+                      plan.active
+                        ? 'text-status-done hover:bg-status-done/10'
+                        : 'text-muted-foreground hover:bg-muted',
+                    )}
+                  >
+                    {planToggling === plan.id ? <Loader2 className="size-3.5 animate-spin" /> : <Power className="size-3.5" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void removePlan(plan)}
+                    disabled={planToggling === plan.id}
+                    aria-label={`Eliminar automático ${plan.id}`}
+                    className="grid size-7 shrink-0 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         <div className="max-h-[62vh] overflow-y-auto">
           {estados.length === 0 ? (

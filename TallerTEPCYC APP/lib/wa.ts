@@ -71,6 +71,33 @@ export interface EstadoProgramado {
   sentAt?: string
 }
 
+/** Estado automático: días (0=domingo … 6=sábado) y hora local «HH:MM». */
+export interface EstadoPlan {
+  id: number
+  text?: string
+  caption?: string
+  mediaUrl?: string
+  mediaType?: 'image' | 'video'
+  backgroundColor?: string
+  days: number[]
+  time: string
+  timezone: string
+  active: boolean
+  createdAt: string
+  lastFiredAt?: string
+  lastFiredDate?: string
+}
+
+export type NewEstadoPlanInput = {
+  text?: string
+  caption?: string
+  mediaDataUrl?: string
+  mediaType?: 'image' | 'video'
+  backgroundColor?: string
+  days: number[]
+  time: string
+}
+
 export interface WaContact {
   phone: string
   name?: string
@@ -165,6 +192,22 @@ export function waCreateEstado(input: NewEstadoInput) {
 
 export function waDeleteEstado(id: number) {
   return request<{ ok: boolean }>(`${BASE}/estados/${id}`, { method: 'DELETE' })
+}
+
+export function waListPlanes() {
+  return request<EstadoPlan[]>(`${BASE}/planes`)
+}
+
+export function waCreatePlan(input: NewEstadoPlanInput) {
+  return request<EstadoPlan>(`${BASE}/planes`, { method: 'POST', body: JSON.stringify(input) })
+}
+
+export function waSetPlanActive(id: number, active: boolean) {
+  return request<EstadoPlan>(`${BASE}/planes/${id}`, { method: 'PATCH', body: JSON.stringify({ active }) })
+}
+
+export function waDeletePlan(id: number) {
+  return request<{ ok: boolean }>(`${BASE}/planes/${id}`, { method: 'DELETE' })
 }
 
 export function waContacts() {

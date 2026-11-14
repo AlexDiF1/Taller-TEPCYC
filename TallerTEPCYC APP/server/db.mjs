@@ -147,6 +147,22 @@ CREATE TABLE IF NOT EXISTS estados_programados (
 );
 CREATE INDEX IF NOT EXISTS idx_estados_status ON estados_programados(status, scheduled_at);
 
+CREATE TABLE IF NOT EXISTS estados_planes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  text TEXT,
+  caption TEXT,
+  media_url TEXT,
+  media_type TEXT,
+  background_color TEXT,
+  days TEXT NOT NULL,
+  hora TEXT NOT NULL,
+  timezone TEXT NOT NULL DEFAULT 'America/Bogota',
+  active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL,
+  last_fired_at TEXT,
+  last_fired_date TEXT
+);
+
 CREATE TABLE IF NOT EXISTS whatsapp_meta (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
@@ -977,6 +993,123 @@ export function pendingEstados(nowIso = new Date().toISOString(), limit = 3) {
       ORDER BY COALESCE(scheduled_at, created_at) LIMIT ?`,
     [nowIso, limit],
   ).map(rowToEstado)
+}
+
+/* ------------------- estados automáticos (recurrentes semanales) ------------------- */
+
+const WEEKDAYS = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }
+
+/** Día de la semana (0=domingo) y hora «HH:MM» en la zona del taller. */
+export function localClock(date = new Date(), timeZone = 'America/Bogota') {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      weekday: 'short',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    })
+      .formatToParts(date)
+      .map((p) => [p.type, p.value]),
+  )
+  const hour = parts.hour === '24' ? '00' : parts.hour
+  return {
+    weekday: WEEKDAYS[parts.weekday] ?? new Date(date).getUTCDay(),
+    date: `${parts.year}-${parts.month}-${parts.day}`,
+    time: `${hour}:${parts.minute}`,
+  }
+}
+
+function rowToPlan(row) {
+  return {
+    id: row.id,
+    text: row.text || undefined,
+    caption: row.caption || undefined,
+    mediaUrl: row.media_url || undefined,
+    mediaType: row.media_type || undefined,
+    backgroundColor: row.background_color || undefined,
+    days: String(row.days || '')
+      .split(',')
+      .map((d) => Number(d))
+      .filter((d) => Number.isInteger(d) && d >= 0 && d <= 6),
+    time: row.hora,
+    timezone: row.timezone,
+    active: Boolean(row.active),
+    createdAt: row.created_at,
+    lastFiredAt: row.last_fired_at || undefined,
+    lastFiredDate: row.last_fired_date || undefined,
+  }
+}
+
+export function listPlanes() {
+  return rows('SELECT * FROM estados_planes ORDER BY hora, id').map(rowToPlan)
+}
+
+export function getPlan(id) {
+  const row = db.prepare('SELECT * FROM estados_planes WHERE id = ?').get(Number(id))
+  return row ? rowToPlan(row) : undefined
+}
+
+export function createPlan(input = {}) {
+  const days = [...new Set((input.days ?? []).map(Number))]
+    .filter((d) => Number.isInteger(d) && d >= 0 && d <= 6)
+    .sort()
+    .join(',')
+  const info = db
+    .prepare(
+      `INSERT INTO estados_planes (text, caption, media_url, media_type, background_color,
+        days, hora, timezone, active, created_at) VALUES (?,?,?,?,?,?,?,?,1,?)`,
+    )
+    .run(
+      input.text?.trim() || null,
+      input.caption?.trim() || null,
+      input.mediaUrl || null,
+      input.mediaType || null,
+      input.backgroundColor || null,
+      days,
+      input.time,
+      input.timezone || 'America/Bogota',
+      new Date().toISOString(),
+    )
+  return getPlan(Number(info.lastInsertRowid))
+}
+
+export function setPlanActive(id, active) {
+  return (
+    db
+      .prepare('UPDATE estados_planes SET active = ? WHERE id = ?')
+      .run(active ? 1 : 0, Number(id)).changes > 0
+  )
+}
+
+export function deletePlan(id) {
+  return db.prepare('DELETE FROM estados_planes WHERE id = ?').run(Number(id)).changes > 0
+}
+
+export function markPlanFired(id, now = new Date(), localDate) {
+  const clock = localClock(now, getPlan(id)?.timezone)
+  db.prepare('UPDATE estados_planes SET last_fired_at = ?, last_fired_date = ? WHERE id = ?').run(
+    now.toISOString(),
+    localDate ?? clock.date,
+    Number(id),
+  )
+}
+
+/** Planes activos cuya hora ya llegó hoy y que aún no se dispararon hoy. */
+export function planesDue(now = new Date()) {
+  const due = []
+  for (const plan of listPlanes()) {
+    if (!plan.active || plan.days.length === 0) continue
+    const clock = localClock(now, plan.timezone)
+    if (!plan.days.includes(clock.weekday)) continue
+    if (clock.time < plan.time) continue
+    if (plan.lastFiredDate === clock.date) continue
+    due.push({ ...plan, _localDate: clock.date })
+  }
+  return due
 }
 
 export function markEstado(id, status, error = null) {

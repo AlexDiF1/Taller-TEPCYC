@@ -443,6 +443,62 @@ api.delete('/whatsapp/estados/:id', (req, res) => {
   res.json({ ok: true })
 })
 
+api.get('/whatsapp/planes', (_req, res) => {
+  res.json(store.listPlanes())
+})
+
+/** Estados automáticos semanales: días (0=dom..6=sáb) + hora local del taller. */
+api.post('/whatsapp/planes', (req, res) => {
+  const body = req.body ?? {}
+  const text = String(body.text ?? '').trim().slice(0, 700)
+  const caption = String(body.caption ?? '').trim().slice(0, 700)
+  const days = Array.isArray(body.days) ? body.days.map(Number) : []
+  const time = String(body.time ?? '').trim()
+  const timezone = String(body.timezone ?? 'America/Bogota').trim() || 'America/Bogota'
+  const mediaType = body.mediaType === 'video' ? 'video' : 'image'
+
+  if (!days.length) return res.status(400).json({ error: 'Elige al menos un día de la semana.' })
+  if (days.some((d) => !Number.isInteger(d) || d < 0 || d > 6)) {
+    return res.status(400).json({ error: 'Día de la semana inválido.' })
+  }
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) return res.status(400).json({ error: 'La hora debe ser HH:MM.' })
+
+  let media
+  if (body.mediaDataUrl) {
+    media = saveDataUrl(body.mediaDataUrl, {
+      maxBytes: mediaType === 'video' ? 12 * 1024 * 1024 : 8 * 1024 * 1024,
+      allowed: mediaType === 'video' ? ['video/mp4'] : ['image/jpeg', 'image/png', 'image/webp'],
+    })
+    if (media.error) return res.status(400).json({ error: media.error })
+  }
+  if (!text && !caption && !media) {
+    return res.status(400).json({ error: 'Escribe un texto o adjunta una imagen/video.' })
+  }
+
+  const plan = store.createPlan({
+    text: caption || text,
+    caption: caption || text,
+    mediaUrl: media?.url,
+    mediaType: media ? mediaType : undefined,
+    backgroundColor: !media && typeof body.backgroundColor === 'string' ? body.backgroundColor.slice(0, 9) : undefined,
+    days,
+    time,
+    timezone,
+  })
+  res.status(201).json(plan)
+})
+
+api.patch('/whatsapp/planes/:id', (req, res) => {
+  if (!store.getPlan(req.params.id)) return res.status(404).json({ error: 'Automatización no encontrada.' })
+  store.setPlanActive(req.params.id, Boolean(req.body?.active))
+  res.json(store.getPlan(req.params.id))
+})
+
+api.delete('/whatsapp/planes/:id', (req, res) => {
+  if (!store.deletePlan(req.params.id)) return res.status(404).json({ error: 'Automatización no encontrada.' })
+  res.json({ ok: true })
+})
+
 api.post('/uploads', (req, res) => {
   const { dataUrl, name } = req.body ?? {}
   const match = typeof dataUrl === 'string' ? dataUrl.match(/^data:(image\/(?:jpeg|png|webp));base64,(.+)$/s) : null

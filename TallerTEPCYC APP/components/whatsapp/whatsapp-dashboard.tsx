@@ -4,7 +4,7 @@ import useSWR from 'swr'
 import { PageHeader } from '@/components/page-header'
 import { ConnectionPanel } from './connection-panel'
 import { EstadosPanel } from './estados-panel'
-import { waListEstados, waStatus, type EstadoProgramado } from '@/lib/wa'
+import { waListEstados, waListPlanes, waStatus, type EstadoPlan, type EstadoProgramado } from '@/lib/wa'
 
 export function WhatsappDashboard() {
   // Mientras no hay sesión el QR cambia cada pocos segundos: se refresca rápido.
@@ -16,6 +16,8 @@ export function WhatsappDashboard() {
   const { data: estados, mutate: refreshEstados } = useSWR<EstadoProgramado[]>('wa-estados', waListEstados, {
     refreshInterval: (data) => ((data ?? []).some((e) => e.status === 'pendiente') ? 30_000 : 0),
   })
+
+  const { data: planes, mutate: refreshPlanes } = useSWR<EstadoPlan[]>('wa-planes', waListPlanes)
 
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8 md:py-8">
@@ -36,11 +38,13 @@ export function WhatsappDashboard() {
         />
         <EstadosPanel
           estados={estados ?? []}
+          planes={planes ?? []}
           connected={Boolean(state?.connected)}
           onChange={() => {
             void refreshEstados()
             void mutate()
           }}
+          onPlanesChange={() => void refreshPlanes()}
         />
       </div>
     </div>

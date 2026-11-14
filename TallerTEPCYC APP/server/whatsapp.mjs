@@ -850,6 +850,29 @@ async function tickEstados() {
   }
 }
 
+/**
+ * Estados automáticos semanales: si un plan toca hoy y ya pasó su hora, se crea un
+ * estado pendiente (lo publica tickEstados, respetando los límites anti-bloqueo).
+ */
+function tickPlanes() {
+  for (const plan of store.planesDue(new Date())) {
+    try {
+      const estado = store.createEstado({
+        text: plan.text,
+        caption: plan.caption,
+        mediaUrl: plan.mediaUrl,
+        mediaType: plan.mediaType,
+        backgroundColor: plan.backgroundColor,
+        scheduledAt: new Date().toISOString(),
+      })
+      store.markPlanFired(plan.id, new Date(), plan._localDate)
+      pushEvent('estado automático creado', `#${estado.id} ← plan #${plan.id} (${plan.time})`)
+    } catch (error) {
+      pushEvent('estado automático fallido', `plan #${plan.id}: ${error?.message ?? error}`)
+    }
+  }
+}
+
 /** Arranca el socket y los temporizadores (idempotente). */
 export async function startWhatsapp() {
   mkdirSync(authDir, { recursive: true, mode: 0o700 })
@@ -866,6 +889,13 @@ export async function startWhatsapp() {
     setInterval(() => {
       tickEstados().catch((error) => pushEvent('publicación de estado fallida', error?.message ?? String(error)))
     }, ESTADOS_TICK_MS).unref?.()
+    setInterval(() => {
+      try {
+        tickPlanes()
+      } catch (error) {
+        pushEvent('estados automáticos fallidos', error?.message ?? String(error))
+      }
+    }, 60_000).unref?.()
     setInterval(
       () => {
         try {
