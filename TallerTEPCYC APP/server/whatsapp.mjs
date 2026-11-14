@@ -721,11 +721,15 @@ export async function sendOrderUpdate({ phone, message, photos = [], maxPhotos =
  * Publica una historia (status@broadcast). `statusJidList` son los JIDs de los
  * contactos sincronizados; sin ellos el estado solo lo vería la propia cuenta.
  */
-export async function publishEstado({ text, caption, mediaPath, mediaType, backgroundColor, font = 1 } = {}) {
-  const jids = store
-    .statusJidPhones(envNumber('WA_STATUS_MAX_JIDS', 3000))
-    .map((phone) => toJid(phone))
-    .filter((jid) => Boolean(jid))
+export async function publishEstado({ text, caption, mediaPath, mediaType, backgroundColor, font = 1, onlyMe = false } = {}) {
+  // Los contactos que ocultan su número llegan como LID (15 dígitos que empiezan por 1):
+  // si se mandan como @s.whatsapp.net el servidor descarta la lista entera.
+  const jids = onlyMe
+    ? []
+    : store
+        .statusJidPhones(envNumber('WA_STATUS_MAX_JIDS', 3000))
+        .map((phone) => (/^1\d{14}$/.test(phone) ? `${phone}@lid` : toJid(phone)))
+        .filter((jid) => Boolean(jid))
 
   const title = caption?.trim() || text?.trim() || ''
   if (!title && !mediaPath) throw new Error('El estado necesita un texto o una imagen/video.')
@@ -733,7 +737,15 @@ export async function publishEstado({ text, caption, mediaPath, mediaType, backg
   return enqueue(async () => {
     const active = requireSocket()
     await waitForTurn('estado')
-    const options = { statusJidList: jids, backgroundColor: backgroundColor || '#101014', font }
+    // `broadcast: true` es obligatorio: sin él WhatsApp acepta el envío y descarta
+    // el estado en silencio (sendMessage devuelve key pero nadie lo ve).
+    // Sin statusJidList el estado solo lo ve la propia cuenta (útil para probar).
+    const options = {
+      broadcast: true,
+      ...(jids.length ? { statusJidList: jids } : {}),
+      backgroundColor: backgroundColor || '#101014',
+      font,
+    }
     let content
     if (mediaPath) {
       const buffer = readFileSync(mediaPath)
