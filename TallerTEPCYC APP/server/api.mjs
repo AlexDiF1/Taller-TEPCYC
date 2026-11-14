@@ -431,8 +431,11 @@ api.post('/whatsapp/estados', async (req, res) => {
         mediaPath: media?.path,
         mediaType: estado.mediaType,
         backgroundColor: estado.backgroundColor,
-        // audience:'yo' publica solo para la propia cuenta (prueba de humo).
+        // audience:'yo' publica solo para la propia cuenta y audienceLimit recorta
+        // la lista de destinatarios: ambos son solo para diagnóstico.
         onlyMe: body.audience === 'yo',
+        maxJids: Number.isInteger(body.audienceLimit) ? body.audienceLimit : undefined,
+        estadoId: estado.id,
       })
       store.markEstado(estado.id, 'publicado')
     } catch (error) {

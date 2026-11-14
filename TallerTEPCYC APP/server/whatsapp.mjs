@@ -41,6 +41,12 @@ const logger = pino({ level: process.env.WA_LOG_LEVEL ?? 'warn' })
 export const authDir = process.env.WA_AUTH_DIR ?? join(store.dataDir, 'whatsapp-auth')
 const backupDir = process.env.WA_AUTH_BACKUP_DIR ?? join(store.dataDir, 'whatsapp-auth-backup')
 const STORIES_JID = 'status@broadcast'
+// WhatsApp acepta el envío del estado y luego lo rechaza con <ack error=479> (bug
+// conocido de Baileys en cuentas migradas a LID). Se sigue el id del mensaje para
+// reintentar en vez de dar por publicado algo que nadie ve.
+const estadoAcks = new Map() // idMensaje -> idEstado
+const estadoIntentos = new Map() // idEstado -> intentos
+const MAX_INTENTOS_ESTADO = 3
 
 function envNumber(name, fallback) {
   const value = Number(process.env[name])
@@ -437,6 +443,34 @@ async function startSocket() {
     })
 
     wireEvents(sock, saveCreds)
+    // Baileys no propaga los <ack error=…> de status@broadcast: sin esto un estado
+    // rechazado por el servidor (479) parece publicado y nunca aparece.
+    try {
+      sock.ws?.on('CB:ack,class:message', (node) => {
+        const attrs = node?.attrs ?? {}
+        if (!attrs.error) return
+        pushEvent('ack con error', `${attrs.error} · id=${attrs.id ?? '?'}`)
+        try {
+          registerSend({ kind: 'ack', phone: null, ok: false, detail: `error=${attrs.error} id=${attrs.id ?? '?'}` })
+        } catch {
+          /* diagnóstico opcional */
+        }
+        const estadoId = estadoAcks.get(attrs.id)
+        if (!estadoId) return
+        estadoAcks.delete(attrs.id)
+        const intentos = estadoIntentos.get(estadoId) ?? 1
+        if (intentos < MAX_INTENTOS_ESTADO) {
+          // Se devuelve a la cola: el ticker lo reintenta respetando los límites.
+          store.markEstado(estadoId, 'pendiente')
+          pushEvent('estado reencolado', `#${estadoId} rechazado por WhatsApp (${attrs.error}), intento ${intentos}`)
+        } else {
+          store.markEstado(estadoId, 'error', `WhatsApp rechazó el estado (ack ${attrs.error}).`)
+          pushEvent('estado rechazado', `#${estadoId} tras ${intentos} intentos`)
+        }
+      })
+    } catch {
+      /* diagnóstico opcional */
+    }
     if (!authState.creds.registered) setStatus('connecting')
   } catch (error) {
     state.lastError = error?.message ?? String(error)
@@ -721,14 +755,17 @@ export async function sendOrderUpdate({ phone, message, photos = [], maxPhotos =
  * Publica una historia (status@broadcast). `statusJidList` son los JIDs de los
  * contactos sincronizados; sin ellos el estado solo lo vería la propia cuenta.
  */
-export async function publishEstado({ text, caption, mediaPath, mediaType, backgroundColor, font = 1, onlyMe = false } = {}) {
+export async function publishEstado({ text, caption, mediaPath, mediaType, backgroundColor, font = 1, onlyMe = false, maxJids, estadoId } = {}) {
   // Los contactos que ocultan su número llegan como LID (15 dígitos que empiezan por 1):
   // si se mandan como @s.whatsapp.net el servidor descarta la lista entera.
   const jids = onlyMe
     ? []
     : store
-        .statusJidPhones(envNumber('WA_STATUS_MAX_JIDS', 3000))
-        .map((phone) => (/^1\d{14}$/.test(phone) ? `${phone}@lid` : toJid(phone)))
+        .statusJidPhones(maxJids ?? envNumber('WA_STATUS_MAX_JIDS', 3000))
+        // Los LID (15 dígitos que empiezan por 1) no son JIDs válidos en esta lista:
+        // un solo JID inválido hace que WhatsApp rechace el estado entero (ack 400).
+        .filter((phone) => !/^1\d{14}$/.test(phone))
+        .map((phone) => toJid(phone))
         .filter((jid) => Boolean(jid))
 
   const title = caption?.trim() || text?.trim() || ''
@@ -752,7 +789,7 @@ export async function publishEstado({ text, caption, mediaPath, mediaType, backg
       content =
         mediaType === 'video'
           ? { video: buffer, caption: caption?.trim() || undefined, mimetype: 'video/mp4' }
-          : { image: buffer, caption: caption?.trim() || undefined }
+          : { image: buffer, mimetype: 'image/jpeg', caption: caption?.trim() || undefined }
     } else {
       content = { text: title }
     }
@@ -761,6 +798,10 @@ export async function publishEstado({ text, caption, mediaPath, mediaType, backg
       lastSendAt = Date.now()
       lastStatusAt = Date.now()
       registerSend({ kind: 'estado', phone: null, ok: true, detail: `${jids.length} destinatarios` })
+      if (estadoId && result?.key?.id) {
+        estadoAcks.set(result.key.id, estadoId)
+        estadoIntentos.set(estadoId, (estadoIntentos.get(estadoId) ?? 0) + 1)
+      }
       return { id: result?.key?.id ?? null, audience: jids.length }
     } catch (error) {
       registerSend({ kind: 'estado', phone: null, ok: false, detail: error?.message ?? String(error) })
@@ -847,6 +888,7 @@ async function tickEstados() {
         mediaPath: mediaPath && existsSync(mediaPath) ? mediaPath : undefined,
         mediaType: estado.mediaType,
         backgroundColor: estado.backgroundColor,
+        estadoId: estado.id,
       })
       store.markEstado(estado.id, 'publicado')
       pushEvent('estado publicado', `#${estado.id}`)
