@@ -956,7 +956,7 @@ export function createEstado(input = {}) {
   const info = db
     .prepare(
       `INSERT INTO estados_programados (text, caption, media_url, media_type, background_color,
-        scheduled_at, status, created_at) VALUES (?,?,?,?,?,?,'pendiente',?)`,
+        scheduled_at, status, created_at) VALUES (?,?,?,?,?,?,?,?)`,
     )
     .run(
       input.text?.trim() || null,
@@ -965,6 +965,7 @@ export function createEstado(input = {}) {
       input.mediaType || null,
       input.backgroundColor || null,
       input.scheduledAt || null,
+      input.status || 'pendiente',
       new Date().toISOString(),
     )
   return getEstado(Number(info.lastInsertRowid))

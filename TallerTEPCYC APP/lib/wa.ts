@@ -65,7 +65,7 @@ export interface EstadoProgramado {
   mediaType?: 'image' | 'video'
   backgroundColor?: string
   scheduledAt?: string
-  status: 'pendiente' | 'publicado' | 'error'
+  status: 'pendiente' | 'publicando' | 'publicado' | 'error'
   error?: string
   createdAt: string
   sentAt?: string

@@ -417,6 +417,9 @@ api.post('/whatsapp/estados', async (req, res) => {
     mediaType: media ? mediaType : undefined,
     backgroundColor: typeof body.backgroundColor === 'string' ? body.backgroundColor.slice(0, 9) : undefined,
     scheduledAt: scheduledAt ? scheduledAt.toISOString() : undefined,
+    // «Ahora» se marca como publicando para que el ticker no lo tome en paralelo
+    // y genere un «estado aplazado» falso mientras el envío está en curso.
+    status: scheduledAt ? 'pendiente' : 'publicando',
   })
 
   // Si es "ahora" se publica de inmediato; si es programado lo toma el ticker.
