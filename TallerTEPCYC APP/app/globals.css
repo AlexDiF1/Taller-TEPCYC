@@ -65,8 +65,8 @@
   --card-foreground: oklch(0.96 0.005 265);
   --popover: oklch(0.20 0.010 265);
   --popover-foreground: oklch(0.96 0.005 265);
-  --primary: oklch(0.6 0.16 152);
-  --primary-foreground: oklch(0.99 0.02 152);
+  --primary: oklch(0.53 0.2 25);
+  --primary-foreground: oklch(0.98 0.01 25);
   --secondary: oklch(0.23 0.010 265);
   --secondary-foreground: oklch(0.96 0.005 265);
   --muted: oklch(0.23 0.010 265);
@@ -76,8 +76,8 @@
   --destructive: oklch(0.72 0.17 45);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.68 0.16 152 / 70%);
-  --chart-1: oklch(0.6 0.16 152);
+  --ring: oklch(0.6 0.2 25 / 70%);
+  --chart-1: oklch(0.53 0.2 25);
   --chart-2: oklch(0.75 0.14 230);
   --chart-3: oklch(0.82 0.16 80);
   --chart-4: oklch(0.72 0.17 300);
@@ -94,15 +94,12 @@
 
   --sidebar: oklch(0.16 0.008 265);
   --sidebar-foreground: oklch(0.96 0.005 265);
-  --sidebar-primary: oklch(0.6 0.16 152);
-  --sidebar-primary-foreground: oklch(0.99 0.02 152);
+  --sidebar-primary: oklch(0.53 0.2 25);
+  --sidebar-primary-foreground: oklch(0.98 0.01 25);
   --sidebar-accent: oklch(0.23 0.010 265);
   --sidebar-accent-foreground: oklch(0.96 0.005 265);
   --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: oklch(0.68 0.16 152 / 70%);
-
-  /* Títulos de la app en verde de marca (el texto normal sigue claro). */
-  --titulo: oklch(0.82 0.15 152);
+  --sidebar-ring: oklch(0.6 0.2 25 / 70%);
 }
 
 @layer base {
@@ -111,17 +108,6 @@
   }
   body {
     @apply bg-background text-foreground font-sans antialiased selection:bg-primary/30 selection:text-primary-foreground;
-  }
-  h1,
-  h2,
-  h3 {
-    color: var(--titulo);
-  }
-  /* El ticket térmico y el comprobante se imprimen en negro sobre blanco. */
-  .print-sheet h1,
-  .print-sheet h2,
-  .print-sheet h3 {
-    color: #000;
   }
 }
 
