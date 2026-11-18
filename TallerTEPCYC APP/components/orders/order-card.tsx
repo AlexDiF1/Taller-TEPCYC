@@ -27,10 +27,13 @@ export function OrderCard({
   order,
   onStatusChange,
   onOpen,
+  onOpenPhotos,
 }: {
   order: Order
   onStatusChange: (order: Order, status: OrderStatus) => void
   onOpen: (order: Order) => void
+  /** Abre el visor de fotos; si no se indica, la miniatura abre el detalle. */
+  onOpenPhotos?: (order: Order) => void
 }) {
   const Icon = DEVICE_ICON[order.device.type]
   const photo = order.photos[0]?.url
@@ -42,16 +45,20 @@ export function OrderCard({
       <div className="flex items-start gap-3">
         <button
           type="button"
-          onClick={() => onOpen(order)}
-          className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-[14px] border border-white/10 bg-white/[0.05] outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          aria-label={`Ver detalle de la orden ${order.id}`}
-          tabIndex={-1}
+          onClick={() => (photo && onOpenPhotos ? onOpenPhotos(order) : onOpen(order))}
+          className="group/img grid size-14 shrink-0 place-items-center overflow-hidden rounded-[14px] border border-white/10 bg-white/[0.05] outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label={
+            photo
+              ? `Ver las ${order.photos.length} foto${order.photos.length === 1 ? '' : 's'} de la orden ${order.id}`
+              : `Ver detalle de la orden ${order.id}`
+          }
+          title={photo ? 'Ver fotos' : undefined}
         >
           {photo ? (
             <img
               src={photo}
               alt=""
-              className="size-full object-cover opacity-90 transition-opacity group-hover:opacity-100"
+              className="size-full object-cover opacity-90 transition-all group-hover/img:scale-105 group-hover/img:opacity-100"
             />
           ) : (
             <Icon className="size-5 text-muted-foreground" aria-hidden="true" />

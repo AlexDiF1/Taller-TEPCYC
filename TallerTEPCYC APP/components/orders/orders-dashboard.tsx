@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { OrderCard } from './order-card'
 import { OrderDetailDialog } from './order-detail-dialog'
 import { OrderEditDialog } from './order-edit-dialog'
+import { PhotoViewer } from './photo-viewer'
 import { useOrders } from '@/hooks/use-orders'
 import { STATUSES, STATUS_MAP, isClosed } from '@/lib/status'
 import { openWhatsApp } from '@/lib/whatsapp'
@@ -23,6 +24,7 @@ export function OrdersDashboard() {
   const [query, setQuery] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [viewerId, setViewerId] = useState<string | null>(null)
 
   const counts = useMemo(() => {
     const c = Object.fromEntries(STATUSES.map((s) => [s.value, 0])) as Record<OrderStatus, number>
@@ -47,6 +49,7 @@ export function OrdersDashboard() {
 
   const selected = orders.find((o) => o.id === selectedId) ?? null
   const editing = orders.find((o) => o.id === editingId) ?? null
+  const viewing = orders.find((o) => o.id === viewerId) ?? null
 
   function startEditing(order: Order) {
     setSelectedId(null)
@@ -165,7 +168,12 @@ export function OrdersDashboard() {
         <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {visible.map((order) => (
             <li key={order.id} className="h-full">
-              <OrderCard order={order} onStatusChange={handleStatusChange} onOpen={(o) => setSelectedId(o.id)} />
+              <OrderCard
+                order={order}
+                onStatusChange={handleStatusChange}
+                onOpen={(o) => setSelectedId(o.id)}
+                onOpenPhotos={(o) => setViewerId(o.id)}
+              />
             </li>
           ))}
         </ul>
@@ -178,6 +186,12 @@ export function OrdersDashboard() {
         onDelete={handleDelete}
       />
       <OrderEditDialog order={editing} onClose={() => setEditingId(null)} onSave={updateOrder} />
+      <PhotoViewer
+        photos={viewing?.photos ?? []}
+        open={Boolean(viewing && viewing.photos.length > 0)}
+        label={viewing?.id}
+        onClose={() => setViewerId(null)}
+      />
     </div>
   )
 }
