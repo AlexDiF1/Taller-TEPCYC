@@ -5,11 +5,13 @@
 - Bloquea archivos ocultos (.git, .env, .token...).
 - Cabeceras de cache larga para fuentes/imagenes y corta para HTML/CSS/JS.
 """
+import json
 import mimetypes
 import os
 import posixpath
 import re
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -21,6 +23,15 @@ HOST = os.environ.get("HOST", "127.0.0.1")
 # App del taller (Express + SQLite) para la consulta pública de una orden.
 TALLER = os.environ.get("TALLER_URL", "http://127.0.0.1:3005").rstrip("/")
 PREFIJO_ORDEN = "/api/orden/"
+# Automatizaciones (n8n): los leads del formulario entran por aquí, mismo origen,
+# y se reenvían al webhook local. Si n8n está caído se guardan en cola: no se pierde ninguno.
+N8N_LEADS = os.environ.get("N8N_LEADS_WEBHOOK", "http://127.0.0.1:5678/webhook/leads")
+REGISTRO_LEADS = os.environ.get(
+    "REGISTRO_LEADS", "/opt/data/proyectos/n8n/leads.jsonl"
+)
+COLA_LEADS = os.environ.get(
+    "COLA_LEADS", "/opt/data/proyectos/n8n/leads-pendientes.jsonl"
+)
 
 mimetypes.add_type("font/woff2", ".woff2")
 mimetypes.add_type("image/webp", ".webp")
@@ -55,6 +66,69 @@ class Handler(SimpleHTTPRequestHandler):
         if self.path.split("?", 1)[0].startswith(PREFIJO_ORDEN):
             return self.consultar_orden(self.path.split("?", 1)[0])
         return super().do_HEAD()
+
+    def do_POST(self):
+        ruta = self.path.split("?", 1)[0]
+        if ruta == "/api/leads":
+            return self.recibir_lead()
+        self.send_error(405, "Method Not Allowed")
+
+    def recibir_lead(self):
+        """Recibe el formulario de reparación y lo entrega a n8n (webhook local)."""
+        try:
+            largo = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            largo = 0
+        datos = None
+        if 0 < largo <= 8192:
+            try:
+                datos = json.loads(self.rfile.read(largo).decode("utf-8"))
+            except (ValueError, UnicodeDecodeError):
+                datos = None
+        if not isinstance(datos, dict):
+            cuerpo, estado = b'{"ok":false}', 400
+        else:
+            cuerpo, estado = self.reenviar_lead(datos)
+        self._api = True
+        self.send_response(estado)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(cuerpo)))
+        self.end_headers()
+        self.wfile.write(cuerpo)
+
+    def reenviar_lead(self, datos):
+        lead = {
+            "recibido": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+            "origen": "tepcyc.com/reparacion",
+            "ip": self.headers.get("CF-Connecting-IP") or self.address_string(),
+            "agente": (self.headers.get("User-Agent") or "")[:300],
+            "datos": {k: (str(v)[:600] if not isinstance(v, (int, float)) else v)
+                      for k, v in list(datos.items())[:20]},
+        }
+        linea = json.dumps(lead, ensure_ascii=False)
+        # 1) Registro propio: el lead queda guardado aunque n8n esté caído.
+        try:
+            with open(REGISTRO_LEADS, "a", encoding="utf-8") as f:
+                f.write(linea + "\n")
+        except OSError as err:
+            sys.stderr.write("no se pudo registrar lead: %s\n" % err)
+        # 2) Aviso/automatización en n8n.
+        try:
+            peticion = urllib.request.Request(
+                N8N_LEADS, data=linea.encode("utf-8"),
+                headers={"Content-Type": "application/json"}, method="POST",
+            )
+            with urllib.request.urlopen(peticion, timeout=6) as resp:
+                resp.read()
+            return b'{"ok":true,"via":"n8n"}', 202
+        except (urllib.error.URLError, OSError, TimeoutError) as err:
+            sys.stderr.write("lead -> n8n fallo (%s), queda en cola\n" % err)
+            try:
+                with open(COLA_LEADS, "a", encoding="utf-8") as f:
+                    f.write(linea + "\n")
+            except OSError:
+                return b'{"ok":true,"via":"registro"}', 202
+            return b'{"ok":true,"via":"cola"}', 202
 
     def consultar_orden(self, ruta):
         """Puente con la app del taller: consulta una orden por su número.

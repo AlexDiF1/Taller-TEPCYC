@@ -75,9 +75,31 @@
   otro.addEventListener('input', () => error('modelo-otro', false, otro));
   nombre.addEventListener('input', () => error('nombre', false, nombre));
 
+  /* Registra el lead en el panel (n8n) sin bloquear al cliente: es "dispara y olvida". */
+  function registrarLead() {
+    const eq = equipo();
+    const mod = campoOtro.hidden ? modelo.value : otro.value.trim();
+    try {
+      fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        keepalive: true,
+        body: JSON.stringify({
+          nombre: nombre.value.trim(),
+          equipo: NOMBRE_EQUIPO[eq],
+          modelo: mod,
+          fallo: fallo.value.trim(),
+          desde: ($('#desde') || {}).value || '',
+          pagina: location.pathname + location.search
+        })
+      }).catch(() => {});
+    } catch (_) { /* si falla, el lead sigue por WhatsApp */ }
+  }
+
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     if (!validar()) { confirmacion.hidden = true; return; }
+    registrarLead();
     const url = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(mensaje())}`;
     enlaceWa.href = url;
     confirmacion.hidden = false;
