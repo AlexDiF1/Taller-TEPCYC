@@ -40,13 +40,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="relative min-h-dvh lg:grid lg:grid-cols-[264px_1fr]">
-      {/* Halos difuminados del fondo (decorativos) */}
-      <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-        <span className="absolute -left-24 -top-28 size-[26rem] rounded-full bg-white/[0.06] blur-[110px]" />
-        <span className="absolute right-[-10%] top-[18%] size-[22rem] rounded-full bg-white/[0.04] blur-[120px]" />
-        <span className="absolute bottom-[-18%] left-[30%] size-[30rem] rounded-full bg-white/[0.03] blur-[130px]" />
-      </div>
-
       <aside className="glass sticky top-0 hidden h-dvh flex-col rounded-r-3xl border-y-0 border-l-0 p-5 print:hidden lg:flex">
         <BrandLogo href="/" />
         <nav aria-label="Principal" className="mt-8 flex flex-col gap-6">

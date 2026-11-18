@@ -193,8 +193,7 @@ export function ReceiptsView({ initialOrderId, initialType }: { initialOrderId?:
               <Button
                 type="button"
                 size="lg"
-                variant="outline"
-                className="glass-soft h-11 font-semibold hover:bg-white/[0.10]"
+                className="h-11 bg-whatsapp font-semibold text-black hover:bg-whatsapp/85"
                 onClick={sendReceiptAutomatically}
                 disabled={!delivery || sendingPdf}
                 title={`PDF bonito con fotos (${order.photos.length} foto${order.photos.length === 1 ? '' : 's'})`}
