@@ -31,7 +31,7 @@ export function OrderCard({
   const receiptType = order.status === 'completada' ? 'entrega' : 'recepcion'
 
   return (
-    <article className="group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border-2 border-border bg-card p-4 pt-5 shadow-lg shadow-black/30 ring-1 ring-white/5 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-xl hover:shadow-primary/10">
+    <article className="glass group relative flex h-full flex-col justify-between overflow-hidden rounded-3xl p-4 pt-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/25 hover:shadow-[0_24px_50px_-28px_rgba(0,0,0,0.95)]">
       <span className={cn('absolute inset-x-0 top-0 h-1', status.dot)} aria-hidden="true" />
       <button
         type="button"

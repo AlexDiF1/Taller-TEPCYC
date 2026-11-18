@@ -39,8 +39,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   if (pathname === '/login') return <>{children}</>
 
   return (
-    <div className="min-h-dvh lg:grid lg:grid-cols-[264px_1fr]">
-      <aside className="sticky top-0 hidden h-dvh flex-col border-r border-sidebar-border bg-sidebar p-5 print:hidden lg:flex">
+    <div className="relative min-h-dvh lg:grid lg:grid-cols-[264px_1fr]">
+      {/* Halos difuminados del fondo (decorativos) */}
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+        <span className="absolute -left-24 -top-28 size-[26rem] rounded-full bg-white/[0.06] blur-[110px]" />
+        <span className="absolute right-[-10%] top-[18%] size-[22rem] rounded-full bg-white/[0.04] blur-[120px]" />
+        <span className="absolute bottom-[-18%] left-[30%] size-[30rem] rounded-full bg-white/[0.03] blur-[130px]" />
+      </div>
+
+      <aside className="glass sticky top-0 hidden h-dvh flex-col rounded-r-3xl border-y-0 border-l-0 p-5 print:hidden lg:flex">
         <BrandLogo href="/" />
         <nav aria-label="Principal" className="mt-8 flex flex-col gap-6">
           {NAV_SECTIONS.map((section) => (
@@ -56,8 +63,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     href={href}
                     aria-current={active ? 'page' : undefined}
                     className={cn(
-                      'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground',
-                      active && 'bg-sidebar-accent text-foreground font-semibold',
+                      'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-all hover:bg-white/[0.06] hover:text-foreground',
+                      active && 'bg-white/[0.09] text-foreground font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]',
                     )}
                   >
                     <Icon
@@ -73,7 +80,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
 
-        <div className="mt-auto rounded-xl border border-sidebar-border bg-background/60 p-4">
+        <div className="glass-soft mt-auto rounded-2xl p-4">
           <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Taller</p>
           <p className="mt-2 flex items-start gap-2 text-xs text-muted-foreground">
             <MapPin className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
@@ -88,7 +95,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="flex min-w-0 flex-col">
-        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background/80 px-4 py-3 backdrop-blur-lg print:hidden lg:hidden">
+        <header className="glass-bar sticky top-0 z-30 flex items-center justify-between rounded-b-2xl border-x-0 border-t-0 px-4 py-3 print:hidden lg:hidden">
           <BrandLogo href="/" />
         </header>
 
@@ -97,7 +104,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <nav
         aria-label="Navegación móvil"
-        className="fixed inset-x-3 bottom-3 z-40 flex items-center justify-around rounded-2xl border border-border bg-popover/90 px-2 py-2 shadow-2xl shadow-black/40 backdrop-blur-xl print:hidden lg:hidden"
+        className="glass-bar fixed inset-x-3 bottom-3 z-40 flex items-center justify-around rounded-3xl px-2 py-2 print:hidden lg:hidden"
       >
         {MOBILE_NAV.map(({ href, label, short, icon: Icon }) => {
           const active = isActive(pathname, href)
