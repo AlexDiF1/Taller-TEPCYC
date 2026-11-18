@@ -9,6 +9,9 @@
     celular: null
   };
   const NOMBRE_EQUIPO = { consola: 'Consola', control: 'Control', celular: 'Celular' };
+  /* Código corto que viaja en el mensaje de WhatsApp: cuando el cliente escribe,
+     el taller identifica el lead y lo da de alta como contacto con su nombre. */
+  const REF = 'W-' + Math.random().toString(36).slice(2, 6).toUpperCase();
 
   const form = document.querySelector('[data-form-reparacion]');
   if (!form) return;
@@ -64,6 +67,7 @@
       `Fallo: ${fallo.value.trim()}`
     ];
     if ($('#desde').value) lineas.push(`Falla desde: ${$('#desde').value}`);
+    lineas.push('', `Ref: ${REF}`);
     return lineas.join('\n');
   }
 
@@ -90,6 +94,7 @@
           modelo: mod,
           fallo: fallo.value.trim(),
           desde: ($('#desde') || {}).value || '',
+          ref: REF,
           pagina: location.pathname + location.search
         })
       }).catch(() => {});
