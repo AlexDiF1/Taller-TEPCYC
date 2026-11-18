@@ -15,6 +15,7 @@ import {
   ScrollText,
   PlayCircle,
   PauseCircle,
+  Download,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { formatDate } from '@/lib/business'
@@ -310,6 +311,14 @@ export function ConnectionPanel({
               {busy === 'sync' ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
               Sincronizar
             </Button>
+            <a
+              href="/api/whatsapp/agenda.vcf"
+              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border px-3 text-xs font-medium hover:bg-accent"
+              title="Descargar todos los contactos en .vcf para agendarlos en el teléfono"
+            >
+              <Download className="size-3.5" />
+              Agenda
+            </a>
           </header>
 
           <p className="mt-3 text-2xl font-bold tabular-nums">{state?.contacts ?? 0}</p>

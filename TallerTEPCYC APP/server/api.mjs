@@ -380,6 +380,37 @@ api.post('/whatsapp/sync', (_req, res) => {
   res.json({ ok: true, actualizados: store.syncWhatsappContacts(), total: store.countWhatsappContacts() })
 })
 
+/**
+ * Descarga de la agenda en formato vCard (.vcf) para importarla en el teléfono.
+ * Sirve para que el número desde el que se suben estados tenga agendados a todos
+ * los contactos (WhatsApp solo muestra estados a números agendados o incluidos
+ * explícitamente en la lista de destinatarios).
+ */
+api.get('/whatsapp/agenda.vcf', (_req, res) => {
+  const contactos = store.listWhatsappContacts(50000)
+  const limpiar = (texto) =>
+    String(texto ?? '')
+      .replace(/\\/g, '\\\\')
+      .replace(/([,;])/g, '\\$1')
+      .replace(/\n/g, ' ')
+      .trim()
+  const tarjetas = contactos.map((c) => {
+    const nombre = limpiar(c.name) || `Contacto ${c.phone.slice(-4)}`
+    return [
+      'BEGIN:VCARD',
+      'VERSION:3.0',
+      `FN:${nombre}`,
+      `N:${nombre};;;;`,
+      `TEL;TYPE=CELL:+${c.phone}`,
+      'END:VCARD',
+    ].join('\r\n')
+  })
+  const cuerpo = tarjetas.join('\r\n')
+  res.setHeader('Content-Type', 'text/vcard; charset=utf-8')
+  res.setHeader('Content-Disposition', 'attachment; filename="contactos-tepcyc.vcf"')
+  res.send(`${cuerpo}\r\n`)
+})
+
 api.get('/whatsapp/estados', (_req, res) => {
   res.json(store.listEstados(60))
 })
