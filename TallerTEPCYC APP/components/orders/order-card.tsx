@@ -1,22 +1,28 @@
 'use client'
 
-import Link from 'next/link'
-import { Clock, ReceiptText, UserRound, Images } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { StatusProgress } from '@/components/status-badge'
-import { StatusSelect } from './status-select'
-import { WhatsAppButton } from './whatsapp-button'
-import { DEVICE_ICON, STATUS_MAP, deviceLabel } from '@/lib/status'
+import { DEVICE_ICON, deviceLabel } from '@/lib/status'
 import type { Order, OrderStatus } from '@/lib/types'
-import { cn } from '@/lib/utils'
+import { StatusSelect } from './status-select'
 
-function daysSince(iso: string) {
-  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000)
-  if (days <= 0) return 'Hoy'
-  if (days === 1) return 'Ayer'
-  return `Hace ${days} días`
+/** «16 nov · 09:56» sin segundos ni año: la lista es de trabajo diario. */
+const SHORT_DATE = new Intl.DateTimeFormat('es-CO', {
+  day: '2-digit',
+  month: 'short',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+})
+
+function shortDate(iso: string) {
+  const parts = SHORT_DATE.formatToParts(new Date(iso))
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? ''
+  return `${get('day')} ${get('month')} · ${get('hour')}:${get('minute')}`
 }
 
+/**
+ * Fila compacta de la lista de órdenes: foto, código, cliente, equipo y
+ * "técnico · fecha". Tocar la fila abre el detalle; la píldora cambia el estado.
+ */
 export function OrderCard({
   order,
   onStatusChange,
@@ -27,71 +33,60 @@ export function OrderCard({
   onOpen: (order: Order) => void
 }) {
   const Icon = DEVICE_ICON[order.device.type]
-  const status = STATUS_MAP[order.status] ?? STATUS_MAP.pendiente
-  const receiptType = order.status === 'completada' ? 'entrega' : 'recepcion'
+  const photo = order.photos[0]?.url
+  const technician = order.technician?.trim()
+  const meta = [technician, shortDate(order.createdAt)].filter(Boolean).join(' · ')
 
   return (
-    <article className="glass group relative flex h-full flex-col justify-between overflow-hidden rounded-3xl p-4 pt-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/25 hover:shadow-[0_24px_50px_-28px_rgba(0,0,0,0.95)]">
-      <span className={cn('absolute inset-x-0 top-0 h-1', status.dot)} aria-hidden="true" />
-      <button
-        type="button"
-        onClick={() => onOpen(order)}
-        className="-m-1 flex flex-1 flex-col gap-3 rounded-xl p-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        aria-label={`Ver detalle de la orden ${order.id}`}
-      >
-        <div className="flex items-center justify-between gap-2">
-          <span className="font-mono text-sm font-bold tracking-wider text-primary">{order.id}</span>
-          <span className="flex items-center gap-1 text-[11px] font-mono text-muted-foreground">
-            <Clock className="size-3" aria-hidden="true" />
-            {daysSince(order.createdAt)}
-          </span>
-        </div>
+    <article className="glass group relative h-full rounded-2xl p-2.5 transition-all duration-300 hover:border-white/25">
+      <div className="flex items-start gap-3">
+        <button
+          type="button"
+          onClick={() => onOpen(order)}
+          className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-[14px] border border-white/10 bg-white/[0.05] outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label={`Ver detalle de la orden ${order.id}`}
+          tabIndex={-1}
+        >
+          {photo ? (
+            <img
+              src={photo}
+              alt=""
+              className="size-full object-cover opacity-90 transition-opacity group-hover:opacity-100"
+            />
+          ) : (
+            <Icon className="size-5 text-muted-foreground" aria-hidden="true" />
+          )}
+        </button>
 
-        <div className="flex items-center gap-3">
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-secondary/80 ring-1 ring-border/60 transition-colors group-hover:bg-secondary">
-            <Icon className="size-5 text-foreground" aria-hidden="true" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <h3 className="truncate text-base font-semibold leading-tight text-foreground group-hover:text-primary transition-colors">
-              {deviceLabel(order.device)}
-            </h3>
-            <p className="mt-1 flex items-center gap-1.5 truncate text-sm font-semibold text-foreground/90">
-              <UserRound className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
-              {order.customer.name}
-            </p>
-          </div>
-        </div>
-
-        <p className="line-clamp-3 text-sm leading-relaxed text-muted-foreground">{order.reportedFault}</p>
-
-        <div className="mt-auto pt-2 flex items-center justify-between text-xs text-muted-foreground">
-          {order.photos.length > 0 ? (
-            <span className="flex items-center gap-1 font-mono text-[11px]">
-              <Images className="size-3.5 text-primary" aria-hidden="true" />
-              {order.photos.length} foto{order.photos.length === 1 ? '' : 's'}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-mono text-[11px] leading-none tracking-wide text-muted-foreground">
+              {order.id}
             </span>
-          ) : <span />}
-        </div>
+            <StatusSelect
+              compact
+              value={order.status}
+              onChange={(s) => onStatusChange(order, s)}
+              id={`status-${order.id}`}
+            />
+          </div>
 
-        <div className="w-full">
-          <StatusProgress status={order.status} />
-        </div>
-      </button>
-
-      <div className="mt-4 pt-3 border-t border-border/50 flex flex-col gap-2">
-        <StatusSelect value={order.status} onChange={(s) => onStatusChange(order, s)} id={`status-${order.id}`} />
-        <div className="grid grid-cols-[1fr_auto] gap-2">
-          <WhatsAppButton order={order} className="w-full h-8 text-xs font-semibold rounded-lg" />
-          <Button
-            variant="outline"
-            className="h-8 rounded-lg text-xs"
-            nativeButton={false}
-            render={<Link href={`/comprobantes?orden=${order.id}&tipo=${receiptType}`} />}
-            aria-label={`Comprobante de la orden ${order.id}`}
+          <button
+            type="button"
+            onClick={() => onOpen(order)}
+            className="mt-1 block w-full min-w-0 rounded text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label={`Ver detalle de la orden ${order.id}`}
           >
-            <ReceiptText data-icon="inline-start" className="size-3.5" />
-            <span className="hidden sm:inline">Comprobante</span>
-          </Button>
+            <h3 className="truncate text-[15px] font-semibold leading-tight text-foreground">
+              {order.customer.name}
+            </h3>
+            <p className="mt-0.5 truncate text-[13px] leading-tight text-muted-foreground">
+              {deviceLabel(order.device)}
+            </p>
+            <p className="mt-1.5 truncate font-mono text-[10px] tracking-tight text-muted-foreground/75">
+              {meta}
+            </p>
+          </button>
         </div>
       </div>
     </article>

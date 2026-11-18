@@ -148,9 +148,9 @@ export function OrdersDashboard() {
           </p>
         </div>
       ) : isLoading ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-busy="true">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-busy="true">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-72 animate-pulse rounded-2xl border border-border bg-card/40" />
+            <div key={i} className="h-[86px] animate-pulse rounded-2xl border border-border bg-card/40" />
           ))}
         </div>
       ) : visible.length === 0 ? (
@@ -162,7 +162,7 @@ export function OrdersDashboard() {
           </p>
         </div>
       ) : (
-        <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {visible.map((order) => (
             <li key={order.id} className="h-full">
               <OrderCard order={order} onStatusChange={handleStatusChange} onOpen={(o) => setSelectedId(o.id)} />
