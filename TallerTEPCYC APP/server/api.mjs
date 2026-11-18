@@ -411,6 +411,54 @@ api.get('/whatsapp/agenda.vcf', (_req, res) => {
   res.send(`${cuerpo}\r\n`)
 })
 
+/**
+ * Envía la agenda completa a los contactos de Google del dueño.
+ * El navegador consigue un access token (Google Identity Services, sin secreto de
+ * cliente) con permiso `contacts` y aquí se crean por lotes con la People API.
+ * Requiere la People API habilitada en el proyecto de Google Cloud.
+ */
+api.post('/whatsapp/google-contacts', async (req, res) => {
+  const token = String(req.body?.accessToken ?? '').trim()
+  if (!token) return res.status(400).json({ error: 'Falta el permiso de Google.' })
+  const contactos = store.listWhatsappContacts(50000)
+  if (!contactos.length) return res.json({ ok: true, total: 0, creados: 0, fallos: [] })
+
+  const nombre = (c) => c.name?.trim() || `Contacto ${c.phone.slice(-4)}`
+  const lotes = []
+  for (let i = 0; i < contactos.length; i += 200) lotes.push(contactos.slice(i, i + 200))
+
+  let creados = 0
+  const fallos = []
+  for (const lote of lotes) {
+    const cuerpo = {
+      contacts: lote.map((c) => ({
+        contactPerson: {
+          names: [{ givenName: nombre(c), unstructuredName: nombre(c) }],
+          phoneNumbers: [{ value: `+${c.phone}`, type: 'mobile' }],
+        },
+      })),
+      readMask: 'names,phoneNumbers',
+    }
+    const respuesta = await fetch('https://people.googleapis.com/v1/people:batchCreateContacts', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(cuerpo),
+    }).catch((error) => ({ ok: false, status: 0, json: async () => ({ error: { message: error?.message } }) }))
+    if (respuesta.ok) {
+      creados += lote.length
+    } else {
+      const detalle = await respuesta.json().catch(() => ({}))
+      fallos.push({
+        lote: `${lote[0].phone}…${lote[lote.length - 1].phone}`,
+        estado: respuesta.status,
+        error: detalle?.error?.message ?? 'Error de Google',
+      })
+      if (respuesta.status === 401 || respuesta.status === 403) break
+    }
+  }
+  res.json({ ok: fallos.length === 0, total: contactos.length, creados, fallos })
+})
+
 api.get('/whatsapp/estados', (_req, res) => {
   res.json(store.listEstados(60))
 })

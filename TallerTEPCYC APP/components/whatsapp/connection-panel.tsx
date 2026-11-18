@@ -45,6 +45,7 @@ export function ConnectionPanel({
   const [busy, setBusy] = useState<'restart' | 'logout' | 'sync' | 'resume' | null>(null)
   const [confirming, setConfirming] = useState(false)
   const [contacts, setContacts] = useState<WaContact[] | null>(null)
+  const [enviando, setEnviando] = useState(false)
 
   const meta = state ? STATUS_LABEL[state.status] : undefined
   const protection = state?.protections
@@ -87,6 +88,53 @@ export function ConnectionPanel({
       cancelled = true
     }
   }, [state?.contacts]) // solo el contador: `state` y `contacts` cambian en cada poll
+
+  /** Pide permiso de contactos a Google y crea la agenda entera allí (una sola vez). */
+  async function enviarAgendaGoogle() {
+    setEnviando(true)
+    try {
+      const cfg = await fetch('/api/auth/config').then((r) => r.json())
+      if (!cfg?.clientId) throw new Error('Falta configurar el acceso con Google.')
+      await new Promise<void>((ok, fallo) => {
+        if ((window as unknown as { google?: unknown }).google) return ok()
+        const script = document.createElement('script')
+        script.src = 'https://accounts.google.com/gsi/client'
+        script.async = true
+        script.onload = () => ok()
+        script.onerror = () => fallo(new Error('No se pudo cargar Google.'))
+        document.head.appendChild(script)
+      })
+      const google = (window as unknown as {
+        google: { accounts: { oauth2: { initTokenClient: (o: unknown) => { requestAccessToken: () => void } } } }
+      }).google
+      const accessToken = await new Promise<string>((ok, fallo) => {
+        const cliente = google.accounts.oauth2.initTokenClient({
+          client_id: cfg.clientId,
+          scope: 'https://www.googleapis.com/auth/contacts',
+          prompt: 'consent',
+          callback: (respuesta: { access_token?: string; error?: string }) => {
+            if (respuesta?.access_token) return ok(respuesta.access_token)
+            fallo(new Error(respuesta?.error === 'access_denied' ? 'Permiso cancelado.' : 'Google no dio permiso.'))
+          },
+        })
+        cliente.requestAccessToken()
+      })
+      const result = await fetch('/api/whatsapp/google-contacts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessToken }),
+      }).then((r) => r.json())
+      if (result?.fallos?.length) {
+        toast.error(`Se crearon ${result.creados} de ${result.total}. ${result.fallos[0]?.error ?? ''}`)
+      } else {
+        toast.success(`Agenda enviada a Google: ${result.creados} contactos.`)
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo enviar la agenda.')
+    } finally {
+      setEnviando(false)
+    }
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -319,6 +367,18 @@ export function ConnectionPanel({
               <Download className="size-3.5" />
               Agenda
             </a>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-9 rounded-xl"
+              disabled={enviando}
+              onClick={enviarAgendaGoogle}
+              title="Crear estos contactos en la cuenta de Google del dueño"
+            >
+              {enviando ? <Loader2 className="size-3.5 animate-spin" /> : <Users className="size-3.5" />}
+              A Google
+            </Button>
           </header>
 
           <p className="mt-3 text-2xl font-bold tabular-nums">{state?.contacts ?? 0}</p>
