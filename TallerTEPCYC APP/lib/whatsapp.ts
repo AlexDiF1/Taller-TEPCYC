@@ -131,7 +131,7 @@ export function buildReceiptMessage(order: Order, type: ReceiptKind, { link = fa
     `Le compartimos ${isDelivery ? 'la factura de entrega' : 'el comprobante de recepción'} de su ${deviceLabel(order)} ${orderRef(order)}.\n\n` +
     `${lines.join('\n')}\n\n` +
     `El documento va adjunto en PDF.\n\n` +
-    cierre([webLine({ link })])
+    cierre(isDelivery ? [webLine({ link }), mapsLine()] : [webLine({ link })])
   )
 }
 
