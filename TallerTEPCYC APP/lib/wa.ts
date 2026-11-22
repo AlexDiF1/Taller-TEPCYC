@@ -175,8 +175,15 @@ export function waSendOrder(input: { orderId: string; phone?: string; message: s
   })
 }
 
-export function waSendDocument(input: { phone: string; fileName: string; dataUrl: string; caption?: string }) {
-  return request<{ ok: boolean; id: string | null; to: string }>(`${BASE}/send-document`, {
+export function waSendDocument(input: {
+  phone: string
+  fileName: string
+  dataUrl: string
+  caption?: string
+  /** Enlace que se envía después del PDF como tarjeta con miniatura. */
+  cardUrl?: string
+}) {
+  return request<{ ok: boolean; id: string | null; to: string; card?: string | null }>(`${BASE}/send-document`, {
     method: 'POST',
     body: JSON.stringify(input),
   })

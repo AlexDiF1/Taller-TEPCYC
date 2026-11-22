@@ -779,6 +779,76 @@ export async function sendDocument(phone, { path, buffer, fileName, mimetype, ca
   )
 }
 
+const CARD_IMAGE = join(new URL('.', import.meta.url).pathname, 'assets/web-card.jpg')
+const cardCache = new Map()
+const CARD_TTL = 6 * 60 * 60 * 1000
+
+function decodeEntities(text) {
+  return String(text ?? '')
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;|&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+}
+
+/** Lee los datos de la tarjeta (título y descripción) de los metadatos Open Graph de la página. */
+export async function cardInfo(url) {
+  const cached = cardCache.get(url)
+  if (cached && Date.now() - cached.at < CARD_TTL) return cached.info
+
+  const info = {}
+  try {
+    const res = await fetch(url, {
+      headers: { 'user-agent': 'Mozilla/5.0 (compatible; WhatsApp/2.24)' },
+      signal: AbortSignal.timeout(8000),
+    })
+    const html = await res.text()
+    const meta = (prop) => {
+      const a = new RegExp(`<meta[^>]+(?:property|name)=["']${prop}["'][^>]*content=["']([^"']*)["']`, 'i')
+      const b = new RegExp(`<meta[^>]+content=["']([^"']*)["'][^>]*(?:property|name)=["']${prop}["']`, 'i')
+      return decodeEntities((html.match(a) ?? html.match(b) ?? [])[1] ?? '').trim()
+    }
+    info.title = meta('og:title') || decodeEntities((html.match(/<title[^>]*>([^<]*)</i) ?? [])[1] ?? '').trim()
+    info.description = meta('og:description')
+  } catch (error) {
+    logger.warn(`[whatsapp] no se pudo leer la tarjeta de ${url}: ${error?.message ?? error}`)
+  }
+
+  cardCache.set(url, { at: Date.now(), info })
+  return info
+}
+
+/**
+ * Tarjeta de enlace (la «miniatura» de la página web): un mensaje de texto con
+ * vista previa armada desde los metadatos Open Graph y una imagen pequeña local.
+ * WhatsApp no muestra vista previa en el pie de un documento, por eso va aparte.
+ */
+export async function sendLinkCard(phone, { url, title, description } = {}) {
+  const jid = toJid(phone)
+  if (!jid) throw Object.assign(new Error('Número de teléfono inválido.'), { code: 'WA_BAD_PHONE' })
+  const target = String(url ?? '').trim()
+  if (!/^https?:\/\/\S+$/i.test(target)) throw new Error('El enlace de la tarjeta no es válido.')
+
+  const info = await cardInfo(target)
+  const preview = {
+    'matched-text': target,
+    'canonical-url': target,
+    title: title || info.title || target,
+    description: description || info.description || '',
+  }
+  if (existsSync(CARD_IMAGE)) {
+    try {
+      preview.jpegThumbnail = readFileSync(CARD_IMAGE)
+    } catch {
+      /* sin miniatura, la tarjeta igual muestra título y descripción */
+    }
+  }
+
+  return humanSend(jid, { text: target, linkPreview: preview }, { kind: 'tarjeta', text: target })
+}
+
 /** Mensaje de estado de la orden + sus fotos (máximo 3 para no parecer spam). */
 export async function sendOrderUpdate({ phone, message, photos = [], maxPhotos = 3 } = {}) {
   const sent = []

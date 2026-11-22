@@ -401,7 +401,7 @@ api.post('/whatsapp/send-order', async (req, res) => {
 
 /** Comprobante o recibo en PDF (el PDF lo genera el navegador con jsPDF). */
 api.post('/whatsapp/send-document', async (req, res) => {
-  const { phone, caption, fileName, dataUrl } = req.body ?? {}
+  const { phone, caption, fileName, dataUrl, cardUrl } = req.body ?? {}
   if (!phone) return res.status(400).json({ error: 'Falta el teléfono del cliente.' })
   const pdf = /^data:application\/pdf;base64,/.test(String(dataUrl ?? ''))
     ? { buffer: Buffer.from(String(dataUrl).replace(/^data:application\/pdf;base64,/, ''), 'base64') }
@@ -415,7 +415,17 @@ api.post('/whatsapp/send-document', async (req, res) => {
       mimetype: 'application/pdf',
       caption: caption ? String(caption).slice(0, 900) : undefined,
     })
-    res.json({ ok: true, id: sent?.key?.id ?? null, to: phone })
+    // Tarjeta con la miniatura de la web: va después del PDF, best-effort.
+    let card = null
+    if (cardUrl) {
+      try {
+        const tarjeta = await wa.sendLinkCard(phone, { url: String(cardUrl) })
+        card = tarjeta?.key?.id ?? 'ok'
+      } catch (error) {
+        card = `error: ${error?.message ?? error}`
+      }
+    }
+    res.json({ ok: true, id: sent?.key?.id ?? null, to: phone, card })
   } catch (error) {
     waError(res, error)
   }

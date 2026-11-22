@@ -29,6 +29,10 @@ function plainMoney(value: number) {
 
 const SIGNATURE = 'Cualquier inquietud adicional, estaremos atentos a sus mensajes. Gracias por elegir nuestro servicio técnico.'
 
+/** Cierre final de los mensajes: estos dos párrafos van al final, después de la firma. */
+const WEBSITE = 'Conozca más de nuestro trabajo, productos y servicios en nuestra página web 👇'
+const MAPS = `Si quedó satisfecho con nuestro trabajo, nos ayudaría muchísimo con una calificación en Google Maps: ${BUSINESS.maps}`
+
 function greeting(order: Order) {
   return `Cordial saludo, ${firstName(order)} . Somos TODOENPCYCONSOLAS 🎮📱.`
 }
@@ -59,8 +63,8 @@ const TEMPLATES: Record<OrderStatus, (o: Order) => string> = {
     `Tenemos excelentes noticias. La reparación de su ${deviceLabel(o)} ${orderRef(o)} ha concluido de manera exitosa.\n\n` +
     `Ya puede acercarse a nuestras instalaciones para retirar su equipo.\n\n` +
     `Valor del servicio: ${plainMoney(totalOf(o))}\n\n` +
-    `Si quedó satisfecho con nuestro trabajo, nos ayudaría muchísimo con una calificación en Google Maps: ${BUSINESS.maps}\n\n` +
-    SIGNATURE,
+    SIGNATURE +
+    `\n\n${MAPS}`,
   rechazada: (o) =>
     `${greeting(o)}\n\n` +
     `Le confirmamos que el servicio para su ${deviceLabel(o)} ${orderRef(o)} ha sido marcado como no autorizado por usted.\n\n` +
@@ -84,7 +88,7 @@ export function buildWhatsAppUrl(phone: string, message: string) {
 export type ReceiptKind = 'recepcion' | 'entrega'
 
 /** Mensaje que acompaña al comprobante/factura enviado en PDF. */
-export function buildReceiptMessage(order: Order, type: ReceiptKind) {
+export function buildReceiptMessage(order: Order, type: ReceiptKind, { link = false }: { link?: boolean } = {}) {
   const isDelivery = type === 'entrega'
   const lines = isDelivery
     ? [
@@ -103,8 +107,8 @@ export function buildReceiptMessage(order: Order, type: ReceiptKind) {
     `Le compartimos ${isDelivery ? 'la factura de entrega' : 'el comprobante de recepción'} de su ${deviceLabel(order)} ${orderRef(order)}.\n\n` +
     `${lines.join('\n')}\n\n` +
     `El documento va adjunto en PDF.\n\n` +
-    `También puede conocer más de nuestro trabajo, productos y servicios en nuestra página web: ${BUSINESS.website}\n\n` +
-    SIGNATURE
+    SIGNATURE +
+    `\n\n${link ? `${WEBSITE.replace(' 👇', '')}: ${BUSINESS.website}` : WEBSITE}`
   )
 }
 
