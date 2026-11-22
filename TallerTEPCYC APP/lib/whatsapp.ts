@@ -59,6 +59,7 @@ const TEMPLATES: Record<OrderStatus, (o: Order) => string> = {
     `Tenemos excelentes noticias. La reparación de su ${deviceLabel(o)} ${orderRef(o)} ha concluido de manera exitosa.\n\n` +
     `Ya puede acercarse a nuestras instalaciones para retirar su equipo.\n\n` +
     `Valor del servicio: ${plainMoney(totalOf(o))}\n\n` +
+    `Si quedó satisfecho con nuestro trabajo, nos ayudaría muchísimo con una calificación en Google Maps: ${BUSINESS.maps}\n\n` +
     SIGNATURE,
   rechazada: (o) =>
     `${greeting(o)}\n\n` +
@@ -102,6 +103,7 @@ export function buildReceiptMessage(order: Order, type: ReceiptKind) {
     `Le compartimos ${isDelivery ? 'la factura de entrega' : 'el comprobante de recepción'} de su ${deviceLabel(order)} ${orderRef(order)}.\n\n` +
     `${lines.join('\n')}\n\n` +
     `El documento va adjunto en PDF.\n\n` +
+    `También puede conocer más de nuestro trabajo, productos y servicios en nuestra página web: ${BUSINESS.website}\n\n` +
     SIGNATURE
   )
 }

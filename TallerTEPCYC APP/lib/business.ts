@@ -5,6 +5,8 @@ export const BUSINESS = {
   address: 'Cra 3 # 20-26 Barrio la Esperanza',
   city: 'Mosquera, Cundinamarca',
   phone: '+57 318 022 3184',
+  website: 'https://tepcyc.com',
+  maps: 'https://maps.app.goo.gl/Q8zifgS4uN5Gjfv2A',
   countryCode: '57',
   warrantyDays: 90,
   currency: 'COP',
