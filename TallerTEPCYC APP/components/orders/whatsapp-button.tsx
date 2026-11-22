@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { MessageCircle, Loader2, CheckCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { buildStatusMessage, buildWhatsAppUrl } from '@/lib/whatsapp'
+import { BUSINESS } from '@/lib/business'
+import { buildStatusMessage, buildWhatsAppUrl, hasWebsiteCard } from '@/lib/whatsapp'
 import { WaOfflineError, WaThrottleError, waSendOrder } from '@/lib/wa'
 import type { Order } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -28,7 +29,10 @@ export function WhatsAppButton({
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
   const message = buildStatusMessage(order)
-  const fallbackHref = buildWhatsAppUrl(order.customer.phone, message)
+  // El respaldo wa.me necesita la URL escrita: allí la tarjeta la arma el teléfono.
+  const fallbackHref = buildWhatsAppUrl(order.customer.phone, buildStatusMessage(order, order.status, { link: true }))
+  // Los estados con párrafo de la web llevan después la tarjeta con miniatura.
+  const cardUrl = hasWebsiteCard(order.status) ? BUSINESS.website : undefined
   const firstName = order.customer.name.trim().split(/\s+/)[0] || 'el cliente'
 
   function openFallback() {
@@ -43,6 +47,7 @@ export function WhatsAppButton({
         phone: order.customer.phone,
         message,
         includePhotos,
+        cardUrl,
       })
       setSent(true)
       toast.success(`Mensaje enviado por WhatsApp a ${firstName}`, {

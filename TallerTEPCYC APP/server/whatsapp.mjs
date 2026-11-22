@@ -29,6 +29,7 @@ import makeWASocket, {
   Browsers,
   DisconnectReason,
   fetchLatestBaileysVersion,
+  prepareWAMessageMedia,
   useMultiFileAuthState,
 } from '@whiskeysockets/baileys'
 import pino from 'pino'
@@ -812,6 +813,7 @@ export async function cardInfo(url) {
     }
     info.title = meta('og:title') || decodeEntities((html.match(/<title[^>]*>([^<]*)</i) ?? [])[1] ?? '').trim()
     info.description = meta('og:description')
+    info.image = meta('og:image')
   } catch (error) {
     logger.warn(`[whatsapp] no se pudo leer la tarjeta de ${url}: ${error?.message ?? error}`)
   }
@@ -838,7 +840,27 @@ export async function sendLinkCard(phone, { url, title, description } = {}) {
     title: title || info.title || target,
     description: description || info.description || '',
   }
-  if (existsSync(CARD_IMAGE)) {
+
+  // Con solo `jpegThumbnail` WhatsApp pinta la tarjeta compacta (miniatura
+  // cuadrada al lado del texto). Para la tarjeta grande hay que subir la imagen
+  // de la página como `thumbnail-link` y pasarla en `highQualityThumbnail`.
+  try {
+    const active = requireSocket()
+    if (info.image && active?.waUploadToServer) {
+      const { imageMessage } = await prepareWAMessageMedia(
+        { image: { url: info.image } },
+        { upload: active.waUploadToServer, mediaTypeOverride: 'thumbnail-link' },
+      )
+      if (imageMessage) {
+        preview.highQualityThumbnail = imageMessage
+        if (imageMessage.jpegThumbnail) preview.jpegThumbnail = Buffer.from(imageMessage.jpegThumbnail)
+      }
+    }
+  } catch (error) {
+    logger.warn(`[whatsapp] tarjeta sin imagen grande para ${target}: ${error?.message ?? error}`)
+  }
+
+  if (!preview.jpegThumbnail && existsSync(CARD_IMAGE)) {
     try {
       preview.jpegThumbnail = readFileSync(CARD_IMAGE)
     } catch {
@@ -846,11 +868,16 @@ export async function sendLinkCard(phone, { url, title, description } = {}) {
     }
   }
 
-  return humanSend(jid, { text: target, linkPreview: preview }, { kind: 'tarjeta', text: target })
+  const result = await humanSend(jid, { text: target, linkPreview: preview }, { kind: 'tarjeta', text: target })
+  const ext = result?.message?.extendedTextMessage
+  if (!ext?.thumbnailDirectPath) {
+    logger.warn(`[whatsapp] la tarjeta de ${target} salió compacta (sin imagen grande)`)
+  }
+  return result
 }
 
 /** Mensaje de estado de la orden + sus fotos (máximo 3 para no parecer spam). */
-export async function sendOrderUpdate({ phone, message, photos = [], maxPhotos = 3 } = {}) {
+export async function sendOrderUpdate({ phone, message, photos = [], maxPhotos = 3, cardUrl } = {}) {
   const sent = []
   const first = await sendText(phone, message)
   sent.push(first?.key?.id ?? null)
@@ -868,7 +895,19 @@ export async function sendOrderUpdate({ phone, message, photos = [], maxPhotos =
       pushEvent('foto fallida', error?.message ?? String(error))
     }
   }
-  return { sent: sent.length, photos: list.length }
+  // La tarjeta de la web va al final (best-effort: si falla, el aviso ya salió).
+  let card = null
+  if (cardUrl) {
+    try {
+      const tarjeta = await sendLinkCard(phone, { url: String(cardUrl) })
+      card = tarjeta?.key?.id ?? 'ok'
+      sent.push('tarjeta')
+    } catch (error) {
+      card = `error: ${error?.message ?? error}`
+      pushEvent('tarjeta fallida', String(card))
+    }
+  }
+  return { sent: sent.length, photos: list.length, card }
 }
 
 /**

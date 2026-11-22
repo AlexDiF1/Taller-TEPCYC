@@ -29,9 +29,32 @@ function plainMoney(value: number) {
 
 const SIGNATURE = 'Cualquier inquietud adicional, estaremos atentos a sus mensajes. Gracias por elegir nuestro servicio técnico.'
 
-/** Cierre final de los mensajes: estos dos párrafos van al final, después de la firma. */
-const WEBSITE = 'Conozca más de nuestro trabajo, productos y servicios en nuestra página web 👇'
-const MAPS = `Si quedó satisfecho con nuestro trabajo, nos ayudaría muchísimo con una calificación en Google Maps: ${BUSINESS.maps}`
+/** Cierre final de los mensajes: estos párrafos van al final, después de la firma. */
+const WEBSITE_TEXTO = 'Conozca más de nuestro trabajo, productos y servicios en nuestra página web'
+const MAPS_TEXTO = 'Si quedó satisfecho con nuestro trabajo, nos ayudaría muchísimo con una calificación en Google Maps'
+
+/**
+ * Los estados que llevan la tarjeta de la web. El servidor manda la tarjeta
+ * (con miniatura) como mensaje aparte, así que en el texto solo va el «👇»;
+ * en el respaldo `wa.me` sí hace falta la URL escrita, por eso `link`.
+ */
+export const STATUSES_WITH_WEBSITE: OrderStatus[] = ['pendiente', 'enRevision', 'esperandoConfirmacion', 'completada']
+
+export function hasWebsiteCard(status: OrderStatus) {
+  return STATUSES_WITH_WEBSITE.includes(status)
+}
+
+function webLine({ link = false }: { link?: boolean }) {
+  return link ? `${WEBSITE_TEXTO}: ${BUSINESS.website}` : `${WEBSITE_TEXTO} 👇`
+}
+
+function mapsLine() {
+  return `${MAPS_TEXTO}: ${BUSINESS.maps}`
+}
+
+function cierre(extras: string[]) {
+  return [SIGNATURE, ...extras].join('\n\n')
+}
 
 function greeting(order: Order) {
   return `Cordial saludo, ${firstName(order)} . Somos TODOENPCYCONSOLAS 🎮📱.`
@@ -41,30 +64,31 @@ function totalOf(order: Order) {
   return order.items.reduce((sum, item) => sum + item.price, 0) || order.estimatedCost
 }
 
-const TEMPLATES: Record<OrderStatus, (o: Order) => string> = {
-  pendiente: (o) =>
+type MsgOpts = { link?: boolean }
+
+const TEMPLATES: Record<OrderStatus, (o: Order, opts: MsgOpts) => string> = {
+  pendiente: (o, opts) =>
     `${greeting(o)}\n\n` +
     `Le informamos que su equipo ${deviceLabel(o)} ${orderRef(o)} ha sido ingresado exitosamente a nuestro taller y se encuentra en fila de espera.\n\n` +
     `Pronto iniciaremos su revisión técnica.\n\n` +
-    SIGNATURE,
-  enRevision: (o) =>
+    cierre([webLine(opts)]),
+  enRevision: (o, opts) =>
     `${greeting(o)}\n\n` +
     `Le informamos que su equipo ${deviceLabel(o)} ${orderRef(o)} ya se encuentra en revisión técnica por parte de nuestro equipo de taller.\n\n` +
     `Pronto le informaremos el resultado del diagnóstico y el costo de la reparación.\n\n` +
-    SIGNATURE,
-  esperandoConfirmacion: (o) =>
+    cierre([webLine(opts)]),
+  esperandoConfirmacion: (o, opts) =>
     `${greeting(o)}\n\n` +
     `Le informamos que nuestro equipo técnico ha finalizado el diagnóstico de su ${deviceLabel(o)} ${orderRef(o)}.\n\n` +
     `El costo exacto para realizar la reparación es de ${plainMoney(o.estimatedCost)}.\n\n` +
     `Por favor, confírmenos por este medio si autoriza que procedamos con el trabajo de reparación.\n\n` +
-    SIGNATURE,
-  completada: (o) =>
+    cierre([webLine(opts)]),
+  completada: (o, opts) =>
     `${greeting(o)}\n\n` +
     `Tenemos excelentes noticias. La reparación de su ${deviceLabel(o)} ${orderRef(o)} ha concluido de manera exitosa.\n\n` +
     `Ya puede acercarse a nuestras instalaciones para retirar su equipo.\n\n` +
     `Valor del servicio: ${plainMoney(totalOf(o))}\n\n` +
-    SIGNATURE +
-    `\n\n${MAPS}`,
+    cierre([webLine(opts), mapsLine()]),
   rechazada: (o) =>
     `${greeting(o)}\n\n` +
     `Le confirmamos que el servicio para su ${deviceLabel(o)} ${orderRef(o)} ha sido marcado como no autorizado por usted.\n\n` +
@@ -77,8 +101,8 @@ const TEMPLATES: Record<OrderStatus, (o: Order) => string> = {
     SIGNATURE,
 }
 
-export function buildStatusMessage(order: Order, status: OrderStatus = order.status) {
-  return TEMPLATES[status](order)
+export function buildStatusMessage(order: Order, status: OrderStatus = order.status, opts: MsgOpts = {}) {
+  return TEMPLATES[status](order, opts)
 }
 
 export function buildWhatsAppUrl(phone: string, message: string) {
@@ -107,12 +131,11 @@ export function buildReceiptMessage(order: Order, type: ReceiptKind, { link = fa
     `Le compartimos ${isDelivery ? 'la factura de entrega' : 'el comprobante de recepción'} de su ${deviceLabel(order)} ${orderRef(order)}.\n\n` +
     `${lines.join('\n')}\n\n` +
     `El documento va adjunto en PDF.\n\n` +
-    SIGNATURE +
-    `\n\n${link ? `${WEBSITE.replace(' 👇', '')}: ${BUSINESS.website}` : WEBSITE}`
+    cierre([webLine({ link })])
   )
 }
 
 export function openWhatsApp(order: Order, status: OrderStatus = order.status) {
-  const url = buildWhatsAppUrl(order.customer.phone, buildStatusMessage(order, status))
+  const url = buildWhatsAppUrl(order.customer.phone, buildStatusMessage(order, status, { link: true }))
   window.open(url, '_blank', 'noopener,noreferrer')
 }

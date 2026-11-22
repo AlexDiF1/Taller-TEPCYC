@@ -383,7 +383,7 @@ api.post('/whatsapp/send', async (req, res) => {
 
 /** Mensaje de actualización de una orden, con sus fotos si se piden. */
 api.post('/whatsapp/send-order', async (req, res) => {
-  const { orderId, phone, message, includePhotos } = req.body ?? {}
+  const { orderId, phone, message, includePhotos, cardUrl } = req.body ?? {}
   if (!orderId && !phone) return res.status(400).json({ error: 'Falta la orden o el teléfono.' })
   const order = orderId ? store.getOrder(String(orderId)) : undefined
   const target = phone || order?.customer?.phone
@@ -392,7 +392,7 @@ api.post('/whatsapp/send-order', async (req, res) => {
   if (!text) return res.status(400).json({ error: 'El mensaje está vacío.' })
   try {
     const photos = includePhotos && order ? order.photos.map((p) => p.url) : []
-    const result = await wa.sendOrderUpdate({ phone: target, message: text, photos })
+    const result = await wa.sendOrderUpdate({ phone: target, message: text, photos, cardUrl: cardUrl ? String(cardUrl) : undefined })
     res.json({ ok: true, ...result, to: target })
   } catch (error) {
     waError(res, error)

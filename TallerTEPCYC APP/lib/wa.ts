@@ -168,8 +168,15 @@ export function waSendText(phone: string, message: string) {
   })
 }
 
-export function waSendOrder(input: { orderId: string; phone?: string; message: string; includePhotos?: boolean }) {
-  return request<{ ok: boolean; sent: number; photos: number; to: string }>(`${BASE}/send-order`, {
+export function waSendOrder(input: {
+  orderId: string
+  phone?: string
+  message: string
+  includePhotos?: boolean
+  /** Enlace que se envía al final como tarjeta con miniatura. */
+  cardUrl?: string
+}) {
+  return request<{ ok: boolean; sent: number; photos: number; to: string; card?: string | null }>(`${BASE}/send-order`, {
     method: 'POST',
     body: JSON.stringify(input),
   })
