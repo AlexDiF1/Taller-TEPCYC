@@ -76,8 +76,8 @@ export function WhatsAppButton({
       onClick={send}
       disabled={sending}
       className={cn(
-        'h-9 bg-whatsapp font-semibold text-black hover:bg-whatsapp/85',
-        sent && 'bg-status-done hover:bg-status-done/85',
+        'h-11 bg-whatsapp font-bold text-white hover:bg-whatsapp/90 dark:text-black',
+        sent && 'bg-status-done hover:bg-status-done/90',
         className,
       )}
       aria-label={`Enviar estado por WhatsApp a ${order.customer.name}`}

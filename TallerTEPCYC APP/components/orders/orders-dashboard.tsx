@@ -3,23 +3,32 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { Search, Plus, Inbox, Layers, LayoutGrid, TriangleAlert } from 'lucide-react'
-import { Input } from '@/components/ui/input'
+import { Search, Plus, Inbox, TriangleAlert, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { OrderCard } from './order-card'
+import { OrderCard, orderBalance } from './order-card'
 import { OrderDetailDialog } from './order-detail-dialog'
 import { OrderEditDialog } from './order-edit-dialog'
 import { PhotoViewer } from './photo-viewer'
 import { useOrders } from '@/hooks/use-orders'
 import { STATUSES, STATUS_MAP, isClosed } from '@/lib/status'
+import { formatMoney } from '@/lib/business'
 import { openWhatsApp } from '@/lib/whatsapp'
 import type { Order, OrderStatus } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 type Filter = 'todas' | 'activas' | OrderStatus
 
+const ACTIVE_STATUSES = STATUSES.filter((s) => !isClosed(s.value))
+const CLOSED = STATUSES.filter((s) => isClosed(s.value))
+
+function shortMoney(n: number) {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1).replace('.0', '').replace('.', ',')}M`
+  if (n >= 1000) return `$${Math.round(n / 1000)}k`
+  return formatMoney(n)
+}
+
 export function OrdersDashboard() {
-  const { orders, isLoading, error, setStatus, updateOrder, deleteOrder } = useOrders()
+  const { orders, isLoading, error, setStatus, updateOrder, addComment, deleteOrder } = useOrders()
   const [filter, setFilter] = useState<Filter>('activas')
   const [query, setQuery] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -31,7 +40,8 @@ export function OrdersDashboard() {
     orders.forEach((o) => (c[o.status] += 1))
     return c
   }, [orders])
-  const activeCount = orders.filter((o) => !isClosed(o.status)).length
+  const active = orders.filter((o) => !isClosed(o.status))
+  const porCobrar = active.reduce((s, o) => s + orderBalance(o), 0)
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -40,12 +50,20 @@ export function OrdersDashboard() {
         filter === 'todas' ? true : filter === 'activas' ? !isClosed(o.status) : o.status === filter
       if (!matchesFilter) return false
       if (!q) return true
-      return [o.id, o.customer.name, o.customer.phone, o.device.brand, o.device.model, o.device.serial ?? '']
+      return [o.id, o.customer.name, o.customer.phone, o.device.brand, o.device.model, o.device.serial ?? '', o.reportedFault]
         .join(' ')
         .toLowerCase()
         .includes(q)
     })
   }, [orders, filter, query])
+
+  // En «Activas» la lista se agrupa por estado, en el orden del flujo del taller.
+  const groups = useMemo(() => {
+    if (filter !== 'activas' || query.trim()) return null
+    return ACTIVE_STATUSES.map((s) => ({ meta: s, items: visible.filter((o) => o.status === s.value) })).filter(
+      (g) => g.items.length > 0,
+    )
+  }, [filter, query, visible])
 
   const selected = orders.find((o) => o.id === selectedId) ?? null
   const editing = orders.find((o) => o.id === editingId) ?? null
@@ -65,118 +83,160 @@ export function OrdersDashboard() {
   async function handleStatusChange(order: Order, status: OrderStatus) {
     const promise = setStatus(order.id, status)
     toast.promise(promise, {
-      loading: 'Actualizando estado...',
+      loading: 'Actualizando estado…',
       success: (updated) => ({
         message: `${updated.id} → ${STATUS_MAP[status]?.label ?? status}`,
         description: `¿Avisar a ${updated.customer.name.split(' ')[0]}?`,
-        action: { label: 'Enviar WhatsApp', onClick: () => openWhatsApp(updated) },
+        action: { label: 'WhatsApp', onClick: () => openWhatsApp(updated) },
         duration: 8000,
       }),
       error: 'No se pudo actualizar el estado.',
     })
   }
 
-  return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8 md:py-8">
-      {/* Barra superior unificada: Buscador, Píldoras de Filtro y Botón Nuevo Ingreso */}
-      <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card/70 p-3.5 backdrop-blur-md lg:flex-row lg:items-center lg:justify-between">
-        <div className="relative min-w-[280px] flex-1">
-          <Search className="pointer-events-none absolute left-3.5 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-          <label htmlFor="order-search" className="sr-only">
-            Buscar órdenes
-          </label>
-          <Input
-            id="order-search"
-            type="search"
-            placeholder="Buscar por orden, cliente, teléfono, modelo o serial..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="h-10 rounded-xl bg-background/60 pl-10 text-sm border-border/80 transition-all duration-200 focus-visible:bg-background"
+  const cardList = (list: Order[]) => (
+    <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
+      {list.map((order) => (
+        <li key={order.id} className="min-w-0">
+          <OrderCard
+            order={order}
+            onStatusChange={handleStatusChange}
+            onOpen={(o) => setSelectedId(o.id)}
+            onOpenPhotos={(o) => setViewerId(o.id)}
           />
-        </div>
+        </li>
+      ))}
+    </ul>
+  )
 
-        <div className="flex min-w-0 items-center gap-2">
-          <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0" role="group" aria-label="Filtrar por estado">
-            <FilterTile
-              active={filter === 'todas'}
-              onClick={() => setFilter('todas')}
-              label="Todas"
-              count={orders.length}
-              icon={LayoutGrid}
-              accent="text-primary"
-              dot="bg-primary"
-            />
-            <FilterTile
-              active={filter === 'activas'}
-              onClick={() => setFilter('activas')}
-              label="Activas"
-              count={activeCount}
-              icon={Layers}
-              accent="text-foreground"
-              dot="bg-foreground"
-            />
-            {STATUSES.map((s) => (
-              <FilterTile
-                key={s.value}
-                active={filter === s.value}
-                onClick={() => setFilter(s.value)}
-                label={s.short}
-                count={counts[s.value]}
-                icon={s.icon}
-                accent={s.text}
-                dot={s.dot}
-              />
-            ))}
-          </div>
-
-          <Button
-            size="sm"
-            aria-label="Nuevo ingreso"
-            className="h-9 shrink-0 gap-1.5 rounded-xl px-3 font-semibold shadow-sm transition-all duration-200 hover:shadow-primary/20"
-            nativeButton={false}
-            render={<Link href="/ingreso" />}
-          >
-            <Plus className="size-4" />
-            <span className="hidden sm:inline">+ Nuevo ingreso</span>
-          </Button>
+  return (
+    <div className="mx-auto flex max-w-6xl flex-col gap-5 px-4 py-4 md:px-8 md:py-8">
+      {/* ---------- encabezado (escritorio) ---------- */}
+      <div className="hidden items-end justify-between gap-4 lg:flex">
+        <div>
+          <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-primary">Taller</p>
+          <h1 className="mt-1 text-[32px] font-extrabold tracking-tight">Órdenes de trabajo</h1>
         </div>
+        <Button size="lg" nativeButton={false} render={<Link href="/ingreso" />}>
+          <Plus data-icon="inline-start" />
+          Nuevo ingreso
+        </Button>
       </div>
 
+      {/* ---------- resumen ---------- */}
+      <section aria-label="Resumen" className="grid grid-cols-3 gap-2.5">
+        <Stat value={String(active.length)} label="En el taller" onClick={() => setFilter('activas')} active={filter === 'activas'} />
+        <Stat
+          value={String(counts.esperandoConfirmacion)}
+          label="Esperan al cliente"
+          tone="text-status-waiting"
+          onClick={() => setFilter('esperandoConfirmacion')}
+          active={filter === 'esperandoConfirmacion'}
+        />
+        <Stat value={shortMoney(porCobrar)} label="Por cobrar" tone="text-status-done" />
+      </section>
+
+      {/* ---------- búsqueda ---------- */}
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3.5 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+        <label htmlFor="order-search" className="sr-only">
+          Buscar órdenes
+        </label>
+        <input
+          id="order-search"
+          type="search"
+          inputMode="search"
+          enterKeyHint="search"
+          placeholder="Buscar cliente, teléfono, equipo, orden…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="h-12 w-full rounded-2xl border border-border bg-surface pr-11 pl-11 text-base outline-none placeholder:text-muted-foreground focus-visible:border-foreground/40 [&::-webkit-search-cancel-button]:hidden"
+        />
+        {query && (
+          <button
+            type="button"
+            onClick={() => setQuery('')}
+            aria-label="Borrar búsqueda"
+            className="absolute right-2 top-1/2 grid size-9 -translate-y-1/2 place-items-center rounded-full text-muted-foreground hover:bg-muted"
+          >
+            <X className="size-4" />
+          </button>
+        )}
+      </div>
+
+      {/* ---------- filtros ---------- */}
+      <div
+        className="scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:px-0"
+        role="group"
+        aria-label="Filtrar por estado"
+      >
+        <Chip active={filter === 'activas'} onClick={() => setFilter('activas')} label="Activas" count={active.length} />
+        {ACTIVE_STATUSES.map((s) => (
+          <Chip
+            key={s.value}
+            active={filter === s.value}
+            onClick={() => setFilter(s.value)}
+            label={s.short}
+            count={counts[s.value]}
+            dot={s.dot}
+          />
+        ))}
+        <span className="mx-1 w-px shrink-0 self-stretch bg-border" aria-hidden="true" />
+        {CLOSED.map((s) => (
+          <Chip
+            key={s.value}
+            active={filter === s.value}
+            onClick={() => setFilter(s.value)}
+            label={s.short}
+            count={counts[s.value]}
+            dot={s.dot}
+          />
+        ))}
+        <Chip active={filter === 'todas'} onClick={() => setFilter('todas')} label="Todas" count={orders.length} />
+      </div>
+
+      {/* ---------- lista ---------- */}
       {error ? (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-destructive/40 bg-destructive/10 px-6 py-12 text-center">
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-destructive/40 bg-destructive/8 px-6 py-12 text-center">
           <TriangleAlert className="size-9 text-destructive" aria-hidden="true" />
-          <p className="font-semibold">No se pudo leer Firestore</p>
-          <p className="max-w-md text-sm text-muted-foreground">
-            {error instanceof Error ? error.message : String(error)}
-          </p>
+          <p className="font-bold">No se pudieron cargar las órdenes</p>
+          <p className="max-w-md text-sm text-muted-foreground">{error instanceof Error ? error.message : String(error)}</p>
         </div>
       ) : isLoading ? (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-busy="true">
+        <div className="grid gap-3 md:grid-cols-2" aria-busy="true">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-[86px] animate-pulse rounded-2xl border border-border bg-card/40" />
+            <div key={i} className="h-[132px] animate-pulse rounded-2xl bg-muted" />
           ))}
         </div>
       ) : visible.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-card/30 px-6 py-16 text-center">
-          <Inbox className="size-10 text-muted-foreground" aria-hidden="true" />
-          <p className="font-semibold">No hay órdenes aquí</p>
-          <p className="max-w-sm text-sm text-muted-foreground">
-            {query ? 'Prueba con otro término de búsqueda.' : 'Cuando un equipo pase a este estado aparecerá en esta lista.'}
+        <div className="flex flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-border px-6 py-14 text-center">
+          <Inbox className="size-10 text-muted-foreground" strokeWidth={1.6} aria-hidden="true" />
+          <p className="text-[16px] font-bold">{query ? 'Sin resultados' : 'No hay órdenes aquí'}</p>
+          <p className="max-w-xs text-sm text-muted-foreground">
+            {query ? 'Prueba con otro nombre, teléfono o número de orden.' : 'Cuando un equipo pase a este estado aparecerá en esta lista.'}
           </p>
+          {!query && filter === 'activas' && (
+            <Button className="mt-3" nativeButton={false} render={<Link href="/ingreso" />}>
+              <Plus data-icon="inline-start" />
+              Registrar un ingreso
+            </Button>
+          )}
+        </div>
+      ) : groups ? (
+        <div className="flex flex-col gap-6">
+          {groups.map(({ meta, items }) => (
+            <section key={meta.value} aria-label={meta.label} className="flex flex-col gap-2.5">
+              <h2 className="flex items-center gap-2 px-1 text-[13px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
+                <span className={cn('size-2.5 rounded-full', meta.dot)} aria-hidden="true" />
+                {meta.label}
+                <span className="font-semibold tabular">{items.length}</span>
+              </h2>
+              {cardList(items)}
+            </section>
+          ))}
         </div>
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {visible.map((order) => (
-            <li key={order.id} className="h-full">
-              <OrderCard
-                order={order}
-                onStatusChange={handleStatusChange}
-                onOpen={(o) => setSelectedId(o.id)}
-                onOpenPhotos={(o) => setViewerId(o.id)}
-              />
-            </li>
-          ))}
-        </ul>
+        cardList(visible)
       )}
 
       <OrderDetailDialog
@@ -184,6 +244,7 @@ export function OrdersDashboard() {
         onClose={() => setSelectedId(null)}
         onEdit={startEditing}
         onDelete={handleDelete}
+        onComment={addComment}
       />
       <OrderEditDialog order={editing} onClose={() => setEditingId(null)} onSave={updateOrder} />
       <PhotoViewer
@@ -196,22 +257,50 @@ export function OrdersDashboard() {
   )
 }
 
-function FilterTile({
+function Stat({
+  value,
+  label,
+  tone,
+  onClick,
+  active,
+}: {
+  value: string
+  label: string
+  tone?: string
+  onClick?: () => void
+  active?: boolean
+}) {
+  const body = (
+    <>
+      <span className={cn('font-display block text-[34px] leading-none', tone)}>{value}</span>
+      <span className="mt-1.5 block text-[12px] font-semibold leading-tight text-muted-foreground">{label}</span>
+    </>
+  )
+  const cls = cn(
+    'rounded-2xl border border-border bg-card px-3 py-3 text-left transition-colors',
+    active && 'border-foreground/25 bg-surface',
+  )
+  return onClick ? (
+    <button type="button" onClick={onClick} aria-pressed={active} className={cn(cls, 'hover:border-foreground/25')}>
+      {body}
+    </button>
+  ) : (
+    <div className={cls}>{body}</div>
+  )
+}
+
+function Chip({
   active,
   onClick,
   label,
   count,
-  icon: Icon,
-  accent,
   dot,
 }: {
   active: boolean
   onClick: () => void
   label: string
   count: number
-  icon: React.ComponentType<{ className?: string }>
-  accent: string
-  dot: string
+  dot?: string
 }) {
   return (
     <button
@@ -219,16 +308,15 @@ function FilterTile({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        'relative inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 py-1 text-xs transition-all duration-200',
+        'inline-flex h-10 shrink-0 items-center gap-2 rounded-full border px-3.5 text-[14px] font-semibold whitespace-nowrap transition-colors',
         active
-          ? 'border-foreground/30 bg-secondary text-foreground shadow-sm'
-          : 'border-border/60 bg-background/40 text-muted-foreground hover:border-foreground/20 hover:bg-secondary/50 hover:text-foreground',
+          ? 'border-foreground bg-foreground text-background'
+          : 'border-border bg-surface text-muted-foreground hover:text-foreground',
       )}
     >
-      {active && <span className={cn('absolute inset-x-0 -top-px h-0.5 rounded-t-lg', dot)} aria-hidden="true" />}
-      <Icon className={cn('size-3.5', accent)} />
-      <span className="font-medium">{label}</span>
-      <span className="font-mono font-bold tabular-nums opacity-90">{count}</span>
+      {dot && <span className={cn('size-2 rounded-full', dot)} aria-hidden="true" />}
+      {label}
+      <span className={cn('tabular text-[13px]', active ? 'opacity-70' : 'opacity-80')}>{count}</span>
     </button>
   )
 }

@@ -76,6 +76,14 @@ CREATE TABLE IF NOT EXISTS status_events (
   note TEXT
 );
 
+CREATE TABLE IF NOT EXISTS order_comments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  author TEXT,
+  text TEXT NOT NULL,
+  at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS invoices (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
@@ -208,7 +216,7 @@ function groupByOrder(table, orderIds) {
   return map
 }
 
-function rowToOrder(row, items, photos, events) {
+function rowToOrder(row, items, photos, events, comments = []) {
   return {
     id: row.order_number,
     createdAt: row.created_at,
@@ -240,6 +248,7 @@ function rowToOrder(row, items, photos, events) {
     technician: row.technician || undefined,
     items: items.map((i) => ({ id: String(i.id), description: i.description, kind: i.kind, price: i.price })),
     history: events.map((e) => ({ status: e.status, at: e.at, note: e.note || undefined })),
+    comments: comments.map((c) => ({ id: String(c.id), author: c.author || undefined, text: c.text, at: c.at })),
     deliveredAt: row.delivered_at || undefined,
   }
 }
@@ -255,7 +264,10 @@ export function listOrders() {
   const items = groupByOrder('order_items', ids)
   const photos = groupByOrder('order_photos', ids)
   const events = groupByOrder('status_events', ids)
-  return orders.map((o) => rowToOrder(o, items.get(o.id) ?? [], photos.get(o.id) ?? [], events.get(o.id) ?? []))
+  const comments = groupByOrder('order_comments', ids)
+  return orders.map((o) =>
+    rowToOrder(o, items.get(o.id) ?? [], photos.get(o.id) ?? [], events.get(o.id) ?? [], comments.get(o.id) ?? []),
+  )
 }
 
 export function getOrder(orderNumber) {
@@ -264,7 +276,8 @@ export function getOrder(orderNumber) {
   const items = groupByOrder('order_items', [row.id]).get(row.id) ?? []
   const photos = groupByOrder('order_photos', [row.id]).get(row.id) ?? []
   const events = groupByOrder('status_events', [row.id]).get(row.id) ?? []
-  return rowToOrder(row, items, photos, events)
+  const comments = groupByOrder('order_comments', [row.id]).get(row.id) ?? []
+  return rowToOrder(row, items, photos, events, comments)
 }
 
 /* ------------------------------- escritura ------------------------------ */
@@ -530,6 +543,18 @@ export function updateOrderDetails(orderNumber, patch = {}) {
   return getOrder(orderNumber)
 }
 
+export function addOrderComment(orderNumber, text, author = null) {
+  const row = findRow(orderNumber)
+  if (!row) return undefined
+  db.prepare('INSERT INTO order_comments (order_id, author, text, at) VALUES (?,?,?,?)').run(
+    row.id,
+    author,
+    String(text).trim(),
+    new Date().toISOString(),
+  )
+  return getOrder(orderNumber)
+}
+
 export function deleteOrder(orderNumber) {
   const row = findRow(orderNumber)
   if (!row) return false
@@ -537,6 +562,7 @@ export function deleteOrder(orderNumber) {
     db.prepare('DELETE FROM order_items WHERE order_id = ?').run(row.id)
     db.prepare('DELETE FROM order_photos WHERE order_id = ?').run(row.id)
     db.prepare('DELETE FROM status_events WHERE order_id = ?').run(row.id)
+    db.prepare('DELETE FROM order_comments WHERE order_id = ?').run(row.id)
     db.prepare('DELETE FROM invoices WHERE order_id = ?').run(row.id)
     db.prepare('DELETE FROM orders WHERE id = ?').run(row.id)
     // Si el cliente no tiene más órdenes, se elimina también para no dejar registros huérfanos.
@@ -640,10 +666,16 @@ export function listVentas(filters = {}) {
 }
 
 /** Acepta el id interno (9) o el número visible de la venta («VTA-1006»). */
+/** Id entero estricto: «5» → 5; «5.00», «5e0», « 5 » o «0x5» → NaN (no coincide con ninguna fila). */
+function intId(id) {
+  const raw = String(id ?? '')
+  return /^[1-9]\d{0,15}$/.test(raw) ? Number(raw) : NaN
+}
+
 function ventaRowId(id) {
   const raw = String(id ?? '').trim()
-  const numeric = Number(raw)
-  if (Number.isFinite(numeric) && numeric > 0) return numeric
+  const numeric = intId(raw)
+  if (Number.isFinite(numeric)) return numeric
   const match = raw.toUpperCase().match(/^VTA-?(\d+)$/)
   if (!match) return NaN
   const row = db.prepare('SELECT id FROM ventas WHERE sale_number = ?').get(`VTA-${match[1]}`)
@@ -972,7 +1004,7 @@ export function createEstado(input = {}) {
 }
 
 export function getEstado(id) {
-  const row = db.prepare('SELECT * FROM estados_programados WHERE id = ?').get(Number(id))
+  const row = db.prepare('SELECT * FROM estados_programados WHERE id = ?').get(intId(id))
   return row ? rowToEstado(row) : undefined
 }
 
@@ -984,7 +1016,7 @@ export function listEstados(limit = 60) {
 }
 
 export function deleteEstado(id) {
-  return db.prepare('DELETE FROM estados_programados WHERE id = ?').run(Number(id)).changes > 0
+  return db.prepare('DELETE FROM estados_programados WHERE id = ?').run(intId(id)).changes > 0
 }
 
 export function pendingEstados(nowIso = new Date().toISOString(), limit = 3) {
@@ -1050,7 +1082,7 @@ export function listPlanes() {
 }
 
 export function getPlan(id) {
-  const row = db.prepare('SELECT * FROM estados_planes WHERE id = ?').get(Number(id))
+  const row = db.prepare('SELECT * FROM estados_planes WHERE id = ?').get(intId(id))
   return row ? rowToPlan(row) : undefined
 }
 
@@ -1082,7 +1114,7 @@ export function setPlanActive(id, active) {
   return (
     db
       .prepare('UPDATE estados_planes SET active = ? WHERE id = ?')
-      .run(active ? 1 : 0, Number(id)).changes > 0
+      .run(active ? 1 : 0, intId(id)).changes > 0
   )
 }
 
@@ -1101,13 +1133,13 @@ export function updatePlan(id, { days, time } = {}) {
   db.prepare('UPDATE estados_planes SET days = ?, hora = ? WHERE id = ?').run(
     nextDays.join(','),
     nextTime,
-    Number(id),
+    intId(id),
   )
   return true
 }
 
 export function deletePlan(id) {
-  return db.prepare('DELETE FROM estados_planes WHERE id = ?').run(Number(id)).changes > 0
+  return db.prepare('DELETE FROM estados_planes WHERE id = ?').run(intId(id)).changes > 0
 }
 
 export function markPlanFired(id, now = new Date(), localDate) {
@@ -1115,7 +1147,7 @@ export function markPlanFired(id, now = new Date(), localDate) {
   db.prepare('UPDATE estados_planes SET last_fired_at = ?, last_fired_date = ? WHERE id = ?').run(
     now.toISOString(),
     localDate ?? clock.date,
-    Number(id),
+    intId(id),
   )
 }
 
@@ -1138,7 +1170,7 @@ export function markEstado(id, status, error = null) {
     status,
     error,
     status === 'publicado' ? new Date().toISOString() : null,
-    Number(id),
+    intId(id),
   )
 }
 

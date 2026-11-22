@@ -139,7 +139,7 @@ export function ConnectionPanel({
   return (
     <div className="flex flex-col gap-5">
       <div className="order-2 flex min-w-0 flex-col gap-5">
-        <section className="min-w-0 rounded-2xl border border-border bg-card/70 p-4 ring-1 ring-foreground/5 md:p-5">
+        <section className="min-w-0 rounded-3xl border border-border bg-card p-4 md:p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex items-center gap-3">
               <span
@@ -203,15 +203,15 @@ export function ConnectionPanel({
           </div>
 
           <dl className="mt-4 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-border bg-background/40 p-3">
-              <dt className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Número vinculado</dt>
+            <div className="rounded-xl border border-border bg-surface p-3">
+              <dt className="text-[12px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Número vinculado</dt>
               <dd className="mt-1 font-mono text-sm font-semibold tabular-nums">
                 {state?.me?.display ?? (state?.connected ? 'Sin identificar' : '—')}
               </dd>
               {state?.me?.name && <p className="text-[11px] text-muted-foreground">{state.me.name}</p>}
             </div>
-            <div className="rounded-xl border border-border bg-background/40 p-3">
-              <dt className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Mensajes enviados</dt>
+            <div className="rounded-xl border border-border bg-surface p-3">
+              <dt className="text-[12px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Mensajes enviados</dt>
               <dd className="mt-1 font-mono text-sm font-semibold tabular-nums">
                 {state?.sentTotal ?? 0}
                 {(state?.sentErrors ?? 0) > 0 && <span className="ml-2 text-[11px] font-normal text-destructive">{state?.sentErrors} con error</span>}
@@ -241,7 +241,7 @@ export function ConnectionPanel({
           )}
         </section>
 
-        <section className="min-w-0 rounded-2xl border border-border bg-card/70 p-4 ring-1 ring-foreground/5 md:p-5">
+        <section className="min-w-0 rounded-3xl border border-border bg-card p-4 md:p-5">
           <header className="flex flex-wrap items-center gap-2">
             <span
               className={cn(
@@ -252,7 +252,7 @@ export function ConnectionPanel({
               <ShieldCheck className="size-4" aria-hidden="true" />
             </span>
             <div className="flex-1">
-              <h2 className="text-sm font-semibold">Protecciones anti-bloqueo</h2>
+              <h2 className="text-[16px] font-extrabold tracking-tight">Protecciones anti-bloqueo</h2>
               <p className="text-xs text-muted-foreground">
                 El servicio escribe despacio y se frena solo si WhatsApp se queja, para cuidar la cuenta.
               </p>
@@ -337,13 +337,13 @@ export function ConnectionPanel({
           )}
         </section>
 
-        <section className="min-w-0 rounded-2xl border border-border bg-card/70 p-4 ring-1 ring-foreground/5 md:p-5">
-          <header className="flex items-center gap-2">
-            <span className="grid size-7 place-items-center rounded-lg bg-status-pending/12 text-status-pending">
+        <section className="min-w-0 rounded-3xl border border-border bg-card p-4 md:p-5">
+          <header className="flex flex-wrap items-center gap-2">
+            <span className="grid size-9 place-items-center rounded-xl bg-status-pending/12 text-status-pending">
               <Users className="size-4" aria-hidden="true" />
             </span>
-            <div className="flex-1">
-              <h2 className="text-sm font-semibold">Números para los estados</h2>
+            <div className="min-w-[12rem] flex-1">
+              <h2 className="text-[16px] font-extrabold tracking-tight">Números para los estados</h2>
               <p className="text-xs text-muted-foreground">
                 Se sincronizan las órdenes, las ventas y los chats que llegan al WhatsApp.
               </p>
@@ -387,7 +387,7 @@ export function ConnectionPanel({
           </p>
 
           {contacts && contacts.length > 0 && (
-            <ul className="mt-3 min-w-0 max-h-64 divide-y divide-border/60 overflow-y-auto overflow-x-hidden rounded-xl border border-border bg-background/40">
+            <ul className="mt-3 min-w-0 max-h-64 divide-y divide-border/60 overflow-y-auto overflow-x-hidden rounded-xl border border-border bg-surface">
               {contacts.map((contact) => (
                 <li key={contact.phone} className="flex min-w-0 items-center justify-between gap-2 px-3 py-2">
                   <div className="min-w-0">
@@ -403,12 +403,12 @@ export function ConnectionPanel({
           )}
         </section>
 
-        <section className="min-w-0 rounded-2xl border border-border bg-card/70 p-4 ring-1 ring-foreground/5 md:p-5">
+        <section className="min-w-0 rounded-3xl border border-border bg-card p-4 md:p-5">
           <header className="flex items-center gap-2">
             <span className="grid size-7 place-items-center rounded-lg bg-secondary text-muted-foreground">
               <ScrollText className="size-4" aria-hidden="true" />
             </span>
-            <h2 className="text-sm font-semibold">Actividad reciente</h2>
+            <h2 className="text-[16px] font-extrabold tracking-tight">Actividad reciente</h2>
           </header>
           <ul className="mt-3 flex flex-col gap-1.5">
             {(state?.events ?? []).length === 0 && <li className="text-xs text-muted-foreground">Sin eventos todavía.</li>}
@@ -425,10 +425,10 @@ export function ConnectionPanel({
         </section>
       </div>
 
-      <aside className="order-1 flex min-w-0 flex-col gap-4 rounded-2xl border border-border bg-card/80 p-4 ring-1 ring-foreground/10">
+      <aside className="order-1 flex min-w-0 flex-col gap-4 rounded-3xl border border-border bg-card p-4">
         <header className="flex items-center gap-2">
           <QrCode className="size-4 text-primary" aria-hidden="true" />
-          <h2 className="text-sm font-semibold">Vinculación</h2>
+          <h2 className="text-[16px] font-extrabold tracking-tight">Vinculación</h2>
         </header>
 
         {state?.connected ? (
@@ -474,8 +474,8 @@ export function ConnectionPanel({
 
 function ProtectionStat({ label, value, danger = false }: { label: string; value: string; danger?: boolean }) {
   return (
-    <div className="rounded-xl border border-border bg-background/40 px-3 py-2">
-      <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
+    <div className="rounded-xl border border-border bg-surface px-3 py-2">
+      <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-muted-foreground">{label}</p>
       <p className={cn('mt-0.5 font-mono text-sm font-semibold tabular-nums', danger ? 'text-destructive' : 'text-foreground')}>
         {value}
       </p>

@@ -27,6 +27,12 @@ export function useOrders() {
     return updated
   }
 
+  async function addComment(id: string, text: string, author?: string) {
+    const updated = await api.addOrderComment(id, text, author)
+    await mutate()
+    return updated
+  }
+
   async function deleteOrder(id: string) {
     await api.deleteOrder(id)
     await mutate()
@@ -46,6 +52,7 @@ export function useOrders() {
     setStatus,
     setItems,
     updateOrder,
+    addComment,
     deleteOrder,
   }
 }

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2, ShieldCheck } from 'lucide-react'
+import { BrandMark } from '@/components/brand-logo'
 
 type TokenResponse = { access_token?: string; error?: string; error_description?: string }
 
@@ -170,15 +171,16 @@ export function LoginCard() {
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-grid px-4 py-10">
-      <div className="w-full max-w-sm rounded-3xl border border-border bg-card/80 p-7 shadow-2xl shadow-black/40 ring-1 ring-foreground/10 backdrop-blur-xl">
-        <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-          <ShieldCheck className="size-3.5" aria-hidden="true" />
+    <div className="flex min-h-dvh flex-col items-center justify-center px-4 py-10">
+      <BrandMark className="size-16" />
+      <div className="mt-6 w-full max-w-sm rounded-3xl border border-border bg-card p-7 shadow-xl">
+        <div className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
+          <ShieldCheck className="size-4" aria-hidden="true" />
           Acceso al taller
         </div>
-        <h1 className="mt-3 text-2xl font-bold tracking-tight">TODOENPCYCONSOLAS</h1>
-        <p className="mt-1.5 text-sm text-muted-foreground">
-          Entra con tu cuenta de Google autorizada para ver las órdenes, ventas y comprobantes del taller.
+        <h1 className="mt-2 text-[26px] font-extrabold tracking-tight">TEPCYC Taller</h1>
+        <p className="mt-1.5 text-[14.5px] text-muted-foreground">
+          Entra con tu cuenta de Google autorizada para ver órdenes, ventas y comprobantes.
         </p>
 
         <div className="mt-6 flex flex-col items-stretch gap-3">
@@ -200,7 +202,7 @@ export function LoginCard() {
               type="button"
               onClick={signIn}
               disabled={!ready || busy}
-              className="flex h-12 w-full items-center justify-center gap-3 rounded-xl bg-white px-4 text-sm font-semibold text-[#1f1f1f] transition-colors hover:bg-white/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex h-13 w-full items-center justify-center gap-3 rounded-xl border border-[#dadce0] bg-white px-4 text-[15px] font-semibold text-[#1f1f1f] transition-colors hover:bg-[#f8f9fa] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-60"
             >
               {busy ? <Loader2 className="size-5 animate-spin" aria-hidden="true" /> : <GoogleMark />}
               {busy ? 'Validando tu cuenta…' : 'Continuar con Google'}

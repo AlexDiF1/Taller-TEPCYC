@@ -193,13 +193,13 @@ export function SaleForm({ onCreated }: { onCreated: () => void }) {
     <div className="grid gap-6 lg:grid-cols-12 lg:items-start">
       {/* ---------------------------- entrada de datos ---------------------------- */}
       <div className="flex flex-col gap-5 lg:col-span-7">
-        <section className="rounded-2xl border border-border bg-card/70 p-4 ring-1 ring-foreground/5 md:p-5">
+        <section className="rounded-3xl border border-border bg-card p-4 md:p-5">
           <header className="flex items-center gap-2">
-            <span className="grid size-7 place-items-center rounded-lg bg-primary/12 text-primary">
+            <span className="grid size-9 place-items-center rounded-xl bg-primary/12 text-primary">
               <UserRound className="size-4" aria-hidden="true" />
             </span>
             <div>
-              <h2 className="text-sm font-semibold">Datos del cliente</h2>
+              <h2 className="text-[16px] font-extrabold tracking-tight">Datos del cliente</h2>
               <p className="text-xs text-muted-foreground">Opcional. Sirve para enviar el recibo por WhatsApp.</p>
             </div>
           </header>
@@ -213,7 +213,7 @@ export function SaleForm({ onCreated }: { onCreated: () => void }) {
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
                 placeholder="Ej. Andrés Gómez"
-                className="h-11 rounded-xl bg-background/40 text-base"
+                className="h-11 rounded-xl bg-surface text-base"
                 autoComplete="off"
               />
             </div>
@@ -227,20 +227,20 @@ export function SaleForm({ onCreated }: { onCreated: () => void }) {
                 onChange={(e) => setCustomerPhone(e.target.value)}
                 placeholder="Ej. 300 123 4567"
                 inputMode="tel"
-                className="h-11 rounded-xl bg-background/40 text-base"
+                className="h-11 rounded-xl bg-surface text-base"
                 autoComplete="off"
               />
             </div>
           </div>
         </section>
 
-        <section className="rounded-2xl border border-border bg-card/70 p-4 ring-1 ring-foreground/5 md:p-5">
+        <section className="rounded-3xl border border-border bg-card p-4 md:p-5">
           <header className="flex items-center gap-2">
-            <span className="grid size-7 place-items-center rounded-lg bg-status-pending/12 text-status-pending">
+            <span className="grid size-9 place-items-center rounded-xl bg-status-pending/12 text-status-pending">
               <PackagePlus className="size-4" aria-hidden="true" />
             </span>
             <div>
-              <h2 className="text-sm font-semibold">Agregar artículo</h2>
+              <h2 className="text-[16px] font-extrabold tracking-tight">Agregar artículo</h2>
               <p className="text-xs text-muted-foreground">Nombre, precio de venta, costo interno y cantidad.</p>
             </div>
           </header>
@@ -256,7 +256,7 @@ export function SaleForm({ onCreated }: { onCreated: () => void }) {
                 value={itemName}
                 onChange={(e) => setItemName(e.target.value)}
                 placeholder="Ej. Control PS5, audífonos, cable HDMI..."
-                className="h-11 rounded-xl bg-background/40 text-base"
+                className="h-11 rounded-xl bg-surface text-base"
                 autoComplete="off"
               />
             </div>
@@ -272,7 +272,7 @@ export function SaleForm({ onCreated }: { onCreated: () => void }) {
                   onChange={(e) => setItemPrice(e.target.value.replace(/[^\d]/g, ''))}
                   placeholder="0"
                   inputMode="numeric"
-                  className="h-11 rounded-xl bg-background/40 font-mono text-base tabular-nums"
+                  className="h-11 rounded-xl bg-surface font-mono text-base tabular-nums"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -285,7 +285,7 @@ export function SaleForm({ onCreated }: { onCreated: () => void }) {
                   onChange={(e) => setItemCost(e.target.value.replace(/[^\d]/g, ''))}
                   placeholder="0"
                   inputMode="numeric"
-                  className="h-11 rounded-xl bg-background/40 font-mono text-base tabular-nums"
+                  className="h-11 rounded-xl bg-surface font-mono text-base tabular-nums"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -297,7 +297,7 @@ export function SaleForm({ onCreated }: { onCreated: () => void }) {
                   value={itemQuantity}
                   onChange={(e) => setItemQuantity(e.target.value.replace(/[^\d]/g, ''))}
                   inputMode="numeric"
-                  className="h-11 rounded-xl bg-background/40 font-mono text-base tabular-nums"
+                  className="h-11 rounded-xl bg-surface font-mono text-base tabular-nums"
                 />
               </div>
             </div>
@@ -309,28 +309,28 @@ export function SaleForm({ onCreated }: { onCreated: () => void }) {
           </form>
         </section>
 
-        <section className="grid gap-3 sm:grid-cols-3">
-          <div className="rounded-2xl border border-border bg-card/70 p-4">
-            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Artículos</p>
+        <section className="hidden gap-3 sm:grid sm:grid-cols-3">
+          <div className="rounded-3xl border border-border bg-card p-4">
+            <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Artículos</p>
             <p className="mt-1 font-mono text-xl font-bold tabular-nums">{totals.units}</p>
           </div>
-          <div className="rounded-2xl border border-border bg-card/70 p-4">
-            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Total</p>
+          <div className="rounded-3xl border border-border bg-card p-4">
+            <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Total</p>
             <p className="mt-1 font-mono text-xl font-bold tabular-nums">{money(totals.total)}</p>
           </div>
-          <div className="rounded-2xl border border-border bg-card/70 p-4">
-            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Ganancia</p>
+          <div className="rounded-3xl border border-border bg-card p-4">
+            <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Ganancia</p>
             <p className="mt-1 font-mono text-xl font-bold tabular-nums text-status-done">{money(totals.profit)}</p>
           </div>
         </section>
       </div>
 
       {/* -------------------------------- carrito -------------------------------- */}
-      <aside className="flex flex-col gap-3 rounded-2xl border border-border bg-card/80 ring-1 ring-foreground/10 lg:sticky lg:top-6 lg:col-span-5">
+      <aside className="flex flex-col gap-3 rounded-3xl border border-border bg-card lg:sticky lg:top-6 lg:col-span-5">
         <header className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
           <div className="flex items-center gap-2">
             <ShoppingCart className="size-4 text-primary" aria-hidden="true" />
-            <h2 className="text-sm font-semibold">Carrito</h2>
+            <h2 className="text-[16px] font-extrabold tracking-tight">Carrito</h2>
             <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-[11px] tabular-nums text-muted-foreground">
               {totals.units}
             </span>
@@ -346,7 +346,7 @@ export function SaleForm({ onCreated }: { onCreated: () => void }) {
           )}
         </header>
 
-        <div className="max-h-[42vh] overflow-y-auto px-2 lg:max-h-[46vh]">
+        <div className="max-h-[50vh] overflow-y-auto px-2 lg:max-h-[46vh]">
           {items.length === 0 ? (
             <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
               <ShoppingCart className="size-8 text-muted-foreground/60" aria-hidden="true" />
@@ -393,7 +393,7 @@ export function SaleForm({ onCreated }: { onCreated: () => void }) {
                         value={item.quantity}
                         onChange={(e) => changeQuantity(item.key, Number(e.target.value))}
                         aria-label={`Cantidad de ${item.name}`}
-                        className="h-7 w-12 rounded-lg border border-input bg-background/40 text-center font-mono text-sm tabular-nums outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
+                        className="h-7 w-12 rounded-lg border border-input bg-surface text-center font-mono text-sm tabular-nums outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
                       />
                       <Button
                         type="button"
@@ -417,11 +417,11 @@ export function SaleForm({ onCreated }: { onCreated: () => void }) {
 
         <section className="border-t border-border px-4 py-3">
           <header className="flex items-center gap-2">
-            <span className="grid size-7 place-items-center rounded-lg bg-status-review/12 text-status-review">
+            <span className="grid size-9 place-items-center rounded-xl bg-status-review/12 text-status-review">
               <Banknote className="size-4" aria-hidden="true" />
             </span>
             <div>
-              <h2 className="text-sm font-semibold">Método de pago</h2>
+              <h2 className="text-[16px] font-extrabold tracking-tight">Método de pago</h2>
               <p className="text-xs text-muted-foreground">Toca el medio por el que entró el dinero.</p>
             </div>
           </header>
@@ -436,17 +436,17 @@ export function SaleForm({ onCreated }: { onCreated: () => void }) {
                   onClick={() => setPaymentMethod(method.value)}
                   aria-pressed={active}
                   className={cn(
-                    'flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-all duration-200',
+                    'flex min-h-14 items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-colors',
                     active
-                      ? 'border-primary/60 bg-primary/10 ring-1 ring-primary/40'
-                      : 'border-border bg-background/40 hover:bg-card hover:border-foreground/20',
+                      ? 'border-foreground bg-foreground/5 ring-1 ring-foreground'
+                      : 'border-border bg-surface hover:border-foreground/25',
                   )}
                 >
                   <span className={cn('grid size-9 shrink-0 place-items-center rounded-lg', method.bg, method.text)}>
                     <Icon className="size-4.5" aria-hidden="true" />
                   </span>
                   <span className="min-w-0">
-                    <span className={cn('block truncate text-sm font-medium', active ? 'text-foreground' : 'text-muted-foreground')}>
+                    <span className={cn('block truncate text-[14.5px] font-bold', active ? 'text-foreground' : 'text-foreground/80')}>
                       {method.label}
                     </span>
                     <span className="block truncate text-[11px] text-muted-foreground">{method.hint}</span>
@@ -464,8 +464,8 @@ export function SaleForm({ onCreated }: { onCreated: () => void }) {
             <span className="font-mono tabular-nums">{totals.units}</span>
           </div>
           <div className="mt-2 flex items-end justify-between">
-            <span className="text-sm font-medium text-muted-foreground">Total a pagar</span>
-            <span className="font-mono text-2xl font-bold tabular-nums tracking-tight">{money(totals.total)}</span>
+            <span className="text-[14px] font-semibold text-muted-foreground">Total a pagar</span>
+            <span className="font-display text-[40px]">{money(totals.total)}</span>
           </div>
           <div className="mt-2 flex items-center justify-between rounded-lg bg-muted/40 px-2.5 py-2">
             <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Ganancia de la venta</span>
@@ -477,7 +477,7 @@ export function SaleForm({ onCreated }: { onCreated: () => void }) {
             type="button"
             onClick={registerSale}
             disabled={saving || items.length === 0 || !paymentMethod}
-            className="mt-3 h-12 w-full rounded-xl text-base font-semibold"
+            className="mt-3 h-13 w-full rounded-xl text-[16px] font-bold"
           >
             {saving ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Receipt className="size-4" aria-hidden="true" />}
             {saving ? 'Registrando...' : 'Registrar venta'}
@@ -573,7 +573,7 @@ function SaleSuccessDialog({
               </DialogDescription>
             </DialogHeader>
 
-            <div className="rounded-xl border border-border bg-background/40 p-3">
+            <div className="rounded-xl border border-border bg-surface p-3">
               <ul className="flex flex-col gap-1.5 text-sm">
                 {sale.items.map((item) => (
                   <li key={item.id} className="flex items-center justify-between gap-2">
@@ -602,7 +602,7 @@ function SaleSuccessDialog({
               </Button>
               <Button
                 type="button"
-                className="h-11 w-full rounded-xl bg-whatsapp font-semibold text-black hover:bg-whatsapp/85"
+                className="h-11 w-full rounded-xl bg-whatsapp font-bold text-white dark:text-black hover:bg-whatsapp/85"
                 onClick={handleDownloadOrSend}
                 disabled={!delivery || sending}
               >

@@ -143,7 +143,7 @@ function Editor({
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
               placeholder="Cliente ocasional"
-              className="h-11 rounded-xl bg-background/40 text-base"
+              className="h-11 rounded-xl bg-surface text-base"
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -156,7 +156,7 @@ function Editor({
               onChange={(e) => setCustomerPhone(e.target.value)}
               placeholder="Ej. 300 123 4567"
               inputMode="tel"
-              className="h-11 rounded-xl bg-background/40 text-base"
+              className="h-11 rounded-xl bg-surface text-base"
             />
           </div>
         </div>
@@ -177,7 +177,7 @@ function Editor({
                     'flex items-center gap-2 rounded-xl border px-3 py-2 text-left transition-all',
                     active
                       ? 'border-primary/60 bg-primary/10 ring-1 ring-primary/40'
-                      : 'border-border bg-background/40 hover:border-foreground/20 hover:bg-card',
+                      : 'border-border bg-surface hover:border-foreground/20 hover:bg-card',
                   )}
                 >
                   <span className={cn('grid size-8 shrink-0 place-items-center rounded-lg', method.bg, method.text)}>
@@ -203,7 +203,7 @@ function Editor({
 
           <ul className="flex flex-col gap-2">
             {items.map((item, index) => (
-              <li key={item.key} className="rounded-xl border border-border bg-background/40 p-3">
+              <li key={item.key} className="rounded-xl border border-border bg-surface p-3">
                 <div className="flex items-center gap-2">
                   <Input
                     value={item.name}
@@ -271,21 +271,21 @@ function Editor({
             onChange={(e) => setNotes(e.target.value.slice(0, 400))}
             rows={2}
             placeholder="Ej. pagó con transferencia a la llave del negocio"
-            className="rounded-xl bg-background/40 text-base"
+            className="rounded-xl bg-surface text-base"
           />
         </div>
 
         <div className="grid gap-2 sm:grid-cols-3">
-          <div className="rounded-xl border border-border bg-background/40 px-3 py-2">
-            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Total</p>
+          <div className="rounded-xl border border-border bg-surface px-3 py-2">
+            <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Total</p>
             <p className="font-mono text-base font-bold tabular-nums">{formatMoney(totals.total)}</p>
           </div>
-          <div className="rounded-xl border border-border bg-background/40 px-3 py-2">
-            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Costo</p>
+          <div className="rounded-xl border border-border bg-surface px-3 py-2">
+            <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Costo</p>
             <p className="font-mono text-base font-semibold tabular-nums">{formatMoney(totals.totalCost)}</p>
           </div>
-          <div className="rounded-xl border border-border bg-background/40 px-3 py-2">
-            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Ganancia</p>
+          <div className="rounded-xl border border-border bg-surface px-3 py-2">
+            <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Ganancia</p>
             <p className="font-mono text-base font-semibold tabular-nums text-status-done">{formatMoney(totals.profit)}</p>
           </div>
         </div>

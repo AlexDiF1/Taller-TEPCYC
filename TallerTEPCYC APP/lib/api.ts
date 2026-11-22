@@ -62,6 +62,11 @@ export async function updateOrder(id: string, patch: OrderPatch): Promise<Order>
   return request<Order>(orderUrl(id), { method: 'PUT', body: JSON.stringify(patch) })
 }
 
+/** Agrega un comentario interno a la orden (devuelve la orden actualizada). */
+export async function addOrderComment(id: string, text: string, author?: string): Promise<Order> {
+  return request<Order>(`${orderUrl(id)}/comments`, { method: 'POST', body: JSON.stringify({ text, author }) })
+}
+
 /** Elimina el registro completo (ítems, fotos, historial y comprobantes). */
 export async function deleteOrder(id: string): Promise<void> {
   await request<{ ok: boolean }>(orderUrl(id), { method: 'DELETE' })

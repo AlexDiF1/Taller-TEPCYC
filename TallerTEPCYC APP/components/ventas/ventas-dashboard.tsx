@@ -48,9 +48,13 @@ export function VentasDashboard() {
   }
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8 md:py-8">
+    <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-4 md:px-8 md:py-8">
+      <div className="hidden lg:block">
+        <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-primary">Negocio</p>
+        <h1 className="mt-1 text-[32px] font-extrabold tracking-tight">Ventas</h1>
+      </div>
       <div
-        className="inline-flex w-fit items-center gap-1 rounded-xl border border-border bg-muted/40 p-1"
+        className="grid grid-cols-2 gap-1 rounded-2xl bg-surface-2 p-1 sm:inline-grid sm:w-fit"
         role="tablist"
         aria-label="Secciones de ventas"
       >
@@ -105,13 +109,11 @@ function TabButton({
       aria-selected={active}
       onClick={onClick}
       className={cn(
-        'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all',
-        active
-          ? 'bg-card text-foreground shadow-sm ring-1 ring-foreground/10'
-          : 'text-muted-foreground hover:text-foreground',
+        'inline-flex h-11 items-center justify-center gap-2 rounded-xl px-5 text-[14.5px] font-bold transition-colors',
+        active ? 'bg-surface text-foreground shadow-sm dark:bg-accent' : 'text-muted-foreground hover:text-foreground',
       )}
     >
-      <Icon className={cn('size-4', active && 'text-primary')} aria-hidden="true" />
+      <Icon className={cn('size-[18px]', active && 'text-primary')} aria-hidden="true" />
       {label}
     </button>
   )

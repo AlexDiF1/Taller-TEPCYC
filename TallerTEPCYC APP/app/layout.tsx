@@ -1,22 +1,20 @@
 import type { Metadata, Viewport } from 'next'
-import { Space_Grotesk, JetBrains_Mono } from 'next/font/google'
+import { Archivo, Bebas_Neue } from 'next/font/google'
 import { Toaster } from 'sonner'
 import { AppShell } from '@/components/app-shell'
 import { ServiceWorkerRegister } from '@/components/service-worker-register'
 import './globals.css'
 
-const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], variable: '--font-space-grotesk' })
-const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbrains-mono' })
+const archivo = Archivo({ subsets: ['latin'], variable: '--font-archivo', display: 'swap' })
+const bebas = Bebas_Neue({ subsets: ['latin'], weight: '400', variable: '--font-bebas', display: 'swap' })
 
 export const metadata: Metadata = {
-  title: 'TODOENPCYCONSOLAS · Taller de reparación',
+  title: 'TEPCYC · Taller',
   description:
     'Gestión de órdenes de servicio técnico para consolas, controles y accesorios: ingreso con fotos, seguimiento, WhatsApp y comprobantes.',
-  generator: 'v0.app',
   icons: {
     icon: [
-      { url: '/icon-light-32x32.png', media: '(prefers-color-scheme: light)' },
-      { url: '/icon-dark-32x32.png', media: '(prefers-color-scheme: dark)' },
+      { url: '/icon.svg', type: 'image/svg+xml' },
       { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
       { url: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
     ],
@@ -25,24 +23,28 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     title: 'TEPCYC',
-    statusBarStyle: 'black-translucent',
+    statusBarStyle: 'default',
   },
   applicationName: 'TEPCYC',
 }
 
 export const viewport: Viewport = {
-  colorScheme: 'dark',
-  themeColor: '#16171d',
+  colorScheme: 'light dark',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f4f2f1' },
+    { media: '(prefers-color-scheme: dark)', color: '#121010' },
+  ],
   width: 'device-width',
   initialScale: 1,
+  viewportFit: 'cover',
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="es" className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} bg-background`}>
+    <html lang="es" className={`${archivo.variable} ${bebas.variable} bg-background`}>
       <body className="antialiased">
         <AppShell>{children}</AppShell>
-        <Toaster theme="dark" position="top-center" richColors closeButton />
+        <Toaster theme="system" position="top-center" richColors closeButton offset={16} mobileOffset={12} />
         <ServiceWorkerRegister />
       </body>
     </html>

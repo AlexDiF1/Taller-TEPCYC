@@ -18,7 +18,7 @@ export function StatusSelect({
   onChange: (status: OrderStatus) => void
   disabled?: boolean
   id?: string
-  /** Píldora pequeña para listas compactas. */
+  /** Píldora para listas. */
   compact?: boolean
 }) {
   const meta = STATUS_MAP[value] ?? STATUS_MAP.pendiente
@@ -33,14 +33,13 @@ export function StatusSelect({
         id={id}
         aria-label="Cambiar estado de la orden"
         className={cn(
-          'h-9 w-full rounded-lg border-0 font-medium ring-1 ring-inset',
+          'h-11 w-full rounded-xl border-0 font-semibold',
           meta.bg,
           meta.text,
-          meta.ring,
-          compact && 'h-auto w-auto shrink-0 gap-1.5 rounded-full px-2.5 py-1 text-[11px] leading-none',
+          compact && 'h-9 w-auto shrink-0 gap-2 rounded-full px-3 text-[13px] data-[size=default]:h-9',
         )}
       >
-        <span className={cn('size-2 shrink-0 rounded-full', meta.dot)} aria-hidden="true" />
+        <span className={cn('size-2.5 shrink-0 rounded-full', meta.dot)} aria-hidden="true" />
         {compact ? meta.short : <SelectValue />}
       </SelectTrigger>
       <SelectContent>
@@ -48,7 +47,7 @@ export function StatusSelect({
           const Icon = s.icon
           return (
             <SelectItem key={s.value} value={s.value}>
-              <Icon className={cn('size-4', s.text)} aria-hidden="true" />
+              <Icon className={cn('size-[18px]', s.text)} aria-hidden="true" />
               {s.label}
             </SelectItem>
           )

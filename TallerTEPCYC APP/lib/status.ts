@@ -34,7 +34,7 @@ export const STATUSES: StatusMeta[] = [
     short: 'Pendiente',
     icon: ClipboardCheck,
     text: 'text-status-pending',
-    bg: 'bg-status-pending/12',
+    bg: 'bg-status-pending/14',
     dot: 'bg-status-pending',
     ring: 'ring-status-pending/30',
   },

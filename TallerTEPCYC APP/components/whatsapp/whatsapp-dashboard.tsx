@@ -20,16 +20,18 @@ export function WhatsappDashboard() {
   const { data: planes, mutate: refreshPlanes } = useSWR<EstadoPlan[]>('wa-planes', waListPlanes)
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8 md:py-8">
-      <PageHeader
-        eyebrow="Centro de Mensajería"
-        title="WhatsApp Business"
-        description="Vincula la cuenta de WhatsApp del taller mediante Baileys, gestiona protecciones anti-bloqueo y programa historias/estados."
-      />
+    <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-4 md:px-8 md:py-8">
+      <div className="hidden lg:block">
+        <PageHeader
+          eyebrow="Negocio"
+          title="WhatsApp"
+          description="Conexión del número del taller, protecciones anti-bloqueo y estados programados."
+        />
+      </div>
 
       {/* Dos bloques simétricos: conexión en vivo + visor del QR a la izquierda,
           creador y programador de Estados a la derecha. */}
-      <div className="grid gap-6 xl:grid-cols-2 xl:items-start">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2 xl:items-start [&>*]:min-w-0">
         <ConnectionPanel
           state={state}
           isLoading={isLoading}

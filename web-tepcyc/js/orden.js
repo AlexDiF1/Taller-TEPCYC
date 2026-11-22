@@ -81,7 +81,9 @@
     form.classList.add('consultando');
     fetch(`/api/orden/${encodeURIComponent(valor)}?t=${encodeURIComponent(ultimos)}`, { headers: { Accept: 'application/json' } })
       .then((r) => r.json())
-      .then((datos) => (datos && datos.encontrada ? pintar(datos) : avisar('No encontramos una orden con ese número y esos 4 dígitos.', valor)))
+      .then((datos) => (datos && datos.encontrada
+        ? pintar(datos)
+        : avisar(datos && datos.error ? datos.error : 'No encontramos una orden con ese número y esos 4 dígitos.', valor)))
       .catch(() => avisar('No pudimos consultar la orden en este momento.', valor))
       .finally(() => { consultando = false; form.classList.remove('consultando'); });
   });

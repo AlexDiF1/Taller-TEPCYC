@@ -2,7 +2,7 @@ import { VentasDashboard } from '@/components/ventas/ventas-dashboard'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Ventas POS · TODOENPCYCONSOLAS',
+  title: 'Ventas POS · TEPCYC',
 }
 
 export default function VentasPage() {

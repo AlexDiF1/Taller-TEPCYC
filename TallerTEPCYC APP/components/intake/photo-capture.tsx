@@ -41,25 +41,25 @@ export function PhotoCapture({ photos, onChange }: PhotoCaptureProps) {
           type="button"
           onClick={() => setCameraOpen(true)}
           disabled={remaining <= 0}
-          className="group flex flex-col items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/8 px-4 py-6 text-center transition-colors hover:border-primary/60 hover:bg-primary/12 disabled:opacity-50"
+          className="flex items-center gap-3 rounded-2xl bg-primary p-3.5 text-left text-primary-foreground transition-transform active:scale-[0.98] disabled:opacity-50"
         >
-          <span className="grid size-11 place-items-center rounded-full bg-primary text-primary-foreground transition-transform group-hover:scale-105">
-            <Camera className="size-5" aria-hidden="true" />
+          <Camera className="size-6 shrink-0" aria-hidden="true" />
+          <span className="leading-tight">
+            <span className="block text-[15px] font-bold">Tomar foto</span>
+            <span className="block text-[12px] opacity-85">Con la cámara</span>
           </span>
-          <span className="text-sm font-semibold">Tomar foto</span>
-          <span className="text-xs text-muted-foreground">Usar cámara del equipo</span>
         </button>
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={remaining <= 0}
-          className="group flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-input bg-secondary/40 px-4 py-6 text-center transition-colors hover:border-foreground/30 hover:bg-secondary disabled:opacity-50"
+          className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-3.5 text-left transition-transform active:scale-[0.98] disabled:opacity-50"
         >
-          <span className="grid size-11 place-items-center rounded-full bg-secondary text-foreground ring-1 ring-border transition-transform group-hover:scale-105">
-            <ImagePlus className="size-5" aria-hidden="true" />
+          <ImagePlus className="size-6 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <span className="leading-tight">
+            <span className="block text-[15px] font-bold">Galería</span>
+            <span className="block text-[12px] text-muted-foreground">Subir fotos</span>
           </span>
-          <span className="text-sm font-semibold">Subir fotos</span>
-          <span className="text-xs text-muted-foreground">JPG, PNG o HEIC</span>
         </button>
         <input
           ref={fileInputRef}
@@ -76,9 +76,9 @@ export function PhotoCapture({ photos, onChange }: PhotoCaptureProps) {
         />
       </div>
 
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>Galería previa</span>
-        <span className="font-mono">
+      <div className="flex items-center justify-between text-[12.5px] font-semibold text-muted-foreground">
+        <span>Sugeridas: frontal, trasera, puertos y detalles</span>
+        <span className="tabular">
           {photos.length}/{MAX_PHOTOS}
         </span>
       </div>
@@ -88,7 +88,7 @@ export function PhotoCapture({ photos, onChange }: PhotoCaptureProps) {
           {['Frontal', 'Trasera', 'Puertos', 'Detalle'].map((label) => (
             <div
               key={label}
-              className="flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border text-[10px] uppercase tracking-wider text-muted-foreground/70"
+              className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border text-[11px] font-semibold text-muted-foreground/80"
             >
               <Aperture className="size-4" />
               {label}
@@ -98,7 +98,7 @@ export function PhotoCapture({ photos, onChange }: PhotoCaptureProps) {
       ) : (
         <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
           {photos.map((photo, index) => (
-            <li key={photo.id} className="group relative aspect-square overflow-hidden rounded-lg ring-1 ring-border">
+            <li key={photo.id} className="group relative aspect-square overflow-hidden rounded-xl bg-muted">
               <img
                 src={photo.url || '/placeholder.svg'}
                 alt={`Foto ${index + 1} del estado físico del equipo`}
@@ -111,7 +111,7 @@ export function PhotoCapture({ photos, onChange }: PhotoCaptureProps) {
                 <button
                   type="button"
                   onClick={() => setPreview(photo)}
-                  className="grid size-7 place-items-center rounded-md bg-white/15 text-white backdrop-blur hover:bg-white/25"
+                  className="grid size-8 place-items-center rounded-lg bg-white/20 text-white hover:bg-white/30"
                   aria-label={`Ampliar foto ${index + 1}`}
                 >
                   <Expand className="size-3.5" />
@@ -119,7 +119,7 @@ export function PhotoCapture({ photos, onChange }: PhotoCaptureProps) {
                 <button
                   type="button"
                   onClick={() => onChange(photos.filter((p) => p.id !== photo.id))}
-                  className="grid size-7 place-items-center rounded-md bg-destructive/80 text-white hover:bg-destructive"
+                  className="grid size-8 place-items-center rounded-lg bg-destructive text-white hover:bg-destructive/90"
                   aria-label={`Eliminar foto ${index + 1}`}
                 >
                   <Trash2 className="size-3.5" />
@@ -139,7 +139,7 @@ export function PhotoCapture({ photos, onChange }: PhotoCaptureProps) {
       />
 
       <Dialog open={!!preview} onOpenChange={(open) => !open && setPreview(null)}>
-        <DialogContent className="max-w-[calc(100%-2rem)] p-2 sm:max-w-3xl">
+        <DialogContent className="bg-black p-2 pt-12 sm:max-w-3xl sm:pt-2">
           <DialogTitle className="sr-only">Vista ampliada</DialogTitle>
           {preview && (
             <img
@@ -223,7 +223,7 @@ function CameraDialog({ open, onOpenChange, onCapture, remaining, capturedCount 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="max-w-[calc(100%-1rem)] gap-0 overflow-hidden bg-black p-0 sm:max-w-2xl"
+        className="max-h-dvh gap-0 overflow-hidden rounded-none border-0 bg-black p-0 pb-[env(safe-area-inset-bottom)] sm:max-w-2xl sm:rounded-2xl sm:pb-0"
       >
         <DialogTitle className="sr-only">Cámara de ingreso</DialogTitle>
         <DialogDescription className="sr-only">

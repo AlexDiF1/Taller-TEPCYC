@@ -3,7 +3,7 @@ import { Suspense } from 'react'
 import { LoginCard } from '@/components/auth/login-card'
 
 export const metadata: Metadata = {
-  title: 'Entrar · TODOENPCYCONSOLAS',
+  title: 'Entrar · TEPCYC',
   robots: { index: false, follow: false },
 }
 

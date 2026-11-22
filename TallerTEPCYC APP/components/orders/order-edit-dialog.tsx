@@ -126,7 +126,7 @@ function EditForm({
       <div className="border-b border-border bg-secondary/40 p-5 md:p-6">
         <div className="flex items-center gap-2 text-primary">
           <Pencil className="size-4" aria-hidden="true" />
-          <span className="font-mono text-[10px] uppercase tracking-[0.2em]">Editar registro</span>
+          <span className="text-[12px] font-bold uppercase tracking-[0.1em]">Editar registro</span>
         </div>
         <DialogTitle className="mt-2 text-xl font-bold tracking-tight">{order.id}</DialogTitle>
         <DialogDescription className="text-sm text-muted-foreground">
@@ -136,7 +136,7 @@ function EditForm({
       </div>
 
       <div className="grid gap-5 p-5 md:grid-cols-2 md:p-6">
-        <h3 className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground md:col-span-2">
+        <h3 className="text-[12px] font-bold uppercase tracking-[0.1em] text-muted-foreground md:col-span-2">
           Cliente
         </h3>
         <Field label="Nombre completo" htmlFor="edit-name" required error={errors.name}>
@@ -169,7 +169,7 @@ function EditForm({
           />
         </Field>
 
-        <h3 className="mt-2 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground md:col-span-2">
+        <h3 className="mt-2 text-[12px] font-bold uppercase tracking-[0.1em] text-muted-foreground md:col-span-2">
           Equipo
         </h3>
         <Field label="Tipo" htmlFor="edit-type">
@@ -223,7 +223,7 @@ function EditForm({
           <Input id="edit-color" value={form.color} onChange={(e) => set('color', e.target.value)} className="h-10" />
         </Field>
 
-        <h3 className="mt-2 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground md:col-span-2">
+        <h3 className="mt-2 text-[12px] font-bold uppercase tracking-[0.1em] text-muted-foreground md:col-span-2">
           Servicio
         </h3>
         <Field label="Falla reportada" htmlFor="edit-fault" required error={errors.reportedFault} className="md:col-span-2">

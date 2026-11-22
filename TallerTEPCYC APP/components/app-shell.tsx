@@ -2,50 +2,61 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutGrid, Plus, ReceiptText, ShoppingCart, MessageCircle, MapPin, Phone } from 'lucide-react'
-import { BrandLogo } from '@/components/brand-logo'
+import { ClipboardList, Plus, ReceiptText, ShoppingBag, MessageCircle, MapPin, Phone } from 'lucide-react'
+import { BrandLogo, BrandMark } from '@/components/brand-logo'
 import { LogoutButton } from '@/components/auth/logout-button'
 import { BUSINESS } from '@/lib/business'
 import { cn } from '@/lib/utils'
 
-const NAV_SECTIONS = [
-  {
-    title: 'Módulo Taller',
-    items: [
-      { href: '/', label: 'Órdenes de trabajo', short: 'Órdenes', icon: LayoutGrid },
-      { href: '/ingreso', label: 'Nuevo ingreso', short: 'Ingreso', icon: Plus },
-      { href: '/comprobantes', label: 'Comprobantes', short: 'Recibos', icon: ReceiptText },
-    ],
-  },
-  {
-    title: 'Comercial & Comunicación',
-    items: [
-      { href: '/ventas', label: 'Ventas POS', short: 'Ventas', icon: ShoppingCart },
-      { href: '/whatsapp', label: 'WhatsApp', short: 'WhatsApp', icon: MessageCircle },
-    ],
-  },
-]
+type NavItem = { href: string; label: string; short: string; icon: typeof ClipboardList }
 
-const MOBILE_NAV = NAV_SECTIONS.flatMap((s) => s.items)
+const ORDENES: NavItem = { href: '/', label: 'Órdenes de trabajo', short: 'Órdenes', icon: ClipboardList }
+const INGRESO: NavItem = { href: '/ingreso', label: 'Nuevo ingreso', short: 'Ingreso', icon: Plus }
+const VENTAS: NavItem = { href: '/ventas', label: 'Ventas', short: 'Ventas', icon: ShoppingBag }
+const RECIBOS: NavItem = { href: '/comprobantes', label: 'Comprobantes', short: 'Recibos', icon: ReceiptText }
+const WHATSAPP: NavItem = { href: '/whatsapp', label: 'WhatsApp', short: 'WhatsApp', icon: MessageCircle }
+
+const SIDEBAR: { title: string; items: NavItem[] }[] = [
+  { title: 'Taller', items: [ORDENES, RECIBOS] },
+  { title: 'Negocio', items: [VENTAS, WHATSAPP] },
+]
 
 function isActive(pathname: string, href: string) {
   return href === '/' ? pathname === '/' : pathname.startsWith(href)
 }
 
+function sectionName(pathname: string) {
+  const all = [ORDENES, INGRESO, VENTAS, RECIBOS, WHATSAPP]
+  return all.find((i) => isActive(pathname, i.href))?.short ?? ''
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
-  // La pantalla de acceso va sin sidebar ni barra inferior.
+  // La pantalla de acceso va sin barras.
   if (pathname === '/login') return <>{children}</>
 
   return (
-    <div className="relative min-h-dvh lg:grid lg:grid-cols-[264px_1fr]">
-      <aside className="glass sticky top-0 hidden h-dvh flex-col rounded-r-3xl border-y-0 border-l-0 p-5 print:hidden lg:flex">
-        <BrandLogo href="/" />
-        <nav aria-label="Principal" className="mt-8 flex flex-col gap-6">
-          {NAV_SECTIONS.map((section) => (
-            <div key={section.title} className="flex flex-col gap-1">
-              <p className="px-3 font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground/70">
+    <div className="relative min-h-dvh lg:grid lg:grid-cols-[256px_1fr]">
+      {/* ---------- escritorio: barra lateral ---------- */}
+      <aside className="sticky top-0 hidden h-dvh flex-col border-r border-sidebar-border bg-sidebar p-4 print:hidden lg:flex">
+        <BrandLogo href="/" className="px-1" />
+
+        <Link
+          href={INGRESO.href}
+          className={cn(
+            'mt-6 flex h-12 items-center justify-center gap-2 rounded-xl bg-primary text-[15px] font-bold text-primary-foreground shadow-[0_8px_20px_-8px] shadow-primary/60 transition-transform active:scale-[0.98]',
+            isActive(pathname, INGRESO.href) && 'ring-2 ring-primary/30 ring-offset-2 ring-offset-sidebar',
+          )}
+        >
+          <Plus className="size-5" strokeWidth={2.6} aria-hidden="true" />
+          Nuevo ingreso
+        </Link>
+
+        <nav aria-label="Principal" className="mt-6 flex flex-col gap-5">
+          {SIDEBAR.map((section) => (
+            <div key={section.title} className="flex flex-col gap-0.5">
+              <p className="px-3 pb-1 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
                 {section.title}
               </p>
               {section.items.map(({ href, label, icon: Icon }) => {
@@ -56,16 +67,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     href={href}
                     aria-current={active ? 'page' : undefined}
                     className={cn(
-                      'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-all hover:bg-white/[0.06] hover:text-foreground',
-                      active && 'bg-white/[0.09] text-foreground font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]',
+                      'flex h-11 items-center gap-3 rounded-xl px-3 text-[14.5px] font-semibold text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground',
+                      active && 'bg-primary/10 text-primary hover:bg-primary/12 hover:text-primary',
                     )}
                   >
-                    <Icon
-                      className={cn('size-4.5 transition-colors', active ? 'text-primary' : 'group-hover:text-foreground')}
-                      aria-hidden="true"
-                    />
+                    <Icon className="size-5" aria-hidden="true" />
                     {label}
-                    {active && <span className="ml-auto size-1.5 rounded-full bg-primary" aria-hidden="true" />}
                   </Link>
                 )
               })}
@@ -73,8 +80,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
 
-        <div className="glass-soft mt-auto rounded-2xl p-4">
-          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Taller</p>
+        <div className="mt-auto rounded-2xl bg-sidebar-accent p-4">
+          <p className="text-[13px] font-bold">{BUSINESS.name}</p>
           <p className="mt-2 flex items-start gap-2 text-xs text-muted-foreground">
             <MapPin className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
             {BUSINESS.address}, {BUSINESS.city}
@@ -87,43 +94,70 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
+      {/* ---------- contenido ---------- */}
       <div className="flex min-w-0 flex-col">
-        <header className="glass-bar sticky top-0 z-30 flex items-center justify-between rounded-b-2xl border-x-0 border-t-0 px-4 py-3 print:hidden lg:hidden">
-          <BrandLogo href="/" />
+        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border/70 bg-background/92 px-4 pt-[env(safe-area-inset-top)] backdrop-blur-md print:hidden lg:hidden">
+          <Link href="/" aria-label="Ir a las órdenes" className="rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <BrandMark className="size-8" />
+          </Link>
+          <div className="flex min-w-0 flex-1 flex-col leading-none">
+            <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">TEPCYC Taller</span>
+            <span className="mt-1 truncate text-[17px] font-extrabold tracking-tight">{sectionName(pathname)}</span>
+          </div>
+          <LogoutButton compact />
         </header>
 
-        <main className="bg-grid min-h-dvh flex-1 pb-28 print:bg-none print:pb-0 lg:pb-0">{children}</main>
+        <main className="min-h-dvh flex-1 pb-[calc(84px+env(safe-area-inset-bottom))] print:pb-0 lg:pb-0">{children}</main>
       </div>
 
+      {/* ---------- móvil: barra inferior ---------- */}
       <nav
-        aria-label="Navegación móvil"
-        className="glass-bar fixed inset-x-3 bottom-3 z-40 flex items-center justify-around rounded-3xl px-2 py-2 print:hidden lg:hidden"
+        aria-label="Navegación"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface/95 pb-safe backdrop-blur-md print:hidden lg:hidden"
       >
-        {MOBILE_NAV.map(({ href, label, short, icon: Icon }) => {
-          const active = isActive(pathname, href)
-          return (
-            <Link
-              key={href}
-              href={href}
-              aria-current={active ? 'page' : undefined}
-              className={cn(
-                'flex min-w-12 flex-col items-center gap-1 rounded-xl px-1.5 py-1.5 text-[10px] font-medium whitespace-nowrap text-muted-foreground transition-colors',
-                active && 'text-foreground',
-              )}
-            >
-              <span
-                className={cn(
-                  'grid size-7 place-items-center rounded-lg transition-all',
-                  active && 'text-primary',
-                )}
-              >
-                <Icon className="size-5" aria-hidden="true" />
-              </span>
-              {short ?? label}
-            </Link>
-          )
-        })}
+        <div className="mx-auto grid h-[66px] max-w-lg grid-cols-5 items-center px-1">
+          <TabLink item={ORDENES} pathname={pathname} />
+          <TabLink item={VENTAS} pathname={pathname} />
+          <Link
+            href={INGRESO.href}
+            aria-label="Nuevo ingreso"
+            aria-current={isActive(pathname, INGRESO.href) ? 'page' : undefined}
+            className="flex flex-col items-center gap-1 text-[11px] font-bold text-foreground"
+          >
+            <span className="-mt-7 grid size-14 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-[0_10px_24px_-8px] shadow-primary/70 ring-4 ring-background transition-transform active:scale-95">
+              <Plus className="size-7" strokeWidth={2.6} aria-hidden="true" />
+            </span>
+            Ingreso
+          </Link>
+          <TabLink item={RECIBOS} pathname={pathname} />
+          <TabLink item={WHATSAPP} pathname={pathname} />
+        </div>
       </nav>
     </div>
+  )
+}
+
+function TabLink({ item, pathname }: { item: NavItem; pathname: string }) {
+  const active = isActive(pathname, item.href)
+  const Icon = item.icon
+  return (
+    <Link
+      href={item.href}
+      aria-current={active ? 'page' : undefined}
+      className={cn(
+        'flex flex-col items-center gap-1 text-[11px] font-semibold text-muted-foreground transition-colors',
+        active && 'text-foreground',
+      )}
+    >
+      <span
+        className={cn(
+          'grid h-8 w-14 place-items-center rounded-full transition-colors',
+          active && 'bg-primary/12 text-primary',
+        )}
+      >
+        <Icon className="size-[22px]" strokeWidth={active ? 2.3 : 1.9} aria-hidden="true" />
+      </span>
+      {item.short}
+    </Link>
   )
 }

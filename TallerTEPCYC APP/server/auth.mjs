@@ -141,6 +141,9 @@ const PUBLIC_PREFIXES = [
 
 function isPublic(pathname) {
   if (PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return true
+  // La API nunca es pública por «parecer un archivo»: /api/whatsapp/agenda.vcf o
+  // /api/ventas/5.00 terminan en «.algo» y antes se saltaban la sesión.
+  if (pathname.startsWith('/api/') || pathname === '/api') return false
   return /\.[a-z0-9]{2,5}$/i.test(pathname)
 }
 

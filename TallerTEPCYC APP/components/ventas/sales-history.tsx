@@ -221,9 +221,9 @@ export function SalesHistory({
           value={formatMoney(summary.averageTicket)}
           hint={`Costo de mercancía: ${formatMoney(summary.totalCost)}`}
         />
-        <div className="rounded-2xl border border-border bg-card/70 p-4 ring-1 ring-foreground/5">
+        <div className="rounded-3xl border border-border bg-card p-4">
           <div className="flex items-center justify-between">
-            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Por método</p>
+            <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Por método</p>
             <Wallet className="size-4 text-status-review" aria-hidden="true" />
           </div>
           <ul className="mt-2.5 flex flex-col gap-1.5">
@@ -258,12 +258,12 @@ export function SalesHistory({
             placeholder="Buscar por venta, cliente, teléfono o artículo..."
             value={filters.q ?? ''}
             onChange={(e) => onFiltersChange({ ...filters, q: e.target.value })}
-            className="h-10 rounded-xl bg-background/40 pl-9 text-base"
+            className="h-10 rounded-xl bg-surface pl-9 text-base"
             aria-label="Buscar ventas"
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 rounded-xl border border-border bg-background/40 p-1">
+          <div className="flex items-center gap-1 rounded-xl border border-border bg-surface p-1">
             {PERIODS.map((p) => (
               <button
                 key={p.value}
@@ -272,7 +272,7 @@ export function SalesHistory({
                 aria-pressed={period === p.value}
                 className={cn(
                   'rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors',
-                  period === p.value ? 'bg-card text-foreground ring-1 ring-foreground/10' : 'text-muted-foreground hover:text-foreground',
+                  period === p.value ? 'bg-card text-foreground' : 'text-muted-foreground hover:text-foreground',
                 )}
               >
                 {p.label}
@@ -285,7 +285,7 @@ export function SalesHistory({
             value={filters.method || 'todas'}
             onValueChange={(v) => onFiltersChange({ ...filters, method: v === 'todas' ? '' : (v as VentaFilters['method']) })}
           >
-            <SelectTrigger className="h-10 w-44 rounded-xl bg-background/40" aria-label="Filtrar por método de pago">
+            <SelectTrigger className="h-10 w-44 rounded-xl bg-surface" aria-label="Filtrar por método de pago">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -348,7 +348,7 @@ export function SalesHistory({
             const expanded = expandedId === venta.id
             const confirming = confirmId === venta.id
             return (
-              <li key={venta.id} className="overflow-hidden rounded-2xl border border-border bg-card/70 ring-1 ring-foreground/5">
+              <li key={venta.id} className="overflow-hidden rounded-3xl border border-border bg-card">
                 <button
                   type="button"
                   onClick={() => setExpandedId(expanded ? null : venta.id)}
@@ -478,7 +478,7 @@ export function SalesHistory({
                                 : 'La venta no tiene teléfono del cliente'
                             }
                             className={cn(
-                              'h-8 rounded-lg bg-whatsapp font-semibold text-black hover:bg-whatsapp/85',
+                              'h-8 rounded-lg bg-whatsapp font-bold text-white dark:text-black hover:bg-whatsapp/85',
                               !venta.customerPhone && 'opacity-60',
                             )}
                           >
@@ -536,9 +536,9 @@ function StatCard({
   hint: string
 }) {
   return (
-    <div className="rounded-2xl border border-border bg-card/70 p-4 ring-1 ring-foreground/5">
+    <div className="rounded-3xl border border-border bg-card p-4">
       <div className="flex items-start justify-between gap-2">
-        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
+        <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-muted-foreground">{label}</p>
         <span className={cn('grid size-7 place-items-center rounded-lg', bg, accent)}>
           <Icon className="size-4" aria-hidden="true" />
         </span>

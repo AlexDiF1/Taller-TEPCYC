@@ -261,13 +261,13 @@ export function EstadosPanel({
 
   return (
     <div className="flex flex-col gap-5">
-      <section className="rounded-2xl border border-border bg-card/70 p-4 ring-1 ring-foreground/5 md:p-5">
+      <section className="rounded-3xl border border-border bg-card p-4 md:p-5">
         <header className="flex items-center gap-2">
-          <span className="grid size-7 place-items-center rounded-lg bg-status-waiting/12 text-status-waiting">
+          <span className="grid size-9 place-items-center rounded-xl bg-status-waiting/12 text-status-waiting">
             <ImagePlus className="size-4" aria-hidden="true" />
           </span>
           <div>
-            <h2 className="text-sm font-semibold">Nuevo estado</h2>
+            <h2 className="text-[16px] font-extrabold tracking-tight">Nuevo estado</h2>
             <p className="text-xs text-muted-foreground">Imagen o video con texto, o solo texto con color de fondo.</p>
           </div>
         </header>
@@ -283,7 +283,7 @@ export function EstadosPanel({
               onChange={(e) => setCaption(e.target.value.slice(0, 700))}
               rows={3}
               placeholder="Ej. ¡Llegaron controles de PS5 nuevos! 🎮"
-              className="min-h-20 rounded-xl bg-background/40 text-base"
+              className="min-h-20 rounded-xl bg-surface text-base"
             />
             <p className="text-right text-[11px] text-muted-foreground">{caption.length}/700</p>
           </div>
@@ -327,7 +327,7 @@ export function EstadosPanel({
           </div>
 
           {media && (
-            <div className="overflow-hidden rounded-xl border border-border bg-background/40 p-2">
+            <div className="overflow-hidden rounded-xl border border-border bg-surface p-2">
               {media.type === 'video' ? (
                 /* eslint-disable-next-line jsx-a11y/media-has-caption */
                 <video src={media.dataUrl} controls className="max-h-64 w-full rounded-lg" />
@@ -363,7 +363,7 @@ export function EstadosPanel({
             </div>
           )}
 
-          <div className="mt-1 flex flex-col gap-3 rounded-xl border border-border bg-background/40 p-3">
+          <div className="mt-1 flex flex-col gap-3 rounded-xl border border-border bg-surface p-3">
             <div className="flex flex-wrap items-end gap-2">
               <div className="flex min-w-52 flex-1 flex-col gap-1.5">
                 <Label htmlFor="estado-when" className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -398,7 +398,7 @@ export function EstadosPanel({
             </p>
           </div>
 
-          <div className="flex flex-col gap-3 rounded-xl border border-border bg-background/40 p-3">
+          <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-3">
             <div>
               <p className="flex items-center gap-1.5 text-xs font-medium text-foreground">
                 <Repeat className="size-3.5" aria-hidden="true" />
@@ -491,11 +491,11 @@ export function EstadosPanel({
         </div>
       </section>
 
-      <aside className="flex flex-col gap-3 rounded-2xl border border-border bg-card/80 p-4 ring-1 ring-foreground/10">
+      <aside className="flex flex-col gap-3 rounded-3xl border border-border bg-card p-4">
         <header className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Clock className="size-4 text-primary" aria-hidden="true" />
-            <h2 className="text-sm font-semibold">Estados</h2>
+            <h2 className="text-[16px] font-extrabold tracking-tight">Estados</h2>
           </div>
           {pendientes > 0 && (
             <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-[11px] tabular-nums text-muted-foreground">
@@ -505,7 +505,7 @@ export function EstadosPanel({
         </header>
 
         {planes.length > 0 && (
-          <section className="flex flex-col gap-2 rounded-xl border border-border bg-background/40 p-2.5">
+          <section className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-2.5">
             <div className="flex items-center gap-1.5">
               <Repeat className="size-3.5 text-primary" aria-hidden="true" />
               <h3 className="text-xs font-semibold">Automáticos semanales</h3>
@@ -574,7 +574,7 @@ export function EstadosPanel({
           ) : (
             <ul className="flex flex-col gap-2">
               {estados.map((estado) => (
-                <li key={estado.id} className="rounded-xl border border-border bg-background/40 p-3">
+                <li key={estado.id} className="rounded-xl border border-border bg-surface p-3">
                   <div className="flex items-start justify-between gap-2">
                     <span
                       className={cn(

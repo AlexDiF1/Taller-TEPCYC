@@ -103,15 +103,19 @@ export function ReceiptsView({ initialOrderId, initialType }: { initialOrderId?:
   const orderItems = orders.map((o) => ({ label: `${o.id} · ${o.customer.name}`, value: o.id }))
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8 md:py-8 print:max-w-none print:p-0">
-      <div className="grid gap-6 lg:grid-cols-[340px_1fr] print:block">
+    <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-4 md:px-8 md:py-8 print:max-w-none print:p-0">
+      <div className="hidden lg:block print:hidden">
+        <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-primary">Taller</p>
+        <h1 className="mt-1 text-[32px] font-extrabold tracking-tight">Comprobantes</h1>
+      </div>
+      <div className="grid gap-5 lg:grid-cols-[360px_1fr] print:block">
         <aside className="flex flex-col gap-4 lg:sticky lg:top-6 lg:self-start print:hidden" aria-label="Opciones del comprobante">
-          <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card/90 p-4">
-            <label htmlFor="receipt-order" className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+          <div className="flex flex-col gap-3 rounded-3xl border border-border bg-card p-4">
+            <label htmlFor="receipt-order" className="text-[12px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
               Orden
             </label>
             <Select items={orderItems} value={orderId ?? null} onValueChange={(v) => v && selectOrder(String(v))} disabled={isLoading}>
-              <SelectTrigger id="receipt-order" className="h-10 w-full">
+              <SelectTrigger id="receipt-order" className="w-full">
                 <SelectValue placeholder={isLoading ? 'Cargando...' : 'Selecciona una orden'} />
               </SelectTrigger>
               <SelectContent>
@@ -132,7 +136,7 @@ export function ReceiptsView({ initialOrderId, initialType }: { initialOrderId?:
             )}
             {order && (
               <div className="flex flex-col gap-2 border-t border-border pt-3">
-                <label className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                <label className="text-[12px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
                   Cambiar estado
                 </label>
                 <StatusSelect
@@ -150,9 +154,9 @@ export function ReceiptsView({ initialOrderId, initialType }: { initialOrderId?:
             )}
           </div>
 
-          <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card/90 p-4">
-            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Tipo de documento</p>
-            <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Tipo de documento">
+          <div className="flex flex-col gap-3 rounded-3xl border border-border bg-card p-4">
+            <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Tipo de documento</p>
+            <div className="grid grid-cols-2 gap-1 rounded-2xl bg-surface-2 p-1" role="radiogroup" aria-label="Tipo de documento">
               {TYPES.map(({ value, label, description, icon: Icon }) => {
                 const active = type === value
                 return (
@@ -163,13 +167,15 @@ export function ReceiptsView({ initialOrderId, initialType }: { initialOrderId?:
                     aria-checked={active}
                     onClick={() => selectType(value)}
                     className={cn(
-                      'flex flex-col items-start gap-2 rounded-xl border p-3 text-left transition-all',
-                      active ? 'border-primary bg-primary/10' : 'border-border bg-secondary/30 hover:border-foreground/25',
+                      'flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition-colors',
+                      active ? 'bg-surface shadow-sm dark:bg-accent' : 'text-muted-foreground hover:text-foreground',
                     )}
                   >
-                    <Icon className={cn('size-5', active ? 'text-primary' : 'text-muted-foreground')} aria-hidden="true" />
-                    <span className="text-sm font-semibold leading-tight">{label}</span>
-                    <span className="text-xs text-muted-foreground">{description}</span>
+                    <Icon className={cn('size-5 shrink-0', active ? 'text-primary' : 'text-muted-foreground')} aria-hidden="true" />
+                    <span className="min-w-0 leading-tight">
+                      <span className="block truncate text-[14px] font-bold">{label}</span>
+                      <span className="block truncate text-[12px] text-muted-foreground">{description}</span>
+                    </span>
                   </button>
                 )
               })}
@@ -186,28 +192,30 @@ export function ReceiptsView({ initialOrderId, initialType }: { initialOrderId?:
 
           {order && (
             <div className="flex flex-col gap-2">
-              <Button size="lg" className="h-11 font-semibold" onClick={() => window.print()}>
-                <Printer data-icon="inline-start" />
-                Imprimir Ticket 80mm
-              </Button>
               <Button
                 type="button"
                 size="lg"
-                className="h-11 bg-whatsapp font-semibold text-black hover:bg-whatsapp/85"
+                className="h-12 bg-whatsapp font-bold text-white hover:bg-whatsapp/90 dark:text-black"
                 onClick={sendReceiptAutomatically}
                 disabled={!delivery || sendingPdf}
-                title={`PDF bonito con fotos (${order.photos.length} foto${order.photos.length === 1 ? '' : 's'})`}
+                title={`PDF con fotos (${order.photos.length} foto${order.photos.length === 1 ? '' : 's'})`}
               >
-                {sendingPdf ? <Loader2 data-icon="inline-start" className="animate-spin" /> : <Send data-icon="inline-start" />}
-                {sendingPdf ? 'Enviando comprobante...' : 'Enviar PDF bonito por WhatsApp'}
+                {sendingPdf || !delivery ? <Loader2 data-icon="inline-start" className="animate-spin" /> : <Send data-icon="inline-start" />}
+                {sendingPdf ? 'Enviando…' : !delivery ? 'Preparando PDF…' : 'Enviar PDF por WhatsApp'}
               </Button>
               {pdfError && (
-                <Button type="button" variant="outline" size="lg" className="h-11" onClick={() => setPdfAttempt((n) => n + 1)}>
+                <Button type="button" variant="outline" size="lg" onClick={() => setPdfAttempt((n) => n + 1)}>
                   <RefreshCw data-icon="inline-start" />
                   Reintentar PDF
                 </Button>
               )}
-              <WhatsAppButton order={order} label="Enviar estado manual" className="h-11 w-full text-sm" />
+              <div className="grid grid-cols-2 gap-2">
+                <Button variant="outline" size="lg" onClick={() => window.print()}>
+                  <Printer data-icon="inline-start" />
+                  Imprimir 80 mm
+                </Button>
+                <WhatsAppButton order={order} label="Aviso de estado" className="h-12 w-full bg-surface-2 text-foreground hover:bg-accent dark:text-foreground" />
+              </div>
             </div>
           )}
         </aside>
@@ -232,7 +240,7 @@ export function ReceiptsView({ initialOrderId, initialType }: { initialOrderId?:
 
 function ReceiptPreview({ order, type }: { order: Order; type: ReceiptType }) {
   return (
-    <div className="flex justify-center rounded-2xl bg-secondary/30 p-3 ring-1 ring-border sm:p-6 print:bg-transparent print:p-0 print:ring-0">
+    <div className="flex justify-center overflow-x-auto rounded-3xl bg-surface-2 p-3 sm:p-6 print:bg-transparent print:p-0">
       <ReceiptDocument order={order} type={type} items={order.items} />
     </div>
   )
@@ -272,9 +280,9 @@ function DeliveryWarranty({
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card/90 p-4">
+    <div className="flex flex-col gap-3 rounded-3xl border border-border bg-card p-4">
       <div className="flex items-center justify-between">
-        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Garantía</p>
+        <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Garantía</p>
         {dirty && <span className="text-[10px] font-medium text-status-review">Sin guardar</span>}
       </div>
       <label htmlFor="warranty-days" className="text-xs text-muted-foreground">
@@ -332,9 +340,9 @@ function DeliveryItems({ order, onSave }: { order: Order; onSave: (items: Servic
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card/90 p-4">
+    <div className="flex flex-col gap-3 rounded-3xl border border-border bg-card p-4">
       <div className="flex items-center justify-between">
-        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Detalle facturado</p>
+        <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Detalle facturado</p>
         {dirty && <span className="text-[10px] font-medium text-status-review">Sin guardar</span>}
       </div>
       <ItemsEditor items={items} onChange={setItemsDraft} />

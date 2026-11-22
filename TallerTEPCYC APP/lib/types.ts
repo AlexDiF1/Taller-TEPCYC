@@ -37,6 +37,14 @@ export interface ServiceItem {
   price: number
 }
 
+/** Comentario interno de una orden (nota libre fechada, visible en la ficha). */
+export interface OrderComment {
+  id: string
+  author?: string
+  text: string
+  at: string
+}
+
 export interface StatusEvent {
   status: OrderStatus
   at: string
@@ -66,6 +74,7 @@ export interface Order {
   technician?: string
   items: ServiceItem[]
   history: StatusEvent[]
+  comments?: OrderComment[]
   deliveredAt?: string
 }
 

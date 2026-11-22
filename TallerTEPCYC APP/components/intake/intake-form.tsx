@@ -26,7 +26,7 @@ import { IntakeSummary } from './intake-summary'
 import { useOrders } from '@/hooks/use-orders'
 import { uploadPhoto } from '@/lib/api'
 import { ACCESSORIES, BRANDS, CONSOLE_MODELS, CUSTOM_DEVICE_TYPES, DEVICE_TYPES } from '@/lib/status'
-import { BUSINESS } from '@/lib/business'
+import { BUSINESS, formatMoney } from '@/lib/business'
 import { openWhatsApp } from '@/lib/whatsapp'
 import type { DeviceType, IntakePhoto, NewOrderInput } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -188,26 +188,39 @@ export function IntakeForm() {
     }
   }
 
+  const cost = Number(draft.estimatedCost) || 0
+  const saldo = Math.max(cost - (Number(draft.deposit) || 0), 0)
+  const deviceText = [draft.brand, draft.model].filter(Boolean).join(' ')
+
+  const submitButton = (className?: string) => (
+    <Button type="submit" size="lg" disabled={submitting} className={cn('h-12 rounded-xl text-[15px] font-bold', className)}>
+      {submitting ? <Loader2 data-icon="inline-start" className="animate-spin" /> : null}
+      {submitting ? 'Registrando…' : 'Registrar ingreso'}
+      {!submitting && <ArrowRight data-icon="inline-end" className="size-4" />}
+    </Button>
+  )
+
   return (
-    <form onSubmit={handleSubmit} noValidate className="grid gap-6 xl:grid-cols-12">
-      {/* Columna Izquierda / Principal: Datos del cliente y del equipo */}
-      <div className="flex min-w-0 flex-col gap-6 xl:col-span-7">
-        <FormSection step={1} icon={UserRound} title="Datos del cliente" description="A este número llegarán las notificaciones.">
+    <form onSubmit={handleSubmit} noValidate className="grid gap-4 md:gap-6 xl:grid-cols-12">
+      <div className="flex min-w-0 flex-col gap-4 md:gap-6 xl:col-span-7">
+        {/* ---------- 1. Cliente ---------- */}
+        <FormSection step={1} icon={UserRound} title="Cliente" description="A su WhatsApp llegan los avisos de la orden.">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Nombre completo" htmlFor="name" required error={errors.name}>
               <Input
                 id="name"
                 autoComplete="name"
+                autoCapitalize="words"
+                enterKeyHint="next"
                 placeholder="Ej. Laura Martínez"
                 value={draft.name}
                 onChange={(e) => set('name', e.target.value)}
                 aria-invalid={!!errors.name}
-                className="h-10 rounded-xl"
               />
             </Field>
-            <Field label="WhatsApp" htmlFor="phone" required error={errors.phone} hint={`Se usará el indicativo +${BUSINESS.countryCode}`}>
+            <Field label="WhatsApp" htmlFor="phone" required error={errors.phone}>
               <div className="relative">
-                <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-sm text-muted-foreground">
+                <span className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-[15px] font-semibold text-muted-foreground">
                   +{BUSINESS.countryCode}
                 </span>
                 <Input
@@ -215,31 +228,32 @@ export function IntakeForm() {
                   type="tel"
                   inputMode="tel"
                   autoComplete="tel"
+                  enterKeyHint="next"
                   placeholder="300 123 4567"
                   value={draft.phone}
                   onChange={(e) => set('phone', e.target.value)}
                   aria-invalid={!!errors.phone}
-                  className="h-10 rounded-xl pl-12 font-mono"
+                  className="tabular pl-13"
                 />
               </div>
             </Field>
-            <Field label="Documento" htmlFor="documentId" className="sm:col-span-2 sm:max-w-[50%]">
+            <Field label="Documento" htmlFor="documentId" hint="Opcional" className="sm:col-span-2 sm:max-w-[50%]">
               <Input
                 id="documentId"
                 inputMode="numeric"
                 placeholder="C.C. / NIT"
                 value={draft.documentId}
                 onChange={(e) => set('documentId', e.target.value)}
-                className="h-10 rounded-xl"
               />
             </Field>
           </div>
         </FormSection>
 
-        <FormSection step={2} icon={Gamepad} title="Equipo" description="Consola, control, celular o accesorio que ingresa.">
+        {/* ---------- 2. Equipo ---------- */}
+        <FormSection step={2} icon={Gamepad} title="Equipo" description="Qué deja el cliente en el taller.">
           <fieldset className="mb-5">
-            <legend className="mb-2 text-sm font-medium">Tipo de equipo</legend>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+            <legend className="sr-only">Tipo de equipo</legend>
+            <div className="grid grid-cols-5 gap-1">
               {DEVICE_TYPES.map(({ value, label, icon: Icon }) => {
                 const active = draft.deviceType === value
                 return (
@@ -249,146 +263,131 @@ export function IntakeForm() {
                     aria-pressed={active}
                     onClick={() => selectDeviceType(value)}
                     className={cn(
-                      'flex flex-col items-center gap-2 rounded-xl border p-3 text-xs font-semibold transition-all duration-200',
+                      'flex min-w-0 flex-col items-center gap-1.5 rounded-2xl border px-0.5 py-3 text-[11px] font-bold tracking-tight transition-colors',
                       active
-                        ? 'border-primary bg-primary/10 text-foreground shadow-sm ring-1 ring-primary/40'
-                        : 'border-border/80 bg-background/40 text-muted-foreground hover:border-foreground/20 hover:text-foreground',
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border bg-surface text-muted-foreground hover:text-foreground',
                     )}
                   >
-                    <Icon className={cn('size-5', active ? 'text-primary' : 'text-muted-foreground')} aria-hidden="true" />
-                    {label}
+                    <Icon className="size-6" aria-hidden="true" />
+                    <span className="max-w-full truncate">{label}</span>
                   </button>
                 )
               })}
             </div>
           </fieldset>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-4">
             {customDevice ? (
-              <Field label="Marca" htmlFor="brand" required error={errors.brand} hint="Escríbela tú mismo">
+              <Field label="Marca" htmlFor="brand" required error={errors.brand}>
                 <Input
                   id="brand"
                   placeholder="Ej. Samsung, Xiaomi, Genérico"
                   value={draft.brand}
                   onChange={(e) => selectBrand(e.target.value)}
                   aria-invalid={!!errors.brand}
-                  className="h-10 rounded-xl"
                 />
               </Field>
             ) : (
-              <Field label="Marca" htmlFor="brand" required error={errors.brand}>
-                <Select items={BRAND_ITEMS} value={draft.brand} onValueChange={(v) => v && selectBrand(String(v))}>
-                  <SelectTrigger id="brand" className="h-10 w-full rounded-xl">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {BRAND_ITEMS.map((b) => (
-                      <SelectItem key={b.value} value={b.value}>
-                        {b.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
+              <div className="flex flex-col gap-1.5">
+                <span id="brand-label" className="text-[13.5px] font-semibold text-foreground/85">
+                  Marca <span className="text-primary">*</span>
+                </span>
+                <div className="flex flex-wrap gap-2" role="group" aria-labelledby="brand-label">
+                  {BRAND_ITEMS.map((b) => (
+                    <ChipToggle
+                      key={b.value}
+                      label={b.label}
+                      selected={draft.brand === b.value}
+                      onToggle={() => selectBrand(b.value)}
+                    />
+                  ))}
+                </div>
+                {errors.brand && <p className="text-[13px] font-medium text-destructive">{errors.brand}</p>}
+              </div>
             )}
 
-            <Field
-              label="Modelo"
-              htmlFor="model"
-              required
-              error={errors.model}
-              hint={customDevice ? 'Escríbelo tú mismo' : undefined}
-            >
-              {useModelSelect ? (
-                <Select
-                  items={models.map((m) => ({ label: m, value: m }))}
-                  value={models.includes(draft.model) ? draft.model : null}
-                  onValueChange={(v) => {
-                    if (String(v) === '__otro__') {
+            {useModelSelect ? (
+              <div className="flex flex-col gap-1.5">
+                <span id="model-label" className="text-[13.5px] font-semibold text-foreground/85">
+                  Modelo <span className="text-primary">*</span>
+                </span>
+                <div className="flex flex-wrap gap-2" role="group" aria-labelledby="model-label">
+                  {models.map((m) => (
+                    <ChipToggle key={m} label={m} selected={draft.model === m} onToggle={() => set('model', m)} />
+                  ))}
+                  <ChipToggle
+                    label="Otro…"
+                    selected={false}
+                    onToggle={() => {
                       set('model', '')
                       setFreeModel(true)
-                      return
-                    }
-                    set('model', String(v))
-                  }}
-                >
-                  <SelectTrigger id="model" className="h-10 w-full rounded-xl">
-                    <SelectValue placeholder="Selecciona el modelo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {models.map((m) => (
-                      <SelectItem key={m} value={m}>
-                        {m}
-                      </SelectItem>
-                    ))}
-                    <SelectItem value="__otro__">Otro modelo…</SelectItem>
-                  </SelectContent>
-                </Select>
-              ) : (
+                      setTimeout(() => document.getElementById('model')?.focus(), 30)
+                    }}
+                    className="border-dashed"
+                  />
+                </div>
+                {/* ancla para el foco de la validación */}
+                <input id="model" className="sr-only" tabIndex={-1} readOnly value={draft.model} aria-hidden="true" />
+                {errors.model && <p className="text-[13px] font-medium text-destructive">{errors.model}</p>}
+              </div>
+            ) : (
+              <Field label="Modelo" htmlFor="model" required error={errors.model}>
                 <Input
                   id="model"
-                  placeholder={customDevice ? 'Ej. Galaxy A54, Redmi Note 12' : 'Ej. Xbox Series X, Switch OLED'}
+                  placeholder={customDevice ? 'Ej. Galaxy A54, Redmi Note 12' : 'Escribe el modelo'}
                   value={draft.model}
                   onChange={(e) => set('model', e.target.value)}
                   aria-invalid={!!errors.model}
-                  className="h-10 rounded-xl"
                 />
-              )}
-            </Field>
+              </Field>
+            )}
 
-            <Field label="Número de serie" htmlFor="serial">
-              <Input
-                id="serial"
-                placeholder="S/N"
-                value={draft.serial}
-                onChange={(e) => set('serial', e.target.value)}
-                className="h-10 rounded-xl font-mono uppercase"
-              />
-            </Field>
-            <Field label="Color / edición" htmlFor="color">
-              <Input
-                id="color"
-                placeholder="Ej. Blanco, Midnight Black"
-                value={draft.color}
-                onChange={(e) => set('color', e.target.value)}
-                className="h-10 rounded-xl"
-              />
-            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Serial" htmlFor="serial" hint="Opcional">
+                <Input
+                  id="serial"
+                  placeholder="S/N"
+                  autoCapitalize="characters"
+                  value={draft.serial}
+                  onChange={(e) => set('serial', e.target.value)}
+                  className="font-mono uppercase"
+                />
+              </Field>
+              <Field label="Color / edición" htmlFor="color" hint="Opcional">
+                <Input id="color" placeholder="Ej. Blanco" value={draft.color} onChange={(e) => set('color', e.target.value)} />
+              </Field>
+            </div>
           </div>
         </FormSection>
 
-        <FormSection step={3} icon={AlertTriangle} title="Falla reportada" description="Describe con tus palabras qué presenta el equipo.">
-          <Field label="Descripción del cliente" htmlFor="reportedFault" required error={errors.reportedFault}>
+        {/* ---------- 3. Falla ---------- */}
+        <FormSection step={3} icon={AlertTriangle} title="Falla" description="Lo que el cliente dice que tiene el equipo.">
+          <Field label="Descripción" htmlFor="reportedFault" required error={errors.reportedFault}>
             <Textarea
               id="reportedFault"
               rows={3}
-              placeholder="¿Qué pasa con el equipo? ¿Desde cuándo? ¿Sufrió golpes o humedad?"
+              placeholder="¿Qué pasa? ¿Desde cuándo? ¿Golpes o humedad?"
               value={draft.reportedFault}
               onChange={(e) => set('reportedFault', e.target.value)}
               aria-invalid={!!errors.reportedFault}
-              className="rounded-xl"
             />
           </Field>
         </FormSection>
 
-        <FormSection step={4} icon={Package} title="Accesorios que deja" description="Escribe cada accesorio que queda en custodia del taller.">
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Accesorios">
-            {ACCESSORIES.map((item) => (
-              <ChipToggle
-                key={item}
-                label={item}
-                selected={draft.accessories.includes(item)}
-                onToggle={() => toggleAccessory(item)}
-              />
-            ))}
-          </div>
-          <div className="mt-4 flex gap-2">
+        {/* ---------- 4. Fotos ---------- */}
+        {photosSection()}
+
+        {/* ---------- 5. Accesorios ---------- */}
+        <FormSection step={5} icon={Package} title="Accesorios" description="Lo que queda en custodia del taller.">
+          <div className="flex gap-2">
             <label htmlFor="customAccessory" className="sr-only">
               Accesorio
             </label>
             <Input
               id="customAccessory"
-              placeholder="Escribe un accesorio y presiona Agregar"
+              placeholder="Ej. Cable HDMI, control, estuche"
+              enterKeyHint="done"
               value={customAccessory}
               onChange={(e) => setCustomAccessory(e.target.value)}
               onKeyDown={(e) => {
@@ -398,58 +397,59 @@ export function IntakeForm() {
                   addCustomAccessory()
                 }
               }}
-              className="h-10 rounded-xl"
             />
-            <Button type="button" variant="outline" className="h-10 rounded-xl" onClick={addCustomAccessory}>
-              <Plus data-icon="inline-start" />
-              Agregar
+            <Button type="button" variant="outline" className="h-11 shrink-0 px-3.5" onClick={addCustomAccessory} aria-label="Agregar accesorio">
+              <Plus className="size-5" />
             </Button>
           </div>
-          {draft.accessories.length > 0 && (
-            <ul className="mt-3 flex flex-wrap gap-2">
-              {draft.accessories.map((item) => (
-                <li
-                  key={item}
-                  className="inline-flex items-center gap-2 rounded-full border border-primary/60 bg-primary/12 px-3 py-1 text-xs text-primary"
+          <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Accesorios">
+            {ACCESSORIES.filter((item) => !draft.accessories.includes(item)).map((item) => (
+              <ChipToggle key={item} label={`Sin accesorios (${item})`} selected={false} onToggle={() => toggleAccessory(item)} />
+            ))}
+            {draft.accessories.map((item) => (
+              <span
+                key={item}
+                className="inline-flex h-10 items-center gap-1 rounded-full bg-foreground pr-1.5 pl-3.5 text-[14px] font-semibold text-background"
+              >
+                {item}
+                <button
+                  type="button"
+                  className="grid size-7 place-items-center rounded-full opacity-70 transition-opacity hover:opacity-100"
+                  onClick={() => set('accessories', draft.accessories.filter((a) => a !== item))}
+                  aria-label={`Quitar ${item}`}
                 >
-                  {item}
-                  <button
-                    type="button"
-                    className="text-primary/70 transition-colors hover:text-primary"
-                    onClick={() => set('accessories', draft.accessories.filter((a) => a !== item))}
-                    aria-label={`Quitar ${item}`}
-                  >
-                    <X className="size-3.5" aria-hidden="true" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+                  <X className="size-4" aria-hidden="true" />
+                </button>
+              </span>
+            ))}
+          </div>
         </FormSection>
 
-        <FormSection step={6} icon={Calculator} title="Presupuesto">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Costo estimado" htmlFor="estimatedCost" hint="Sujeto a diagnóstico">
+        {/* ---------- 6. Presupuesto ---------- */}
+        <FormSection step={6} icon={Calculator} title="Presupuesto" description="Sujeto a diagnóstico.">
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Costo estimado" htmlFor="estimatedCost">
               <MoneyInput id="estimatedCost" value={draft.estimatedCost} onChange={(v) => set('estimatedCost', v)} />
             </Field>
-            <Field label="Abono recibido" htmlFor="deposit">
+            <Field label="Abono" htmlFor="deposit">
               <MoneyInput id="deposit" value={draft.deposit} onChange={(v) => set('deposit', v)} />
             </Field>
-            <Field label="Entrega estimada" htmlFor="estimatedDate" className="sm:col-span-2">
+            <Field label="Entrega estimada" htmlFor="estimatedDate" className="col-span-2">
               <Input
                 id="estimatedDate"
                 type="date"
                 value={draft.estimatedDate}
                 onChange={(e) => set('estimatedDate', e.target.value)}
-                className="h-10 rounded-xl [color-scheme:dark]"
               />
             </Field>
           </div>
 
-          <div
+          <label
+            htmlFor="acceptedTerms"
             className={cn(
-              'mt-5 flex items-start gap-3 rounded-xl border p-4 transition-colors',
-              errors.acceptedTerms ? 'border-destructive/60 bg-destructive/5' : 'border-border/80 bg-background/40',
+              'mt-5 flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition-colors',
+              errors.acceptedTerms ? 'border-destructive/60 bg-destructive/6' : 'border-border bg-surface-2',
+              draft.acceptedTerms && 'border-status-done/50 bg-status-done/8',
             )}
           >
             <Checkbox
@@ -457,57 +457,71 @@ export function IntakeForm() {
               checked={draft.acceptedTerms}
               onCheckedChange={(checked) => set('acceptedTerms', checked === true)}
               aria-invalid={!!errors.acceptedTerms}
-              className="mt-0.5 rounded-md"
+              className="mt-0.5 size-5 rounded-md"
             />
-            <label htmlFor="acceptedTerms" className="text-xs leading-relaxed text-muted-foreground">
-              El cliente acepta las condiciones del servicio: el diagnóstico puede modificar el costo estimado y los
-              equipos no reclamados en 60 días podrán generar cobro por bodegaje.
-            </label>
-          </div>
+            <span className="text-[13.5px] leading-relaxed text-foreground/85">
+              <b className="font-bold">El cliente acepta las condiciones:</b> el diagnóstico puede cambiar el costo estimado
+              y los equipos no reclamados en 60 días pueden generar cobro por bodegaje.
+            </span>
+          </label>
+          {errors.acceptedTerms && <p className="mt-2 text-[13px] font-medium text-destructive">{errors.acceptedTerms}</p>}
         </FormSection>
       </div>
 
-      {/* Columna Derecha / Cámara + Panel de Resumen Fijo */}
-      <div className="flex flex-col gap-6 xl:col-span-5">
-        <FormSection step={5} icon={Camera} title="Estado físico" description="Fotografía rayones, golpes, sellos y puertos al recibir.">
-          <PhotoCapture photos={draft.photos} onChange={(photos) => set('photos', photos)} />
-          <Field label="Observaciones físicas" htmlFor="physicalNotes" className="mt-5">
-            <Textarea
-              id="physicalNotes"
-              rows={2}
-              placeholder="Ej. Rayón en tapa superior, falta tornillo trasero, sello de garantía roto."
-              value={draft.physicalNotes}
-              onChange={(e) => set('physicalNotes', e.target.value)}
-              className="rounded-xl"
-            />
-          </Field>
-        </FormSection>
-
+      {/* ---------- escritorio: resumen fijo ---------- */}
+      <div className="hidden flex-col gap-6 xl:col-span-5 xl:flex">
         <IntakeSummary draft={draft} submitting={submitting}>
-          <Button type="submit" size="lg" disabled={submitting} className="h-11 w-full rounded-xl text-sm font-semibold shadow-md">
-            {submitting ? (
-              <Loader2 data-icon="inline-start" className="animate-spin" />
-            ) : null}
-            {submitting ? 'Registrando...' : 'Registrar ingreso'}
-            {!submitting && <ArrowRight data-icon="inline-end" className="size-4" />}
-          </Button>
+          {submitButton('w-full')}
         </IntakeSummary>
+      </div>
+
+      {/* ---------- móvil: barra fija para registrar ---------- */}
+      <div className="fixed inset-x-0 bottom-[calc(66px+env(safe-area-inset-bottom))] z-30 border-t border-border bg-background/95 px-4 py-2.5 backdrop-blur-md lg:bottom-0 xl:hidden">
+        <div className="mx-auto flex max-w-3xl items-center gap-3">
+          <div className="min-w-0 flex-1 leading-tight">
+            <p className="truncate text-[14px] font-bold">{deviceText || 'Equipo sin definir'}</p>
+            <p className="truncate text-[12.5px] text-muted-foreground">
+              {cost ? `Saldo ${formatMoney(saldo)}` : draft.name || 'Completa los datos'}
+              {draft.photos.length > 0 && ` · ${draft.photos.length} foto${draft.photos.length === 1 ? '' : 's'}`}
+            </p>
+          </div>
+          {submitButton('shrink-0 px-5')}
+        </div>
       </div>
     </form>
   )
+
+  function photosSection() {
+    return (
+      <FormSection step={4} icon={Camera} title="Estado físico" description="Fotos de rayones, golpes, sellos y puertos.">
+        <PhotoCapture photos={draft.photos} onChange={(photos) => set('photos', photos)} />
+        <Field label="Observaciones" htmlFor="physicalNotes" className="mt-4">
+          <Textarea
+            id="physicalNotes"
+            rows={2}
+            placeholder="Ej. Rayón en tapa superior, falta tornillo trasero."
+            value={draft.physicalNotes}
+            onChange={(e) => set('physicalNotes', e.target.value)}
+          />
+        </Field>
+      </FormSection>
+    )
+  }
 }
 
 function MoneyInput({ id, value, onChange }: { id: string; value: string; onChange: (v: string) => void }) {
   return (
     <div className="relative">
-      <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-sm text-muted-foreground">$</span>
+      <span className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-[15px] font-semibold text-muted-foreground">
+        $
+      </span>
       <Input
         id={id}
         inputMode="numeric"
         placeholder="0"
         value={value ? Number(value).toLocaleString(BUSINESS.locale) : ''}
         onChange={(e) => onChange(e.target.value.replace(/\D/g, ''))}
-        className="h-10 rounded-xl pl-7 font-mono"
+        className="tabular pl-7 font-semibold"
       />
     </div>
   )

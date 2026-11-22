@@ -69,6 +69,16 @@ api.delete('/orders/:id', (req, res) => {
   res.json({ ok: true })
 })
 
+api.post('/orders/:id/comments', (req, res) => {
+  const text = String(req.body?.text ?? '').trim()
+  const author = String(req.body?.author ?? '').trim()
+  if (!text) return res.status(400).json({ error: 'El comentario está vacío.' })
+  if (text.length > 1000) return res.status(400).json({ error: 'Máximo 1000 caracteres.' })
+  const order = store.addOrderComment(req.params.id, text, author || null)
+  if (!order) return res.status(404).json({ error: 'Orden no encontrada.' })
+  res.status(201).json(order)
+})
+
 api.get('/orders/:id/invoices', (req, res) => {
   res.json(store.listInvoices(req.params.id))
 })
@@ -92,13 +102,52 @@ function numeroDeOrden(valor) {
   return limpio
 }
 
+/*
+ * Freno de fuerza bruta: los 4 dígitos son solo 10.000 combinaciones y los números
+ * de orden son seguidos. La web pública llega por un proxy local (siempre la misma IP),
+ * así que el límite va por número de orden y, además, uno global.
+ */
+const INTENTOS_POR_ORDEN = 8
+const INTENTOS_GLOBALES = 300
+const VENTANA_MS = 60 * 60 * 1000
+const fallosPorOrden = new Map()
+let fallosGlobales = { cuenta: 0, desde: Date.now() }
+
+function bloqueada(numero) {
+  const ahora = Date.now()
+  if (ahora - fallosGlobales.desde > VENTANA_MS) fallosGlobales = { cuenta: 0, desde: ahora }
+  if (fallosGlobales.cuenta >= INTENTOS_GLOBALES) return true
+  const registro = fallosPorOrden.get(numero)
+  if (!registro) return false
+  if (ahora - registro.desde > VENTANA_MS) {
+    fallosPorOrden.delete(numero)
+    return false
+  }
+  return registro.cuenta >= INTENTOS_POR_ORDEN
+}
+
+function anotarFallo(numero) {
+  const ahora = Date.now()
+  fallosGlobales.cuenta += 1
+  const registro = fallosPorOrden.get(numero)
+  if (!registro || ahora - registro.desde > VENTANA_MS) fallosPorOrden.set(numero, { cuenta: 1, desde: ahora })
+  else registro.cuenta += 1
+  if (fallosPorOrden.size > 5000) {
+    for (const [clave, r] of fallosPorOrden) if (ahora - r.desde > VENTANA_MS) fallosPorOrden.delete(clave)
+  }
+}
+
 api.get('/public/orden/:numero', (req, res) => {
   const numero = numeroDeOrden(req.params.numero)
+  if (numero && bloqueada(numero)) {
+    return res.status(429).json({ encontrada: false, error: 'Demasiados intentos. Prueba de nuevo en una hora.' })
+  }
   const sufijo = String(req.query?.t ?? '').replace(/\D/g, '').slice(0, 4)
   const orden = numero ? store.getOrder(numero) : undefined
   // Segunda llave: los últimos 4 dígitos del teléfono registrado en la orden.
   const telefono = String(orden?.customer?.phone ?? '').replace(/\D/g, '')
   if (!orden || sufijo.length !== 4 || !telefono.endsWith(sufijo)) {
+    if (numero) anotarFallo(numero)
     return res.status(404).json({ encontrada: false })
   }
   const subtotal = (orden.items ?? []).reduce((suma, item) => suma + (Number(item.price) || 0), 0)

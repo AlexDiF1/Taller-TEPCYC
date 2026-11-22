@@ -58,7 +58,7 @@ export function PhotoViewer({
         </DialogTitle>
 
         <div className="flex items-center justify-between px-1">
-          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+          <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
             {label ?? 'Fotos'} {total > 1 && `· ${index + 1}/${total}`}
           </p>
           <button

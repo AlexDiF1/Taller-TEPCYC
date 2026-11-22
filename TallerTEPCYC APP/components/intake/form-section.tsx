@@ -16,22 +16,16 @@ export function FormSection({
   children: React.ReactNode
 }) {
   return (
-    <section
-      aria-labelledby={`section-${step}`}
-      className="rounded-2xl border border-border bg-card/80 p-5 backdrop-blur-sm md:p-6"
-    >
-      <header className="mb-5 flex items-start gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-secondary text-primary ring-1 ring-border">
+    <section aria-labelledby={`section-${step}`} className="rounded-3xl border border-border bg-card p-4 md:p-6">
+      <header className="mb-4 flex items-center gap-3">
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
           <Icon className="size-5" aria-hidden="true" />
         </span>
         <div className="min-w-0">
-          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-            Paso {String(step).padStart(2, '0')}
-          </p>
-          <h2 id={`section-${step}`} className="text-lg font-semibold tracking-tight">
+          <h2 id={`section-${step}`} className="text-[18px] leading-tight font-extrabold tracking-tight">
             {title}
           </h2>
-          {description && <p className="text-sm text-muted-foreground">{description}</p>}
+          {description && <p className="text-[13.5px] text-muted-foreground">{description}</p>}
         </div>
       </header>
       {children}
@@ -44,11 +38,13 @@ export function ChipToggle({
   selected,
   onToggle,
   icon: Icon,
+  className,
 }: {
   label: string
   selected: boolean
   onToggle: () => void
   icon?: LucideIcon
+  className?: string
 }) {
   return (
     <button
@@ -56,13 +52,14 @@ export function ChipToggle({
       aria-pressed={selected}
       onClick={onToggle}
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-all',
+        'inline-flex h-10 items-center gap-1.5 rounded-full border px-3.5 text-[14px] font-semibold transition-colors',
         selected
-          ? 'border-primary/60 bg-primary/12 text-primary'
-          : 'border-border bg-secondary/40 text-muted-foreground hover:border-foreground/25 hover:text-foreground',
+          ? 'border-foreground bg-foreground text-background'
+          : 'border-border bg-surface text-foreground/80 hover:border-foreground/30 hover:text-foreground',
+        className,
       )}
     >
-      {selected ? <Check className="size-3.5" aria-hidden="true" /> : Icon && <Icon className="size-3.5" aria-hidden="true" />}
+      {selected ? <Check className="size-4" aria-hidden="true" /> : Icon && <Icon className="size-4" aria-hidden="true" />}
       {label}
     </button>
   )
@@ -86,8 +83,8 @@ export function Field({
   children: React.ReactNode
 }) {
   return (
-    <div className={cn('flex flex-col gap-2', className)}>
-      <label htmlFor={htmlFor} className="flex items-center gap-1 text-sm font-medium">
+    <div className={cn('flex min-w-0 flex-col gap-1.5', className)}>
+      <label htmlFor={htmlFor} className="flex items-center gap-1 text-[13.5px] font-semibold text-foreground/85">
         {label}
         {required && (
           <span className="text-primary" aria-hidden="true">
@@ -97,11 +94,11 @@ export function Field({
       </label>
       {children}
       {error ? (
-        <p className="text-xs text-destructive" role="alert">
+        <p className="text-[13px] font-medium text-destructive" role="alert">
           {error}
         </p>
       ) : (
-        hint && <p className="text-xs text-muted-foreground">{hint}</p>
+        hint && <p className="text-[12.5px] text-muted-foreground">{hint}</p>
       )}
     </div>
   )
