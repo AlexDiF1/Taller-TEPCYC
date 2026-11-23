@@ -19,7 +19,9 @@ function firstName(order: Order) {
 }
 
 function orderRef(order: Order) {
-  return `(Orden: #${order.id})`
+  // El id ya puede venir como ORD-99536: en ese caso no se le pone otro «#».
+  const id = String(order.id)
+  return `(Orden: ${/^\d+$/.test(id) ? `#${id}` : id})`
 }
 
 /** Valor en el formato del taller: $500000 */
