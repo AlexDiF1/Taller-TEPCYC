@@ -16,7 +16,6 @@ import { ReceiptDocument, type ReceiptType } from './receipt-document'
 import { ItemsEditor } from './items-editor'
 import { useOrders } from '@/hooks/use-orders'
 import { downloadReceiptPdf, prepareReceiptDelivery, type ReceiptDelivery } from '@/lib/receipt-pdf'
-import { BUSINESS } from '@/lib/business'
 import { buildReceiptMessage } from '@/lib/whatsapp'
 import { WaOfflineError, WaThrottleError, blobToDataUrl, waSendDocument } from '@/lib/wa'
 import type { Order, OrderPatch, ServiceItem } from '@/lib/types'
@@ -75,7 +74,6 @@ export function ReceiptsView({ initialOrderId, initialType }: { initialOrderId?:
         fileName: delivery.fileName,
         dataUrl: await blobToDataUrl(delivery.blob),
         caption: buildReceiptMessage(order, type),
-        cardUrl: BUSINESS.website,
       })
       toast.success(`Comprobante enviado por WhatsApp a ${order.customer.name.split(' ')[0]}.`)
     } catch (error) {

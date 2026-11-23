@@ -114,7 +114,7 @@ export function buildWhatsAppUrl(phone: string, message: string) {
 export type ReceiptKind = 'recepcion' | 'entrega'
 
 /** Mensaje que acompaña al comprobante/factura enviado en PDF. */
-export function buildReceiptMessage(order: Order, type: ReceiptKind, { link = false }: { link?: boolean } = {}) {
+export function buildReceiptMessage(order: Order, type: ReceiptKind) {
   const isDelivery = type === 'entrega'
   const lines = isDelivery
     ? [
@@ -133,7 +133,7 @@ export function buildReceiptMessage(order: Order, type: ReceiptKind, { link = fa
     `Le compartimos ${isDelivery ? 'la factura de entrega' : 'el comprobante de recepción'} de su ${deviceLabel(order)} ${orderRef(order)}.\n\n` +
     `${lines.join('\n')}\n\n` +
     `El documento va adjunto en PDF.\n\n` +
-    cierre(isDelivery ? [webLine({ link }), mapsLine()] : [webLine({ link })])
+    cierre(isDelivery ? [mapsLine()] : [])
   )
 }
 

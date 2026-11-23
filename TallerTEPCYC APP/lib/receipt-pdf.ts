@@ -216,7 +216,7 @@ export async function prepareReceiptDelivery(
     blob,
     fileName: filename,
     variant,
-    url: buildWhatsAppUrl(order.customer.phone, buildReceiptMessage(order, type, { link: true })),
+    url: buildWhatsAppUrl(order.customer.phone, buildReceiptMessage(order, type)),
   }
 }
 
