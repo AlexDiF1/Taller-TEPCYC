@@ -76,6 +76,8 @@ export interface Order {
   history: StatusEvent[]
   comments?: OrderComment[]
   deliveredAt?: string
+  /** Fecha en que se archivó. Las archivadas no salen en la lista y se pueden restaurar. */
+  archivedAt?: string
 }
 
 /** Campos editables de una orden ya registrada (PATCH/PUT /api/orders/:id). */
@@ -103,5 +105,5 @@ export interface OrderPatch {
 
 export type NewOrderInput = Omit<
   Order,
-  'id' | 'createdAt' | 'status' | 'history' | 'items' | 'deliveredAt' | 'technician'
+  'id' | 'createdAt' | 'status' | 'history' | 'items' | 'deliveredAt' | 'technician' | 'archivedAt'
 >

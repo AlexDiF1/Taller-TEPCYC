@@ -198,6 +198,8 @@ function ensureColumn(table, column, definition) {
 ensureColumn('orders', 'warranty_days', 'INTEGER')
 ensureColumn('orders', 'warranty_screen_excluded', 'INTEGER NOT NULL DEFAULT 0')
 ensureColumn('orders', 'warranty_no_after_review', 'INTEGER NOT NULL DEFAULT 1')
+// Órdenes archivadas: no salen en la lista, no se pierde nada y se pueden restaurar.
+ensureColumn('orders', 'archived_at', 'TEXT')
 
 /* ------------------------------- lectura -------------------------------- */
 
@@ -250,6 +252,7 @@ function rowToOrder(row, items, photos, events, comments = []) {
     history: events.map((e) => ({ status: e.status, at: e.at, note: e.note || undefined })),
     comments: comments.map((c) => ({ id: String(c.id), author: c.author || undefined, text: c.text, at: c.at })),
     deliveredAt: row.delivered_at || undefined,
+    archivedAt: row.archived_at || undefined,
   }
 }
 
@@ -555,10 +558,26 @@ export function addOrderComment(orderNumber, text, author = null) {
   return getOrder(orderNumber)
 }
 
+/** Archiva o restaura una orden (reversible). Devuelve la orden, o undefined si no existe. */
+export function setOrderArchived(orderNumber, archived) {
+  const row = findRow(orderNumber)
+  if (!row) return undefined
+  db.prepare('UPDATE orders SET archived_at = ? WHERE id = ?').run(archived ? new Date().toISOString() : null, row.id)
+  return getOrder(orderNumber)
+}
+
+/**
+ * Borrado definitivo, solo de una orden ya archivada.
+ * Devuelve { ok: false, reason: 'not_found' | 'not_archived' } o { ok: true, photos }:
+ * `photos` son las rutas /uploads/... que ya no usa ninguna otra orden (las borra quien llama).
+ */
 export function deleteOrder(orderNumber) {
   const row = findRow(orderNumber)
-  if (!row) return false
+  if (!row) return { ok: false, reason: 'not_found' }
+  if (!row.archived_at) return { ok: false, reason: 'not_archived' }
+  let photos = []
   const tx = db.transaction(() => {
+    const urls = rows('SELECT url FROM order_photos WHERE order_id = ?', [row.id]).map((p) => p.url)
     db.prepare('DELETE FROM order_items WHERE order_id = ?').run(row.id)
     db.prepare('DELETE FROM order_photos WHERE order_id = ?').run(row.id)
     db.prepare('DELETE FROM status_events WHERE order_id = ?').run(row.id)
@@ -568,9 +587,12 @@ export function deleteOrder(orderNumber) {
     // Si el cliente no tiene más órdenes, se elimina también para no dejar registros huérfanos.
     const left = db.prepare('SELECT COUNT(*) AS c FROM orders WHERE customer_id = ?').get(row.customer_id).c
     if (left === 0) db.prepare('DELETE FROM customers WHERE id = ?').run(row.customer_id)
+    // Solo se devuelven las fotos que ninguna otra orden comparte.
+    const shared = db.prepare('SELECT COUNT(*) AS c FROM order_photos WHERE url = ?')
+    photos = [...new Set(urls)].filter((u) => shared.get(u).c === 0)
   })
   tx()
-  return true
+  return { ok: true, photos }
 }
 
 export function listInvoices(orderNumber) {

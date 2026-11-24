@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Search, Plus, Inbox, TriangleAlert, X } from 'lucide-react'
+import { Search, Plus, Inbox, TriangleAlert, X, Archive, ArchiveRestore, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { OrderCard, orderBalance } from './order-card'
 import { useOrders } from '@/hooks/use-orders'
@@ -12,7 +13,7 @@ import { formatMoney } from '@/lib/business'
 import type { Order, OrderStatus } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
-type Filter = 'todas' | 'activas' | OrderStatus
+type Filter = 'todas' | 'activas' | 'archivadas' | OrderStatus
 
 const ACTIVE_STATUSES = STATUSES.filter((s) => !isClosed(s.value))
 const CLOSED = STATUSES.filter((s) => isClosed(s.value))
@@ -24,7 +25,8 @@ function shortMoney(n: number) {
 }
 
 export function OrdersDashboard() {
-  const { orders, isLoading, error } = useOrders()
+  const { orders, archivedOrders, isLoading, error, restoreOrder } = useOrders()
+  const [restoring, setRestoring] = useState<string | null>(null)
   const [filter, setFilter] = useState<Filter>('activas')
   const [query, setQuery] = useState('')
   const router = useRouter()
@@ -48,9 +50,14 @@ export function OrdersDashboard() {
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return orders.filter((o) => {
+    const source = filter === 'archivadas' ? archivedOrders : orders
+    return source.filter((o) => {
       const matchesFilter =
-        filter === 'todas' ? true : filter === 'activas' ? !isClosed(o.status) : o.status === filter
+        filter === 'todas' || filter === 'archivadas'
+          ? true
+          : filter === 'activas'
+            ? !isClosed(o.status)
+            : o.status === filter
       if (!matchesFilter) return false
       if (!q) return true
       return [o.id, o.customer.name, o.customer.phone, o.device.brand, o.device.model, o.device.serial ?? '', o.reportedFault]
@@ -58,7 +65,19 @@ export function OrdersDashboard() {
         .toLowerCase()
         .includes(q)
     })
-  }, [orders, filter, query])
+  }, [orders, archivedOrders, filter, query])
+
+  async function restore(id: string) {
+    setRestoring(id)
+    try {
+      await restoreOrder(id)
+      toast.success(`Orden ${id} restaurada.`)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'No se pudo restaurar la orden.')
+    } finally {
+      setRestoring(null)
+    }
+  }
 
   // En «Activas» la lista se agrupa por estado, en el orden del flujo del taller.
   const groups = useMemo(() => {
@@ -71,8 +90,25 @@ export function OrdersDashboard() {
   const cardList = (list: Order[]) => (
     <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
       {list.map((order) => (
-        <li key={order.id} className="min-w-0">
+        <li key={order.id} className="flex min-w-0 flex-col gap-1.5">
           <OrderCard order={order} />
+          {order.archivedAt && (
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full"
+              disabled={restoring === order.id}
+              onClick={() => restore(order.id)}
+              aria-label={`Restaurar orden ${order.id}`}
+            >
+              {restoring === order.id ? (
+                <Loader2 data-icon="inline-start" className="animate-spin" />
+              ) : (
+                <ArchiveRestore data-icon="inline-start" />
+              )}
+              Restaurar
+            </Button>
+          )}
         </li>
       ))}
     </ul>
@@ -162,6 +198,13 @@ export function OrdersDashboard() {
           />
         ))}
         <Chip active={filter === 'todas'} onClick={() => setFilter('todas')} label="Todas" count={orders.length} />
+        <Chip
+          active={filter === 'archivadas'}
+          onClick={() => setFilter('archivadas')}
+          label="Archivadas"
+          count={archivedOrders.length}
+          icon={<Archive className="size-3.5" aria-hidden="true" />}
+        />
       </div>
 
       {/* ---------- lista ---------- */}
@@ -180,9 +223,13 @@ export function OrdersDashboard() {
       ) : visible.length === 0 ? (
         <div className="flex flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-border px-6 py-14 text-center">
           <Inbox className="size-10 text-muted-foreground" strokeWidth={1.6} aria-hidden="true" />
-          <p className="text-[16px] font-bold">{query ? 'Sin resultados' : 'No hay órdenes aquí'}</p>
+          <p className="text-[16px] font-bold">{query ? 'Sin resultados' : filter === 'archivadas' ? 'No hay órdenes archivadas' : 'No hay órdenes aquí'}</p>
           <p className="max-w-xs text-sm text-muted-foreground">
-            {query ? 'Prueba con otro nombre, teléfono o número de orden.' : 'Cuando un equipo pase a este estado aparecerá en esta lista.'}
+            {query
+              ? 'Prueba con otro nombre, teléfono o número de orden.'
+              : filter === 'archivadas'
+                ? 'Las órdenes que archives desde su ficha (menú ⋯) quedan aquí y se pueden restaurar.'
+                : 'Cuando un equipo pase a este estado aparecerá en esta lista.'}
           </p>
           {!query && filter === 'activas' && (
             <Button className="mt-3" nativeButton={false} render={<Link href="/ingreso" />}>
@@ -250,12 +297,14 @@ function Chip({
   label,
   count,
   dot,
+  icon,
 }: {
   active: boolean
   onClick: () => void
   label: string
   count: number
   dot?: string
+  icon?: ReactNode
 }) {
   return (
     <button
@@ -270,6 +319,7 @@ function Chip({
       )}
     >
       {dot && <span className={cn('size-2 rounded-full', dot)} aria-hidden="true" />}
+      {icon}
       {label}
       <span className={cn('tabular text-[13px]', active ? 'opacity-70' : 'opacity-80')}>{count}</span>
     </button>

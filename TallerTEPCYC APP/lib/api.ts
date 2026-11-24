@@ -67,7 +67,20 @@ export async function addOrderComment(id: string, text: string, author?: string)
   return request<Order>(`${orderUrl(id)}/comments`, { method: 'POST', body: JSON.stringify({ text, author }) })
 }
 
-/** Elimina el registro completo (ítems, fotos, historial y comprobantes). */
+/** Archiva la orden: deja de salir en la lista, pero se puede restaurar. */
+export async function archiveOrder(id: string): Promise<Order> {
+  return request<Order>(`${orderUrl(id)}/archive`, { method: 'POST' })
+}
+
+/** Saca la orden del archivo y la devuelve a la lista. */
+export async function restoreOrder(id: string): Promise<Order> {
+  return request<Order>(`${orderUrl(id)}/restore`, { method: 'POST' })
+}
+
+/**
+ * Borrado definitivo (ítems, fotos del disco, historial y comprobantes).
+ * El servidor solo lo permite con órdenes ya archivadas.
+ */
 export async function deleteOrder(id: string): Promise<void> {
   await request<{ ok: boolean }>(orderUrl(id), { method: 'DELETE' })
 }

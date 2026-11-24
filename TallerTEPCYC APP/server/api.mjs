@@ -1,8 +1,8 @@
 /**
  * API REST del taller (montada en /api).
  */
-import { mkdirSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { mkdirSync, unlinkSync, writeFileSync } from 'node:fs'
+import { basename, join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { Router } from 'express'
 import * as store from './db.mjs'
@@ -64,9 +64,37 @@ api.put('/orders/:id', (req, res) => {
   res.json(order)
 })
 
+/* Archivar en vez de borrar: reversible y no se pierde nada. */
+api.post('/orders/:id/archive', (req, res) => {
+  const order = store.setOrderArchived(req.params.id, true)
+  if (!order) return res.status(404).json({ error: 'Orden no encontrada.' })
+  res.json(order)
+})
+
+api.post('/orders/:id/restore', (req, res) => {
+  const order = store.setOrderArchived(req.params.id, false)
+  if (!order) return res.status(404).json({ error: 'Orden no encontrada.' })
+  res.json(order)
+})
+
+/* Borrado definitivo: solo de una orden archivada; borra también sus fotos del disco. */
 api.delete('/orders/:id', (req, res) => {
-  if (!store.deleteOrder(req.params.id)) return res.status(404).json({ error: 'Orden no encontrada.' })
-  res.json({ ok: true })
+  const result = store.deleteOrder(req.params.id)
+  if (!result.ok && result.reason === 'not_found') return res.status(404).json({ error: 'Orden no encontrada.' })
+  if (!result.ok) return res.status(409).json({ error: 'Primero archiva la orden: solo se borran órdenes archivadas.' })
+  let photosRemoved = 0
+  for (const url of result.photos) {
+    if (!url.startsWith('/uploads/')) continue
+    const file = basename(url)
+    if (!file || file.startsWith('.')) continue
+    try {
+      unlinkSync(join(uploadsDir, file))
+      photosRemoved += 1
+    } catch {
+      /* la foto ya no estaba en el disco */
+    }
+  }
+  res.json({ ok: true, photosRemoved })
 })
 
 api.post('/orders/:id/comments', (req, res) => {
@@ -143,7 +171,9 @@ api.get('/public/orden/:numero', (req, res) => {
     return res.status(429).json({ encontrada: false, error: 'Demasiados intentos. Prueba de nuevo en una hora.' })
   }
   const sufijo = String(req.query?.t ?? '').replace(/\D/g, '').slice(0, 4)
-  const orden = numero ? store.getOrder(numero) : undefined
+  const encontrada = numero ? store.getOrder(numero) : undefined
+  // Las órdenes archivadas no se muestran en la web.
+  const orden = encontrada?.archivedAt ? undefined : encontrada
   // Segunda llave: los últimos 4 dígitos del teléfono registrado en la orden.
   const telefono = String(orden?.customer?.phone ?? '').replace(/\D/g, '')
   if (!orden || sufijo.length !== 4 || !telefono.endsWith(sufijo)) {

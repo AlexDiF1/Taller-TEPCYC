@@ -33,6 +33,19 @@ export function useOrders() {
     return updated
   }
 
+  async function archiveOrder(id: string) {
+    const updated = await api.archiveOrder(id)
+    await mutate()
+    return updated
+  }
+
+  async function restoreOrder(id: string) {
+    const updated = await api.restoreOrder(id)
+    await mutate()
+    return updated
+  }
+
+  /** Borrado definitivo: solo para órdenes ya archivadas. */
   async function deleteOrder(id: string) {
     await api.deleteOrder(id)
     await mutate()
@@ -44,8 +57,14 @@ export function useOrders() {
     return updated
   }
 
+  const allOrders = data ?? []
   return {
-    orders: data ?? [],
+    /** Órdenes en uso (sin las archivadas). */
+    orders: allOrders.filter((o) => !o.archivedAt),
+    /** Órdenes archivadas: solo se ven con el filtro «Archivadas». */
+    archivedOrders: allOrders.filter((o) => o.archivedAt),
+    /** Todas, para abrir la ficha de cualquier orden (también archivada). */
+    allOrders,
     isLoading,
     error,
     createOrder,
@@ -53,6 +72,8 @@ export function useOrders() {
     setItems,
     updateOrder,
     addComment,
+    archiveOrder,
+    restoreOrder,
     deleteOrder,
   }
 }

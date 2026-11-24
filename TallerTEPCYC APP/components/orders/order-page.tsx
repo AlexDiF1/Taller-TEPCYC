@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import {
+  Archive,
+  ArchiveRestore,
   ArrowLeft,
   Camera,
   Check,
@@ -44,8 +46,9 @@ import { cn } from '@/lib/utils'
 export function OrderPage({ id }: { id: string }) {
   const router = useRouter()
   const params = useSearchParams()
-  const { orders, isLoading, error, setStatus, updateOrder, setItems, addComment, deleteOrder } = useOrders()
-  const order = orders.find((o) => o.id === id)
+  const { allOrders, isLoading, error, setStatus, updateOrder, setItems, addComment, archiveOrder, restoreOrder, deleteOrder } =
+    useOrders()
+  const order = allOrders.find((o) => o.id === id)
 
   const [receipt, setReceipt] = useState<ReceiptType | null>(null)
   const [photoIndex, setPhotoIndex] = useState<number | null>(null)
@@ -78,10 +81,33 @@ export function OrderPage({ id }: { id: string }) {
   const meta = STATUS_MAP[order.status] ?? STATUS_MAP.pendiente
   const save = (patch: OrderPatch) => updateOrder(order.id, patch)
 
+  async function handleRestore(orderId: string) {
+    try {
+      await restoreOrder(orderId)
+      toast.success(`Orden ${orderId} restaurada.`)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'No se pudo restaurar la orden.')
+    }
+  }
+
+  async function handleArchive() {
+    const orderId = order!.id
+    try {
+      await archiveOrder(orderId)
+      toast.success(`Orden ${orderId} archivada.`, {
+        description: 'Está en el filtro «Archivadas».',
+        action: { label: 'Deshacer', onClick: () => void handleRestore(orderId) },
+      })
+      router.push('/')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'No se pudo archivar la orden.')
+    }
+  }
+
   async function handleDelete() {
     try {
       await deleteOrder(order!.id)
-      toast.success(`Orden ${order!.id} eliminada.`)
+      toast.success(`Orden ${order!.id} eliminada definitivamente.`)
       router.push('/')
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'No se pudo eliminar la orden.')
@@ -110,12 +136,38 @@ export function OrderPage({ id }: { id: string }) {
               <RotateCcw /> Corregir estado (sin avisar)
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" className="min-h-11 px-2.5 text-[15px]" onClick={() => setConfirmDelete(true)}>
-              <Trash2 /> Eliminar orden
-            </DropdownMenuItem>
+            {order.archivedAt ? (
+              <>
+                <DropdownMenuItem className="min-h-11 px-2.5 text-[15px]" onClick={() => handleRestore(order.id)}>
+                  <ArchiveRestore /> Restaurar orden
+                </DropdownMenuItem>
+                <DropdownMenuItem variant="destructive" className="min-h-11 px-2.5 text-[15px]" onClick={() => setConfirmDelete(true)}>
+                  <Trash2 /> Eliminar definitivamente
+                </DropdownMenuItem>
+              </>
+            ) : (
+              <DropdownMenuItem className="min-h-11 px-2.5 text-[15px]" onClick={handleArchive}>
+                <Archive /> Archivar orden
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {/* ---------- aviso de archivada ---------- */}
+      {order.archivedAt && (
+        <div className="flex items-center gap-3 rounded-2xl border border-border bg-surface px-3.5 py-3">
+          <Archive className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <p className="min-w-0 flex-1 text-[14px] leading-snug">
+            <span className="font-bold">Orden archivada</span>
+            <span className="block text-muted-foreground">El {formatDate(order.archivedAt)}. No sale en la lista.</span>
+          </p>
+          <Button variant="outline" size="lg" onClick={() => handleRestore(order.id)}>
+            <ArchiveRestore data-icon="inline-start" />
+            Restaurar
+          </Button>
+        </div>
+      )}
 
       {/* ---------- equipo ---------- */}
       <header className="flex items-center gap-3.5">
@@ -173,8 +225,11 @@ export function OrderPage({ id }: { id: string }) {
 
       <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <DialogContent>
-          <DialogTitle>¿Eliminar {order.id}?</DialogTitle>
-          <DialogDescription>Se borran el equipo, el historial, los comprobantes y las fotos. No se puede deshacer.</DialogDescription>
+          <DialogTitle>¿Eliminar {order.id} para siempre?</DialogTitle>
+          <DialogDescription>
+            Se borran el equipo, el historial, los comprobantes y las fotos del servidor. No se puede deshacer. Si solo quieres
+            quitarla de la lista, déjala archivada.
+          </DialogDescription>
           <div className="grid grid-cols-2 gap-2">
             <Button variant="outline" size="lg" onClick={() => setConfirmDelete(false)}>
               Cancelar
