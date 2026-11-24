@@ -22,7 +22,9 @@ api.get('/health', (_req, res) => {
   res.json({ ok: true, ...store.stats() })
 })
 
-api.get('/orders', (_req, res) => {
+api.get('/orders', (req, res) => {
+  // ?resumen=1: lista liviana para la pantalla de órdenes. Sin el parámetro, las órdenes completas (como antes).
+  if (req.query.resumen === '1') return res.json(store.listOrderSummaries())
   res.json(store.listOrders())
 })
 

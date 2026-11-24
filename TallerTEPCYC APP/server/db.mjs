@@ -373,6 +373,42 @@ export function listOrders() {
   )
 }
 
+/**
+ * Lista resumida para la pantalla de órdenes: solo lo que pinta la tarjeta, los filtros y la búsqueda.
+ * Sin historial, comentarios, pagos ni ítems (se suman aquí); la ficha pide la orden completa.
+ */
+export function listOrderSummaries() {
+  const list = rows(`
+    SELECT o.order_number, o.created_at, o.status, o.device_type, o.device_brand, o.device_model,
+           o.device_serial, o.reported_fault, o.estimated_cost, o.deposit, o.delivered_at, o.archived_at,
+           c.name AS customer_name, c.phone AS customer_phone,
+           (SELECT COALESCE(SUM(price), 0) FROM order_items i WHERE i.order_id = o.id) AS items_total,
+           (SELECT COUNT(*) FROM order_photos p WHERE p.order_id = o.id) AS photo_count,
+           (SELECT url FROM order_photos p WHERE p.order_id = o.id ORDER BY p.id LIMIT 1) AS photo
+      FROM orders o JOIN customers c ON c.id = o.customer_id
+     ORDER BY o.created_at DESC, o.id DESC`)
+  return list.map((r) => ({
+    id: r.order_number,
+    createdAt: r.created_at,
+    status: r.status,
+    customer: { name: r.customer_name, phone: r.customer_phone ?? '' },
+    device: {
+      type: r.device_type,
+      brand: r.device_brand || 'Otra',
+      model: r.device_model || '',
+      serial: r.device_serial || undefined,
+    },
+    reportedFault: r.reported_fault || '',
+    estimatedCost: r.estimated_cost,
+    deposit: r.deposit,
+    itemsTotal: r.items_total,
+    photo: r.photo || undefined,
+    photoCount: r.photo_count,
+    deliveredAt: r.delivered_at || undefined,
+    archivedAt: r.archived_at || undefined,
+  }))
+}
+
 export function getOrder(orderNumber) {
   const row = db.prepare(`${SELECT_ORDERS} WHERE o.order_number = ?`).get(orderNumber)
   if (!row) return undefined

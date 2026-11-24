@@ -37,7 +37,7 @@ import { ReceiptSheet } from './receipt-sheet'
 import { PhotoViewer } from './photo-viewer'
 import { StatusSelect } from './status-select'
 import { orderBalance, orderTotal, timeAgo } from './order-card'
-import { useOrders } from '@/hooks/use-orders'
+import { useOrder, useOrderActions } from '@/hooks/use-orders'
 import { BRANDS, DEVICE_ICON, DEVICE_TYPES, STATUS_MAP, deviceLabel } from '@/lib/status'
 import { BUSINESS, formatDate, formatMoney } from '@/lib/business'
 import { PAYMENT_MAP } from '@/lib/ventas'
@@ -50,9 +50,6 @@ export function OrderPage({ id }: { id: string }) {
   const router = useRouter()
   const params = useSearchParams()
   const {
-    allOrders,
-    isLoading,
-    error,
     setStatus,
     updateOrder,
     setItems,
@@ -64,8 +61,8 @@ export function OrderPage({ id }: { id: string }) {
     deletePayment,
     deliverOrder,
     undeliverOrder,
-  } = useOrders()
-  const order = allOrders.find((o) => o.id === id)
+  } = useOrderActions()
+  const { order, isLoading, error } = useOrder(id)
 
   const [receipt, setReceipt] = useState<ReceiptType | null>(null)
   const [photoIndex, setPhotoIndex] = useState<number | null>(null)

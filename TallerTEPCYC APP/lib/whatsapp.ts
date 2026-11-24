@@ -59,7 +59,7 @@ function cierre(extras: string[]) {
 }
 
 function greeting(order: Order) {
-  return `Cordial saludo, ${firstName(order)} . Somos TODOENPCYCONSOLAS 🎮📱.`
+  return `Cordial saludo, ${firstName(order)} . Somos ${BUSINESS.name} 🎮📱.`
 }
 
 function totalOf(order: Order) {

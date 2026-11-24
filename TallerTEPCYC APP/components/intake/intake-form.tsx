@@ -26,7 +26,7 @@ import { PhotoCapture } from './photo-capture'
 import { MethodPicker } from '@/components/orders/payment-dialogs'
 import { IntakeSummary } from './intake-summary'
 import { CustomerHistoryCard } from './customer-history'
-import { useOrders } from '@/hooks/use-orders'
+import { useOrderActions } from '@/hooks/use-orders'
 import { findCustomer, getSolicitud, uploadPhoto } from '@/lib/api'
 import { deviceFromSolicitud, localPhone } from '@/lib/solicitudes'
 import { ACCESSORIES, BRANDS, CONSOLE_MODELS, CUSTOM_DEVICE_TYPES, DEVICE_TYPES, deviceLabel } from '@/lib/status'
@@ -98,7 +98,7 @@ const BRAND_ITEMS = BRANDS.map((b) => ({ label: b, value: b }))
 
 export function IntakeForm({ solicitudId }: { solicitudId?: number } = {}) {
   const router = useRouter()
-  const { createOrder } = useOrders()
+  const { createOrder } = useOrderActions()
   const [draft, setDraft] = useState<IntakeDraft>(EMPTY)
   const [errors, setErrors] = useState<Errors>({})
   const [submitting, setSubmitting] = useState(false)

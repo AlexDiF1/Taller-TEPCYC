@@ -8,10 +8,10 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { OrderCard, orderBalance } from './order-card'
 import { SolicitudesAviso } from '@/components/solicitudes/solicitudes-aviso'
-import { useOrders } from '@/hooks/use-orders'
+import { useOrderActions, useOrderList } from '@/hooks/use-orders'
 import { STATUSES, isClosed, isDelivered, isInShop } from '@/lib/status'
 import { formatMoney } from '@/lib/business'
-import type { Order, OrderStatus } from '@/lib/types'
+import type { OrderStatus, OrderSummary } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 type Filter = 'todas' | 'activas' | 'entregadas' | 'archivadas' | OrderStatus
@@ -23,7 +23,7 @@ const CLOSED = STATUSES.filter((s) => isClosed(s.value))
  * «Activas» = equipos que siguen en el taller (también los listos sin recoger).
  * Los estados cerrados (Lista, Rechazada, Fallida) cuentan solo los que faltan por entregar.
  */
-function matches(o: Order, filter: Filter) {
+function matches(o: OrderSummary, filter: Filter) {
   if (filter === 'todas' || filter === 'archivadas') return true
   if (filter === 'activas') return isInShop(o)
   if (filter === 'entregadas') return isDelivered(o)
@@ -37,7 +37,8 @@ function shortMoney(n: number) {
 }
 
 export function OrdersDashboard() {
-  const { orders, archivedOrders, isLoading, error, restoreOrder } = useOrders()
+  const { orders, archivedOrders, isLoading, error } = useOrderList()
+  const { restoreOrder } = useOrderActions()
   const [restoring, setRestoring] = useState<string | null>(null)
   const [filter, setFilter] = useState<Filter>('activas')
   const [query, setQuery] = useState('')
@@ -96,7 +97,7 @@ export function OrdersDashboard() {
     )
   }, [filter, query, visible])
 
-  const cardList = (list: Order[]) => (
+  const cardList = (list: OrderSummary[]) => (
     <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
       {list.map((order) => (
         <li key={order.id} className="flex min-w-0 flex-col gap-1.5">

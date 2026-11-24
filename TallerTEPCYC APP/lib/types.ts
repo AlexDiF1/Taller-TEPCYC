@@ -98,6 +98,21 @@ export interface Order {
   archivedAt?: string
 }
 
+/**
+ * Orden resumida para la lista (`GET /api/orders?resumen=1`): lo que pinta la tarjeta,
+ * sin historial, comentarios ni pagos. La ficha pide la orden completa.
+ */
+export interface OrderSummary
+  extends Pick<Order, 'id' | 'createdAt' | 'status' | 'reportedFault' | 'estimatedCost' | 'deposit' | 'deliveredAt' | 'archivedAt'> {
+  customer: Pick<Customer, 'name' | 'phone'>
+  device: Pick<Device, 'type' | 'brand' | 'model' | 'serial'>
+  /** Suma de los ítems cargados (0 si no hay). */
+  itemsTotal: number
+  /** Primera foto del ingreso, si hay. */
+  photo?: string
+  photoCount: number
+}
+
 /** Campos editables de una orden ya registrada (PATCH/PUT /api/orders/:id). */
 export interface OrderPatch {
   status?: OrderStatus

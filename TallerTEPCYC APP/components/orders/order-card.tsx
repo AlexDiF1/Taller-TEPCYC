@@ -5,7 +5,7 @@ import { Camera, MessageCircle } from 'lucide-react'
 import { DEVICE_ICON, STATUS_MAP, deviceLabel, isDelivered } from '@/lib/status'
 import { formatMoney } from '@/lib/business'
 import { chatUrl } from '@/lib/notify'
-import type { Order } from '@/lib/types'
+import type { Order, OrderSummary } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 /** «hace 3 h», «ayer», «hace 6 días». */
@@ -19,17 +19,24 @@ export function timeAgo(iso: string) {
   return d === 1 ? 'ayer' : `hace ${d} días`
 }
 
-export function orderTotal(order: Order) {
-  return order.items.reduce((s, i) => s + i.price, 0) || order.estimatedCost || 0
+/** Sirve con la orden completa (ítems) o con la resumida de la lista (`itemsTotal`). */
+type Cobrable = Pick<Order, 'status' | 'estimatedCost' | 'deposit'> & (Pick<Order, 'items'> | Pick<OrderSummary, 'itemsTotal'>)
+
+function itemsSum(order: Cobrable) {
+  return 'items' in order ? order.items.reduce((s, i) => s + i.price, 0) : order.itemsTotal
+}
+
+export function orderTotal(order: Cobrable) {
+  return itemsSum(order) || order.estimatedCost || 0
 }
 
 /**
  * Lo que falta por cobrar. En rechazadas y fallidas el presupuesto no se cobra:
  * solo cuenta lo que se haya cargado como ítems (p. ej. la revisión).
  */
-export function orderBalance(order: Order) {
+export function orderBalance(order: Cobrable) {
   const noRepair = order.status === 'rechazada' || order.status === 'fallida'
-  const total = noRepair ? order.items.reduce((s, i) => s + i.price, 0) : orderTotal(order)
+  const total = noRepair ? itemsSum(order) : orderTotal(order)
   return Math.max(total - (order.deposit || 0), 0)
 }
 
@@ -37,10 +44,10 @@ export function orderBalance(order: Order) {
  * Tarjeta de la lista: tocarla abre la ficha de la orden.
  * El único atajo es el botón verde, que abre el chat del cliente.
  */
-export function OrderCard({ order }: { order: Order }) {
+export function OrderCard({ order }: { order: OrderSummary }) {
   const Icon = DEVICE_ICON[order.device.type]
   const meta = STATUS_MAP[order.status] ?? STATUS_MAP.pendiente
-  const photo = order.photos[0]?.url
+  const photo = order.photo
   // Entregada = ya salió del taller; las listas sin recoger siguen «vivas» en la lista.
   const closed = isDelivered(order)
   const days = Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 86400000)
@@ -61,10 +68,10 @@ export function OrderCard({ order }: { order: Order }) {
           {photo ? (
             <>
               <img src={photo} alt="" className="size-full object-cover" />
-              {order.photos.length > 1 && (
+              {order.photoCount > 1 && (
                 <span className="absolute right-1 bottom-1 flex items-center gap-0.5 rounded-md bg-black/65 px-1 py-0.5 text-[10px] font-bold text-white">
                   <Camera className="size-2.5" aria-hidden="true" />
-                  {order.photos.length}
+                  {order.photoCount}
                 </span>
               )}
             </>

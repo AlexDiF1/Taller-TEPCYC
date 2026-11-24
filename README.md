@@ -1,6 +1,6 @@
 # Taller-TEPCYC
 
-Aplicacion web para TODOENPCYCONSOLAS (taller de consolas, controles y celulares).
+Aplicacion web para TODOENPCYCONSOLAS 2 (taller de consolas, controles y celulares).
 
 ## Arquitectura (100% en el VPS)
 

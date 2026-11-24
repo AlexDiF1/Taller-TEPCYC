@@ -1,107 +1,67 @@
 'use client'
 
-import useSWR from 'swr'
+import useSWR, { useSWRConfig } from 'swr'
 import * as api from '@/lib/api'
-import type { NewOrderInput, OrderPatch, OrderStatus, PaymentMethod, ServiceItem } from '@/lib/types'
+import type { NewOrderInput, Order, OrderPatch, OrderStatus, PaymentMethod, ServiceItem } from '@/lib/types'
 
-const ORDERS_KEY = 'orders'
+/**
+ * La lista trae órdenes resumidas (`?resumen=1`); la ficha pide solo su orden completa.
+ * Así la app no descarga todas las órdenes con historial, comentarios y pagos cada vez.
+ */
+const LIST_KEY = 'orders-resumen'
+const orderKey = (id: string) => ['order', id] as const
 
-export function useOrders() {
-  const { data, error, isLoading, mutate } = useSWR(ORDERS_KEY, api.listOrders)
+/** Lista de la pantalla de órdenes. */
+export function useOrderList() {
+  const { data, error, isLoading } = useSWR(LIST_KEY, api.listOrderSummaries)
+  const all = data ?? []
+  return {
+    /** Órdenes en uso (sin las archivadas). */
+    orders: all.filter((o) => !o.archivedAt),
+    /** Órdenes archivadas: solo se ven con el filtro «Archivadas». */
+    archivedOrders: all.filter((o) => o.archivedAt),
+    isLoading,
+    error,
+  }
+}
 
-  async function createOrder(input: NewOrderInput) {
-    const order = await api.createOrder(input)
-    await mutate()
+/** Una orden completa (también archivada), para su ficha. */
+export function useOrder(id: string) {
+  const { data, error, isLoading } = useSWR(orderKey(id), ([, orderId]) => api.getOrder(orderId))
+  return { order: data, isLoading, error }
+}
+
+/** Acciones sobre las órdenes: dejan al día la ficha y la lista. */
+export function useOrderActions() {
+  const { mutate } = useSWRConfig()
+
+  /** Guarda la orden devuelta en su ficha y refresca la lista (si `wait`, espera a la lista). */
+  async function done(order: Order, wait = false) {
+    await mutate(orderKey(order.id), order, { revalidate: false })
+    const list = mutate(LIST_KEY)
+    if (wait) await list
     return order
   }
 
-  async function setStatus(id: string, status: OrderStatus) {
-    const updated = await api.updateOrderStatus(id, status)
-    await mutate()
-    return updated
-  }
-
-  async function updateOrder(id: string, patch: OrderPatch) {
-    const updated = await api.updateOrder(id, patch)
-    await mutate()
-    return updated
-  }
-
-  async function addComment(id: string, text: string, author?: string) {
-    const updated = await api.addOrderComment(id, text, author)
-    await mutate()
-    return updated
-  }
-
-  async function archiveOrder(id: string) {
-    const updated = await api.archiveOrder(id)
-    await mutate()
-    return updated
-  }
-
-  async function restoreOrder(id: string) {
-    const updated = await api.restoreOrder(id)
-    await mutate()
-    return updated
-  }
-
-  async function addPayment(id: string, payment: { amount: number; method: PaymentMethod; note?: string }) {
-    const updated = await api.addOrderPayment(id, payment)
-    await mutate()
-    return updated
-  }
-
-  async function deletePayment(id: string, paymentId: string) {
-    const updated = await api.deleteOrderPayment(id, paymentId)
-    await mutate()
-    return updated
-  }
-
-  async function deliverOrder(id: string, payment?: { amount: number; method: PaymentMethod }) {
-    const updated = await api.deliverOrder(id, payment)
-    await mutate()
-    return updated
-  }
-
-  async function undeliverOrder(id: string) {
-    const updated = await api.undeliverOrder(id)
-    await mutate()
-    return updated
-  }
-
-  /** Borrado definitivo: solo para órdenes ya archivadas. */
-  async function deleteOrder(id: string) {
-    await api.deleteOrder(id)
-    await mutate()
-  }
-
-  async function setItems(id: string, items: ServiceItem[]) {
-    const updated = await api.updateOrderItems(id, items)
-    await mutate()
-    return updated
-  }
-
-  const allOrders = data ?? []
   return {
-    /** Órdenes en uso (sin las archivadas). */
-    orders: allOrders.filter((o) => !o.archivedAt),
-    /** Órdenes archivadas: solo se ven con el filtro «Archivadas». */
-    archivedOrders: allOrders.filter((o) => o.archivedAt),
-    /** Todas, para abrir la ficha de cualquier orden (también archivada). */
-    allOrders,
-    isLoading,
-    error,
-    createOrder,
-    setStatus,
-    setItems,
-    updateOrder,
-    addComment,
-    archiveOrder,
-    restoreOrder,
-    deleteOrder,
-    addPayment,
-    deletePayment,
-    deliverOrder,
-    undeliverOrder,
+    createOrder: async (input: NewOrderInput) => done(await api.createOrder(input), true),
+    setStatus: async (id: string, status: OrderStatus) => done(await api.updateOrderStatus(id, status)),
+    updateOrder: async (id: string, patch: OrderPatch) => done(await api.updateOrder(id, patch)),
+    setItems: async (id: string, items: ServiceItem[]) => done(await api.updateOrderItems(id, items)),
+    addComment: async (id: string, text: string, author?: string) => done(await api.addOrderComment(id, text, author)),
+    archiveOrder: async (id: string) => done(await api.archiveOrder(id), true),
+    restoreOrder: async (id: string) => done(await api.restoreOrder(id), true),
+    addPayment: async (id: string, payment: { amount: number; method: PaymentMethod; note?: string }) =>
+      done(await api.addOrderPayment(id, payment)),
+    deletePayment: async (id: string, paymentId: string) => done(await api.deleteOrderPayment(id, paymentId)),
+    deliverOrder: async (id: string, payment?: { amount: number; method: PaymentMethod }) =>
+      done(await api.deliverOrder(id, payment)),
+    undeliverOrder: async (id: string) => done(await api.undeliverOrder(id)),
+    /** Borrado definitivo: solo para órdenes ya archivadas. */
+    deleteOrder: async (id: string) => {
+      await api.deleteOrder(id)
+      await mutate(LIST_KEY)
+      await mutate(orderKey(id), undefined, { revalidate: false })
+    },
   }
 }

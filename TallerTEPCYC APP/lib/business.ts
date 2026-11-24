@@ -1,5 +1,5 @@
 export const BUSINESS = {
-  name: 'TODOENPCYCONSOLAS2',
+  name: 'TODOENPCYCONSOLAS 2',
   tagline: 'Servicio Técnico y Venta de Videojuegos',
   taxId: 'NIT 1007624883-1',
   address: 'Cra 3 # 20-26 Barrio la Esperanza',

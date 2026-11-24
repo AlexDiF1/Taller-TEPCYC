@@ -71,7 +71,7 @@ const nombre = (n) => String(n ?? '').trim().split(/\s+/)[0] ?? ''
 const fechaCorta = (iso) =>
   new Intl.DateTimeFormat('es-CO', { timeZone: TIMEZONE, day: 'numeric', month: 'long' }).format(new Date(iso))
 
-const SALUDO = (o) => `Cordial saludo, ${nombre(o.customer_name)} . Somos TODOENPCYCONSOLAS 🎮📱.`
+const SALUDO = (o) => `Cordial saludo, ${nombre(o.customer_name)} . Somos TODOENPCYCONSOLAS 2 🎮📱.`
 const FIRMA = 'Cualquier inquietud adicional, estaremos atentos a sus mensajes. Gracias por elegir nuestro servicio técnico.'
 
 export function mensaje(kind, o) {

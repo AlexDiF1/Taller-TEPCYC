@@ -2,7 +2,7 @@ import type { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'TODOENPCYCONSOLAS · Taller de reparación',
+    name: 'TODOENPCYCONSOLAS 2 · Taller de reparación',
     short_name: 'TEPCYC',
     description:
       'Gestión de órdenes de servicio técnico para consolas, controles y accesorios: ingreso con fotos, seguimiento, WhatsApp y comprobantes.',

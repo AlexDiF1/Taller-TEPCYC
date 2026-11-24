@@ -9,6 +9,7 @@ import type {
   Order,
   OrderPatch,
   OrderStatus,
+  OrderSummary,
   PaymentMethod,
   ServiceItem,
   Solicitud,
@@ -46,12 +47,20 @@ export async function listOrders(): Promise<Order[]> {
   return request<Order[]>(ORDERS_URL)
 }
 
+/** Lista liviana para la pantalla de órdenes (sin historial, comentarios ni pagos). */
+export async function listOrderSummaries(): Promise<OrderSummary[]> {
+  return request<OrderSummary[]>(`${ORDERS_URL}?resumen=1`)
+}
+
+/** Una orden completa. `undefined` si no existe (404); otros errores se lanzan. */
 export async function getOrder(id: string): Promise<Order | undefined> {
-  try {
-    return await request<Order>(orderUrl(id))
-  } catch {
-    return undefined
+  const response = await fetch(orderUrl(id), { cache: 'no-store' })
+  if (response.status === 404) return undefined
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { error?: string } | null
+    throw new Error(body?.error ?? `${response.status} ${response.statusText}`)
   }
+  return (await response.json()) as Order
 }
 
 export async function createOrder(input: NewOrderInput): Promise<Order> {

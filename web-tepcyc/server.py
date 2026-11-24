@@ -11,6 +11,7 @@ import os
 import posixpath
 import re
 import sys
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -35,6 +36,40 @@ REGISTRO_LEADS = os.environ.get(
 COLA_LEADS = os.environ.get(
     "COLA_LEADS", "/opt/data/proyectos/n8n/leads-pendientes.jsonl"
 )
+
+# Freno al spam del formulario: límite por IP y uno global (para no llenar el disco ni n8n).
+# Lo que pase del límite responde 429 y no se guarda; el cliente igual sigue por WhatsApp.
+LEADS_IP_10MIN = int(os.environ.get("LEADS_IP_10MIN", "5"))
+LEADS_IP_DIA = int(os.environ.get("LEADS_IP_DIA", "20"))
+LEADS_HORA = int(os.environ.get("LEADS_HORA", "120"))
+# Campo trampa: invisible para las personas; si llega con texto, es un robot.
+CAMPO_TRAMPA = "sitio_web"
+REF_LEAD = re.compile(r"W-[A-Z0-9]{4}")
+_envios_ip = {}   # ip -> [instantes de envío de las últimas 24 h]
+_envios_todos = []  # instantes de envío de la última hora
+_candado = threading.Lock()
+
+
+def permitir_lead(ip, ahora=None):
+    """Cuenta el envío si cabe en los límites. Devuelve False si hay que frenarlo."""
+    ahora = time.time() if ahora is None else ahora
+    with _candado:
+        _envios_todos[:] = [t for t in _envios_todos if ahora - t < 3600]
+        lista = [t for t in _envios_ip.get(ip, []) if ahora - t < 86400]
+        if (len(_envios_todos) >= LEADS_HORA
+                or len(lista) >= LEADS_IP_DIA
+                or sum(1 for t in lista if ahora - t < 600) >= LEADS_IP_10MIN):
+            _envios_ip[ip] = lista
+            return False
+        lista.append(ahora)
+        _envios_ip[ip] = lista
+        _envios_todos.append(ahora)
+        # Limpieza: que el diccionario no crezca sin fin con IPs viejas.
+        if len(_envios_ip) > 5000:
+            for clave in [k for k, v in _envios_ip.items() if not v or ahora - v[-1] >= 86400]:
+                del _envios_ip[clave]
+        return True
+
 
 mimetypes.add_type("font/woff2", ".woff2")
 mimetypes.add_type("image/webp", ".webp")
@@ -121,9 +156,17 @@ class Handler(SimpleHTTPRequestHandler):
                 datos = json.loads(self.rfile.read(largo).decode("utf-8"))
             except (ValueError, UnicodeDecodeError):
                 datos = None
-        if not isinstance(datos, dict):
+        if not isinstance(datos, dict) or not REF_LEAD.fullmatch(str(datos.get("ref") or "")):
             cuerpo, estado = b'{"ok":false}', 400
+        elif str(datos.get(CAMPO_TRAMPA) or "").strip():
+            # Robot: se le responde como si nada para que no aprenda, pero no se guarda.
+            sys.stderr.write("lead descartado: campo trampa (%s)\n" % self.ip_cliente())
+            cuerpo, estado = b'{"ok":true}', 202
+        elif not permitir_lead(self.ip_cliente()):
+            sys.stderr.write("lead frenado: demasiados envios (%s)\n" % self.ip_cliente())
+            cuerpo, estado = b'{"ok":false,"error":"demasiados envios"}', 429
         else:
+            datos.pop(CAMPO_TRAMPA, None)
             cuerpo, estado = self.reenviar_lead(datos)
         self._api = True
         self.send_response(estado)
@@ -132,11 +175,15 @@ class Handler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(cuerpo)
 
+    def ip_cliente(self):
+        # Detrás de Cloudflare la IP real viene en CF-Connecting-IP (el servidor solo escucha en 127.0.0.1).
+        return (self.headers.get("CF-Connecting-IP") or self.address_string())[:64]
+
     def reenviar_lead(self, datos):
         lead = {
             "recibido": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
             "origen": "tepcyc.com/reparacion",
-            "ip": self.headers.get("CF-Connecting-IP") or self.address_string(),
+            "ip": self.ip_cliente(),
             "agente": (self.headers.get("User-Agent") or "")[:300],
             "datos": {k: (str(v)[:600] if not isinstance(v, (int, float)) else v)
                       for k, v in list(datos.items())[:20]},
