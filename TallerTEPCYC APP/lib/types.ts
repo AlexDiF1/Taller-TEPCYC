@@ -123,4 +123,37 @@ export interface OrderPatch {
 export type NewOrderInput = Omit<
   Order,
   'id' | 'createdAt' | 'status' | 'history' | 'items' | 'deliveredAt' | 'technician' | 'archivedAt' | 'payments'
->
+> & {
+  /** Solicitud de la web de la que sale la orden (queda marcada como convertida). */
+  solicitudId?: number
+}
+
+/** Solicitud que llegó por el formulario de tepcyc.com/reparacion. */
+export type SolicitudStatus = 'nueva' | 'convertida' | 'descartada'
+export interface Solicitud {
+  id: number
+  /** Código W-XXXX que el cliente manda también por WhatsApp. */
+  ref: string
+  receivedAt: string
+  name: string
+  /** «Consola», «Control» o «Celular», como lo eligió en la web. */
+  device: string
+  model: string
+  fault: string
+  /** Desde cuándo falla, si lo dijo. */
+  since?: string
+  /** Su WhatsApp, cuando escribió con el código. */
+  phone?: string
+  status: SolicitudStatus
+  /** Orden creada a partir de la solicitud. */
+  orderId?: string
+}
+
+/** Cliente que ya vino antes (búsqueda por teléfono en Ingreso). */
+export interface CustomerHistory {
+  customer: { name: string; phone: string; documentId?: string } | null
+  total: number
+  orders: (Pick<Order, 'id' | 'createdAt' | 'status' | 'reportedFault' | 'deliveredAt' | 'archivedAt'> & {
+    device: Pick<Device, 'type' | 'brand' | 'model'>
+  })[]
+}

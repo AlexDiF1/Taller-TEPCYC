@@ -11,6 +11,7 @@ import { api, uploadsDir } from './api.mjs'
 import { authApi, gate, authEnabled, readSession } from './auth.mjs'
 import { projectDir } from './db.mjs'
 import { startWhatsapp } from './whatsapp.mjs'
+import { startRecordatorios } from './recordatorios.mjs'
 
 const port = Number(process.env.PORT ?? 3005)
 const hostname = process.env.HOST ?? '0.0.0.0'
@@ -59,6 +60,8 @@ const server = app.listen(port, hostname, () => {
   startWhatsapp()
     .then((status) => console.log(`[whatsapp] estado inicial: ${status.status}`))
     .catch((error) => console.error('[whatsapp] no se pudo iniciar:', error?.message ?? error))
+  // Recordatorios automáticos: apagados hasta que se activen en la página WhatsApp.
+  startRecordatorios()
 })
 
 server.on('error', (error) => {

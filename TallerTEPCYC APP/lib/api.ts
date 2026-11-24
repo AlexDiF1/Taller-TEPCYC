@@ -3,7 +3,16 @@
  * Habla con `/api/orders`, que lee y escribe en Firestore mediante
  * `lib/orders-firestore.ts` (que solo se ejecuta en el servidor).
  */
-import type { NewOrderInput, Order, OrderPatch, OrderStatus, PaymentMethod, ServiceItem } from './types'
+import type {
+  CustomerHistory,
+  NewOrderInput,
+  Order,
+  OrderPatch,
+  OrderStatus,
+  PaymentMethod,
+  ServiceItem,
+  Solicitud,
+} from './types'
 
 const ORDERS_URL = '/api/orders'
 const UPLOADS_URL = '/api/uploads'
@@ -137,6 +146,73 @@ export async function getCashSummary(from: string, to: string): Promise<CashSumm
  */
 export async function deleteOrder(id: string): Promise<void> {
   await request<{ ok: boolean }>(orderUrl(id), { method: 'DELETE' })
+}
+
+/* ---------------- solicitudes de la web ---------------- */
+
+export async function listSolicitudes(): Promise<{ solicitudes: Solicitud[]; nuevas: number }> {
+  return request('/api/solicitudes')
+}
+
+export async function getSolicitud(id: number | string): Promise<Solicitud> {
+  return request<Solicitud>(`/api/solicitudes/${encodeURIComponent(String(id))}`)
+}
+
+/** Descartar una solicitud o devolverla a «nueva». */
+export async function setSolicitudStatus(id: number, status: 'nueva' | 'descartada'): Promise<Solicitud> {
+  return request<Solicitud>(`/api/solicitudes/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) })
+}
+
+/* ---------------- clientes recurrentes ---------------- */
+
+/** Cliente y órdenes anteriores con ese teléfono (cualquier formato). */
+export async function findCustomer(phone: string): Promise<CustomerHistory> {
+  return request<CustomerHistory>(`/api/clientes/buscar?${new URLSearchParams({ telefono: phone })}`)
+}
+
+/* ---------------- recordatorios automáticos ---------------- */
+
+export type ReminderKind = 'presupuesto' | 'recoger'
+
+export interface ReminderPending {
+  orderId: string
+  kind: ReminderKind
+  customer: string
+  device: string
+  since: string
+  dueAt: string
+  /** Ya toca enviarlo. */
+  due: boolean
+  /** Por qué no saldría aunque toque. */
+  motivo?: string
+}
+
+export interface ReminderSent {
+  id: number
+  orderId: string
+  customer: string
+  kind: ReminderKind
+  sentAt: string
+  ok: boolean
+  detail?: string
+}
+
+export interface RemindersSummary {
+  config: Record<ReminderKind, boolean>
+  reglas: Record<ReminderKind, { desdeDias: number; hastaDias: number }>
+  horario: { desde: number; hasta: number; ahora: boolean }
+  maxPorDia: number
+  enviadosHoy: number
+  pendientes: ReminderPending[]
+  enviados: ReminderSent[]
+}
+
+export async function getReminders(): Promise<RemindersSummary> {
+  return request<RemindersSummary>('/api/recordatorios')
+}
+
+export async function setReminders(patch: Partial<Record<ReminderKind, boolean>>): Promise<RemindersSummary> {
+  return request<RemindersSummary>('/api/recordatorios', { method: 'PUT', body: JSON.stringify(patch) })
 }
 
 /** Sube una foto (data URL ya comprimida) y devuelve su URL en /uploads. */

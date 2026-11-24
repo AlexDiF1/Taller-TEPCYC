@@ -253,6 +253,39 @@ CREATE INDEX IF NOT EXISTS idx_productos_category ON productos(category);
 // Qué producto del catálogo se vendió en cada línea (para devolver existencias al editar o borrar).
 ensureColumn('venta_items', 'product_id', 'INTEGER')
 
+// Fase 4: solicitudes de la web (vienen de leads.jsonl, ver leads.mjs) y recordatorios automáticos.
+// `ref` es el código W-XXXX del formulario: así una solicitud no se importa dos veces.
+// Un recordatorio se manda una sola vez por orden, tipo y momento en que la orden entró al estado (`since`).
+db.exec(`
+CREATE TABLE IF NOT EXISTS solicitudes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ref TEXT UNIQUE NOT NULL,
+  received_at TEXT NOT NULL,
+  name TEXT,
+  device TEXT,
+  model TEXT,
+  fault TEXT,
+  since TEXT,
+  phone TEXT,
+  status TEXT NOT NULL DEFAULT 'nueva',
+  order_number TEXT,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_solicitudes_status ON solicitudes(status, received_at);
+
+CREATE TABLE IF NOT EXISTS order_reminders (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL,
+  since TEXT NOT NULL,
+  sent_at TEXT NOT NULL,
+  ok INTEGER NOT NULL DEFAULT 1,
+  detail TEXT,
+  UNIQUE(order_id, kind, since)
+);
+CREATE INDEX IF NOT EXISTS idx_order_reminders_sent ON order_reminders(sent_at);
+`)
+
 /* ------------------------------- lectura -------------------------------- */
 
 function rows(sql, params = []) {
@@ -1593,6 +1626,182 @@ export function deleteProducto(id) {
 /** ¿Otro producto usa esta foto? (para no borrar del disco una foto compartida). */
 export function productPhotoInUse(url) {
   return Boolean(db.prepare('SELECT 1 FROM productos WHERE photo_url = ?').get(url))
+}
+
+/* ------------------------- clientes recurrentes ------------------------- */
+
+/**
+ * Cliente y órdenes anteriores por teléfono. Los teléfonos se guardaron como se escribieron
+ * («300 123 4567», «573001234567»…), así que se comparan normalizados.
+ */
+export function findCustomerHistory(phone, limit = 10) {
+  const target = normalizePhone(phone)
+  if (!target) return { customer: null, orders: [], total: 0 }
+  const ids = rows("SELECT id, phone FROM customers WHERE phone IS NOT NULL AND phone <> ''")
+    .filter((c) => normalizePhone(c.phone) === target)
+    .map((c) => c.id)
+  if (ids.length === 0) return { customer: null, orders: [], total: 0 }
+  const marks = ids.map(() => '?').join(',')
+  const list = rows(`${SELECT_ORDERS} WHERE o.customer_id IN (${marks}) ORDER BY o.created_at DESC, o.id DESC`, ids)
+  const first = list[0] ?? db.prepare(`SELECT name AS customer_name, phone AS customer_phone, document_id AS customer_document FROM customers WHERE id = ?`).get(ids[0])
+  return {
+    customer: {
+      name: first.customer_name ?? '',
+      phone: first.customer_phone ?? '',
+      documentId: first.customer_document || undefined,
+    },
+    total: list.length,
+    orders: list.slice(0, limit).map((o) => ({
+      id: o.order_number,
+      createdAt: o.created_at,
+      status: o.status,
+      device: { type: o.device_type, brand: o.device_brand || '', model: o.device_model || '' },
+      reportedFault: o.reported_fault || '',
+      deliveredAt: o.delivered_at || undefined,
+      archivedAt: o.archived_at || undefined,
+    })),
+  }
+}
+
+/* ------------------------- solicitudes de la web ------------------------ */
+
+export const SOLICITUD_STATUSES = ['nueva', 'convertida', 'descartada']
+
+function rowToSolicitud(r) {
+  return {
+    id: r.id,
+    ref: r.ref,
+    receivedAt: r.received_at,
+    name: r.name || '',
+    device: r.device || '',
+    model: r.model || '',
+    fault: r.fault || '',
+    since: r.since || undefined,
+    phone: r.phone || undefined,
+    status: r.status,
+    orderId: r.order_number || undefined,
+  }
+}
+
+/** Agrega las solicitudes que aún no estén (por `ref`). Devuelve cuántas entraron. */
+export function importSolicitudes(list) {
+  const insert = db.prepare(
+    `INSERT OR IGNORE INTO solicitudes (ref, received_at, name, device, model, fault, since, status, updated_at)
+     VALUES (?,?,?,?,?,?,?,?,?)`,
+  )
+  let added = 0
+  db.transaction(() => {
+    for (const s of list) {
+      const info = insert.run(s.ref, s.receivedAt, s.name, s.device, s.model, s.fault, s.since, s.status ?? 'nueva', s.receivedAt)
+      added += Number(info.changes)
+    }
+  })()
+  return added
+}
+
+export function listSolicitudes(limit = 300) {
+  return rows('SELECT * FROM solicitudes ORDER BY received_at DESC, id DESC LIMIT ?', [limit]).map(rowToSolicitud)
+}
+
+export function getSolicitud(id) {
+  const n = intId(id)
+  const row = n ? db.prepare('SELECT * FROM solicitudes WHERE id = ?').get(n) : undefined
+  return row ? rowToSolicitud(row) : undefined
+}
+
+export function countSolicitudesNuevas() {
+  return db.prepare("SELECT COUNT(*) c FROM solicitudes WHERE status = 'nueva'").get().c
+}
+
+/** Descartar o volver a «nueva». Una convertida ya tiene su orden y no cambia. */
+export function setSolicitudStatus(id, status) {
+  const current = getSolicitud(id)
+  if (!current) return { error: 'not_found' }
+  if (current.status === 'convertida') return { error: 'converted' }
+  db.prepare('UPDATE solicitudes SET status = ?, updated_at = ? WHERE id = ?').run(status, new Date().toISOString(), current.id)
+  return { solicitud: getSolicitud(current.id) }
+}
+
+/** El cliente escribió por WhatsApp con su código W-XXXX: queda su número en la solicitud. */
+export function linkSolicitudPhone(ref, phone) {
+  if (!ref || !phone) return false
+  const info = db
+    .prepare("UPDATE solicitudes SET phone = ?, updated_at = ? WHERE ref = ? AND (phone IS NULL OR phone = '')")
+    .run(String(phone), new Date().toISOString(), String(ref).toUpperCase())
+  return Number(info.changes) > 0
+}
+
+export function markSolicitudConverted(id, orderNumber) {
+  const current = getSolicitud(id)
+  if (!current) return undefined
+  db.prepare("UPDATE solicitudes SET status = 'convertida', order_number = ?, updated_at = ? WHERE id = ?").run(
+    orderNumber,
+    new Date().toISOString(),
+    current.id,
+  )
+  return getSolicitud(current.id)
+}
+
+export function getSolicitudByRef(ref) {
+  const row = ref ? db.prepare('SELECT * FROM solicitudes WHERE ref = ?').get(String(ref).toUpperCase()) : undefined
+  return row ? rowToSolicitud(row) : undefined
+}
+
+/* ----------------------- recordatorios automáticos ---------------------- */
+
+/**
+ * Órdenes que podrían necesitar recordatorio: esperando confirmación del presupuesto, o
+ * listas y sin entregar. `since` = cuándo entraron a ese estado (las notas de entrega no cuentan).
+ */
+export function reminderCandidates() {
+  return rows(`
+    SELECT o.id, o.order_number, o.status, o.device_brand, o.device_model, o.estimated_cost, o.deposit,
+           c.name AS customer_name, c.phone AS customer_phone,
+           (SELECT MAX(e.at) FROM status_events e
+             WHERE e.order_id = o.id AND e.status = o.status AND (e.note IS NULL OR e.note NOT LIKE 'Entrega%')) AS since,
+           (SELECT COALESCE(SUM(i.price), 0) FROM order_items i WHERE i.order_id = o.id) AS items_total
+      FROM orders o JOIN customers c ON c.id = o.customer_id
+     WHERE o.archived_at IS NULL
+       AND (o.status = 'esperandoConfirmacion' OR (o.status = 'completada' AND o.delivered_at IS NULL))`)
+}
+
+export function reminderKeys() {
+  return new Set(rows('SELECT order_id, kind, since FROM order_reminders').map((r) => `${r.order_id}|${r.kind}|${r.since}`))
+}
+
+export function recordReminder({ orderId, kind, since, ok = true, detail = null }) {
+  db.prepare(
+    'INSERT OR IGNORE INTO order_reminders (order_id, kind, since, sent_at, ok, detail) VALUES (?,?,?,?,?,?)',
+  ).run(orderId, kind, since, new Date().toISOString(), ok ? 1 : 0, detail ? String(detail).slice(0, 300) : null)
+}
+
+export function countRemindersSince(iso) {
+  return db.prepare('SELECT COUNT(*) c FROM order_reminders WHERE ok = 1 AND sent_at >= ?').get(iso).c
+}
+
+export function listReminders(limit = 30) {
+  return rows(
+    `SELECT r.*, o.order_number, c.name AS customer_name
+       FROM order_reminders r JOIN orders o ON o.id = r.order_id JOIN customers c ON c.id = o.customer_id
+      ORDER BY r.sent_at DESC, r.id DESC LIMIT ?`,
+    [limit],
+  ).map((r) => ({
+    id: r.id,
+    orderId: r.order_number,
+    customer: r.customer_name,
+    kind: r.kind,
+    since: r.since,
+    sentAt: r.sent_at,
+    ok: Boolean(r.ok),
+    detail: r.detail || undefined,
+  }))
+}
+
+/** Último mensaje que salió bien a ese número (para no escribirle dos veces el mismo día). */
+export function lastSentTo(phone) {
+  const target = normalizePhone(phone)
+  if (!target) return null
+  return db.prepare('SELECT MAX(at) at FROM whatsapp_audit WHERE ok = 1 AND phone = ?').get(target)?.at ?? null
 }
 
 export function stats() {

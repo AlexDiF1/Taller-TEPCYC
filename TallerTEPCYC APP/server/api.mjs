@@ -7,6 +7,8 @@ import { randomUUID } from 'node:crypto'
 import { Router } from 'express'
 import * as store from './db.mjs'
 import * as wa from './whatsapp.mjs'
+import * as leads from './leads.mjs'
+import * as recordatorios from './recordatorios.mjs'
 
 export const uploadsDir = process.env.UPLOADS_DIR ?? join(store.projectDir, 'uploads')
 mkdirSync(uploadsDir, { recursive: true })
@@ -29,7 +31,60 @@ api.post('/orders', (req, res) => {
   if (!body.customer?.name || !body.device?.model) {
     return res.status(400).json({ error: 'Faltan datos del cliente o del equipo.' })
   }
-  res.status(201).json(store.createOrder(body))
+  // Si viene de una solicitud de la web, se valida antes de crear nada.
+  const solicitud = body.solicitudId == null ? null : store.getSolicitud(body.solicitudId)
+  if (body.solicitudId != null && !solicitud) return res.status(400).json({ error: 'La solicitud de la web no existe.' })
+  if (solicitud?.status === 'convertida') {
+    return res.status(409).json({ error: `Esa solicitud ya es la orden ${solicitud.orderId}.`, orderId: solicitud.orderId })
+  }
+  const order = store.createOrder(body)
+  if (solicitud) store.markSolicitudConverted(solicitud.id, order.id)
+  res.status(201).json(order)
+})
+
+/* ---------------- clientes recurrentes (Ingreso: al escribir el teléfono) ---------------- */
+api.get('/clientes/buscar', (req, res) => {
+  const telefono = String(req.query.telefono ?? '').slice(0, 30)
+  if (telefono.replace(/\D/g, '').length < 10) return res.json({ customer: null, orders: [], total: 0 })
+  res.json(store.findCustomerHistory(telefono))
+})
+
+/* ---------------- solicitudes de la web (bandeja) ---------------- */
+api.get('/solicitudes', (_req, res) => {
+  leads.syncSolicitudes()
+  res.json({ solicitudes: store.listSolicitudes(300), nuevas: store.countSolicitudesNuevas() })
+})
+
+api.get('/solicitudes/:id', (req, res) => {
+  leads.syncSolicitudes()
+  const solicitud = store.getSolicitud(req.params.id)
+  if (!solicitud) return res.status(404).json({ error: 'Solicitud no encontrada.' })
+  res.json(solicitud)
+})
+
+api.patch('/solicitudes/:id', (req, res) => {
+  const status = req.body?.status
+  if (!['nueva', 'descartada'].includes(status)) return res.status(400).json({ error: 'Estado de solicitud inválido.' })
+  const result = store.setSolicitudStatus(req.params.id, status)
+  if (result.error === 'not_found') return res.status(404).json({ error: 'Solicitud no encontrada.' })
+  if (result.error === 'converted') return res.status(409).json({ error: 'Esa solicitud ya se convirtió en orden.' })
+  res.json(result.solicitud)
+})
+
+/* ---------------- recordatorios automáticos por WhatsApp ---------------- */
+api.get('/recordatorios', (_req, res) => {
+  res.json(recordatorios.resumen())
+})
+
+api.put('/recordatorios', (req, res) => {
+  const body = req.body ?? {}
+  for (const key of ['presupuesto', 'recoger']) {
+    if (body[key] !== undefined && typeof body[key] !== 'boolean') {
+      return res.status(400).json({ error: 'Indica sí o no para cada recordatorio.' })
+    }
+  }
+  recordatorios.setConfig(body)
+  res.json(recordatorios.resumen())
 })
 
 api.get('/orders/:id', (req, res) => {

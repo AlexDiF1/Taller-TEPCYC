@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
@@ -14,6 +14,7 @@ import {
   ArrowRight,
   Plus,
   X,
+  Inbox,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,12 +25,14 @@ import { FormSection, ChipToggle, Field } from './form-section'
 import { PhotoCapture } from './photo-capture'
 import { MethodPicker } from '@/components/orders/payment-dialogs'
 import { IntakeSummary } from './intake-summary'
+import { CustomerHistoryCard } from './customer-history'
 import { useOrders } from '@/hooks/use-orders'
-import { uploadPhoto } from '@/lib/api'
-import { ACCESSORIES, BRANDS, CONSOLE_MODELS, CUSTOM_DEVICE_TYPES, DEVICE_TYPES } from '@/lib/status'
+import { findCustomer, getSolicitud, uploadPhoto } from '@/lib/api'
+import { deviceFromSolicitud, localPhone } from '@/lib/solicitudes'
+import { ACCESSORIES, BRANDS, CONSOLE_MODELS, CUSTOM_DEVICE_TYPES, DEVICE_TYPES, deviceLabel } from '@/lib/status'
 import { BUSINESS, formatMoney } from '@/lib/business'
 import { openWhatsApp } from '@/lib/whatsapp'
-import type { DeviceType, IntakePhoto, NewOrderInput, PaymentMethod } from '@/lib/types'
+import type { CustomerHistory, DeviceType, IntakePhoto, NewOrderInput, PaymentMethod, Solicitud } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 export interface IntakeDraft {
@@ -93,7 +96,7 @@ function validate(d: IntakeDraft): Errors {
 
 const BRAND_ITEMS = BRANDS.map((b) => ({ label: b, value: b }))
 
-export function IntakeForm() {
+export function IntakeForm({ solicitudId }: { solicitudId?: number } = {}) {
   const router = useRouter()
   const { createOrder } = useOrders()
   const [draft, setDraft] = useState<IntakeDraft>(EMPTY)
@@ -101,6 +104,76 @@ export function IntakeForm() {
   const [submitting, setSubmitting] = useState(false)
   const [customAccessory, setCustomAccessory] = useState('')
   const [freeModel, setFreeModel] = useState(false)
+  /** Solicitud de la web que se está convirtiendo en orden. */
+  const [solicitud, setSolicitud] = useState<Solicitud | null>(null)
+  /** Cliente que ya vino antes con ese teléfono. */
+  const [history, setHistory] = useState<CustomerHistory | null>(null)
+  /** Lo que puso la búsqueda por teléfono (para cambiarlo si cambian el número). */
+  const autoFilled = useRef({ name: '', documentId: '' })
+
+  // «Convertir en orden»: se rellena el ingreso con lo que el cliente escribió en la web.
+  useEffect(() => {
+    if (!solicitudId) return
+    let vigente = true
+    getSolicitud(solicitudId)
+      .then((s) => {
+        if (!vigente) return
+        if (s.status === 'convertida') {
+          toast.info(`Esa solicitud ya es la orden ${s.orderId}.`)
+          return
+        }
+        const equipo = deviceFromSolicitud(s.device, s.model)
+        setSolicitud(s)
+        setFreeModel(equipo.freeModel)
+        setDraft((d) => ({
+          ...d,
+          name: s.name || d.name,
+          phone: s.phone ? localPhone(s.phone) : d.phone,
+          deviceType: equipo.deviceType,
+          brand: equipo.brand,
+          model: equipo.model,
+          reportedFault: [s.fault, s.since ? `(Falla desde: ${s.since})` : ''].filter(Boolean).join(' '),
+        }))
+      })
+      .catch(() => vigente && toast.error('No se encontró la solicitud de la web.'))
+    return () => {
+      vigente = false
+    }
+  }, [solicitudId])
+
+  // Clientes recurrentes: con el número completo se buscan sus órdenes anteriores.
+  const phoneDigits = draft.phone.replace(/\D/g, '')
+  useEffect(() => {
+    if (phoneDigits.length < 10) {
+      setHistory(null)
+      return
+    }
+    let vigente = true
+    const timer = setTimeout(() => {
+      findCustomer(phoneDigits)
+        .then((found) => {
+          if (!vigente) return
+          setHistory(found.customer ? found : null)
+          // Si el nombre está vacío (o lo puso esta búsqueda con otro número) se pone el que ya
+          // tenía; si lo escribieron a mano, se respeta.
+          const auto = autoFilled.current
+          const name = found.customer?.name ?? ''
+          const documentId = found.customer?.documentId ?? ''
+          const replace = (value: string, previous: string) => !value.trim() || (previous !== '' && value === previous)
+          setDraft((d) => ({
+            ...d,
+            name: replace(d.name, auto.name) ? name : d.name,
+            documentId: replace(d.documentId, auto.documentId) ? documentId : d.documentId,
+          }))
+          autoFilled.current = { name, documentId }
+        })
+        .catch(() => vigente && setHistory(null))
+    }, 400)
+    return () => {
+      vigente = false
+      clearTimeout(timer)
+    }
+  }, [phoneDigits])
 
   const customDevice = isCustomDevice(draft.deviceType)
   const models = CONSOLE_MODELS[draft.brand] ?? []
@@ -175,6 +248,7 @@ export function IntakeForm() {
       deposit: Number(draft.deposit) || 0,
       depositMethod: Number(draft.deposit) > 0 && draft.depositMethod ? draft.depositMethod : undefined,
       estimatedDate: draft.estimatedDate ? new Date(draft.estimatedDate).toISOString() : undefined,
+      solicitudId: solicitud?.id,
     }
 
     try {
@@ -188,15 +262,16 @@ export function IntakeForm() {
         duration: 8000,
       })
       router.push(`/orden/${encodeURIComponent(order.id)}?recibo=recepcion`)
-    } catch {
-      toast.error('No se pudo registrar la orden. Intenta de nuevo.')
+    } catch (error) {
+      const detail = error instanceof Error && /solicitud/i.test(error.message) ? error.message : 'Intenta de nuevo.'
+      toast.error('No se pudo registrar la orden.', { description: detail })
       setSubmitting(false)
     }
   }
 
   const cost = Number(draft.estimatedCost) || 0
   const saldo = Math.max(cost - (Number(draft.deposit) || 0), 0)
-  const deviceText = [draft.brand, draft.model].filter(Boolean).join(' ')
+  const deviceText = deviceLabel({ brand: draft.brand, model: draft.model })
 
   const submitButton = (className?: string) => (
     <Button type="submit" size="lg" disabled={submitting} className={cn('h-12 rounded-xl text-[15px] font-bold', className)}>
@@ -209,9 +284,29 @@ export function IntakeForm() {
   return (
     <form onSubmit={handleSubmit} noValidate className="grid gap-4 md:gap-6 xl:grid-cols-12">
       <div className="flex min-w-0 flex-col gap-4 md:gap-6 xl:col-span-7">
+        {solicitud && (
+          <div className="flex items-start gap-3 rounded-2xl border border-primary/40 bg-primary/8 p-3.5">
+            <Inbox className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden="true" />
+            <p className="min-w-0 flex-1 text-[14px] leading-snug">
+              <b className="font-bold">Desde la solicitud {solicitud.ref} de la web.</b>{' '}
+              <span className="text-muted-foreground">
+                Revisa los datos con el equipo en la mano{solicitud.phone ? '' : ' y escribe su WhatsApp'}.
+              </span>
+            </p>
+            <button
+              type="button"
+              onClick={() => setSolicitud(null)}
+              className="-m-1.5 grid size-11 shrink-0 place-items-center rounded-full text-muted-foreground hover:text-foreground"
+              aria-label="No marcar la solicitud como convertida"
+              title="Registrar sin marcar la solicitud"
+            >
+              <X className="size-4" aria-hidden="true" />
+            </button>
+          </div>
+        )}
         {/* ---------- 1. Cliente ---------- */}
         <FormSection step={1} icon={UserRound} title="Cliente" description="A su WhatsApp llegan los avisos de la orden.">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Nombre completo" htmlFor="name" required error={errors.name}>
               <Input
                 id="name"
@@ -243,6 +338,14 @@ export function IntakeForm() {
                 />
               </div>
             </Field>
+            {history && (
+              <CustomerHistoryCard
+                history={history}
+                currentName={draft.name}
+                onUseName={(name) => set('name', name)}
+                className="sm:col-span-2"
+              />
+            )}
             <Field label="Documento" htmlFor="documentId" hint="Opcional" className="sm:col-span-2 sm:max-w-[50%]">
               <Input
                 id="documentId"

@@ -2,9 +2,10 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ClipboardList, Plus, Search, ShoppingBag, MessageCircle, MapPin, Package, Phone, Wallet } from 'lucide-react'
+import { ClipboardList, Inbox, Plus, Search, ShoppingBag, MessageCircle, MapPin, Package, Phone, Wallet } from 'lucide-react'
 import { BrandLogo, BrandMark } from '@/components/brand-logo'
 import { LogoutButton } from '@/components/auth/logout-button'
+import { useSolicitudes } from '@/hooks/use-solicitudes'
 import { BUSINESS } from '@/lib/business'
 import { cn } from '@/lib/utils'
 
@@ -12,6 +13,7 @@ type NavItem = { href: string; label: string; short: string; icon: typeof Clipbo
 
 const ORDENES: NavItem = { href: '/', label: 'Órdenes de trabajo', short: 'Órdenes', icon: ClipboardList }
 const INGRESO: NavItem = { href: '/ingreso', label: 'Nuevo ingreso', short: 'Ingreso', icon: Plus }
+const SOLICITUDES: NavItem = { href: '/solicitudes', label: 'Solicitudes web', short: 'Solicitudes', icon: Inbox }
 const VENTAS: NavItem = { href: '/ventas', label: 'Ventas', short: 'Ventas', icon: ShoppingBag }
 const CATALOGO: NavItem = { href: '/catalogo', label: 'Catálogo', short: 'Catálogo', icon: Package }
 const CAJA: NavItem = { href: '/caja', label: 'Caja del día', short: 'Caja', icon: Wallet }
@@ -19,7 +21,7 @@ const BUSCAR: NavItem = { href: '/?buscar=1', label: 'Buscar orden', short: 'Bus
 const WHATSAPP: NavItem = { href: '/whatsapp', label: 'WhatsApp', short: 'WhatsApp', icon: MessageCircle }
 
 const SIDEBAR: { title: string; items: NavItem[] }[] = [
-  { title: 'Taller', items: [ORDENES] },
+  { title: 'Taller', items: [ORDENES, SOLICITUDES] },
   { title: 'Negocio', items: [VENTAS, CATALOGO, CAJA, WHATSAPP] },
 ]
 
@@ -31,7 +33,7 @@ function isActive(pathname: string, href: string) {
 
 function sectionName(pathname: string) {
   if (pathname.startsWith('/orden/')) return 'Orden'
-  const all = [ORDENES, INGRESO, VENTAS, CATALOGO, CAJA, WHATSAPP]
+  const all = [ORDENES, INGRESO, SOLICITUDES, VENTAS, CATALOGO, CAJA, WHATSAPP]
   return all.find((i) => isActive(pathname, i.href))?.short ?? ''
 }
 
@@ -78,6 +80,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   >
                     <Icon className="size-5" aria-hidden="true" />
                     {label}
+                    {href === SOLICITUDES.href && <NuevasBadge />}
                   </Link>
                 )
               })}
@@ -139,6 +142,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </nav>
     </div>
+  )
+}
+
+/** Cuántas solicitudes de la web faltan por atender (solo si hay alguna). */
+function NuevasBadge() {
+  const { nuevas } = useSolicitudes()
+  if (!nuevas) return null
+  return (
+    <span className="ml-auto grid h-6 min-w-6 place-items-center rounded-full bg-primary px-1.5 text-[12px] font-bold text-primary-foreground tabular">
+      <span className="sr-only">, nuevas: </span>
+      {nuevas}
+    </span>
   )
 }
 

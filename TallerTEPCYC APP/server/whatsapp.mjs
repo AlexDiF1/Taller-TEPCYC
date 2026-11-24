@@ -22,7 +22,7 @@
  *   (rate-overlimit, 429, 463/reachout timelock, cortes raros).
  * - Estados: pocos al día y bien separados, como los publica una persona.
  */
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, statSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { createHash, randomInt } from 'node:crypto'
 import makeWASocket, {
@@ -36,6 +36,7 @@ import pino from 'pino'
 import QRCode from 'qrcode'
 import * as store from './db.mjs'
 import { formatPhone, toJid } from './phone.mjs'
+import { refDeTexto, solicitudPorRef } from './leads.mjs'
 
 const logger = pino({ level: process.env.WA_LOG_LEVEL ?? 'warn' })
 
@@ -56,16 +57,8 @@ function envNumber(name, fallback) {
 
 /* ------------------------- leads de la web ------------------------------- */
 // El formulario de tepcyc.com manda un código `Ref: W-XXXX` dentro del texto de
-// WhatsApp. Con él se reconoce al cliente que ya dejó sus datos en la web y se
-// guarda el contacto con su nombre real en vez del perfil de WhatsApp.
-const LEADS_FILE = process.env.LEADS_FILE ?? '/opt/data/proyectos/n8n/leads.jsonl'
-let leadsCache = { mtime: -1, porRef: new Map() }
-
-function refDeTexto(texto) {
-  const m = String(texto ?? '').match(/\bW-[A-Z0-9]{4,8}\b/)
-  return m ? m[0] : null
-}
-
+// WhatsApp. Con él se reconoce al cliente que ya dejó sus datos en la web: se guarda
+// el contacto con su nombre real y su número queda en la solicitud (ver leads.mjs).
 function textoDelMensaje(message) {
   const m = message?.message ?? {}
   return (
@@ -75,29 +68,6 @@ function textoDelMensaje(message) {
     m.videoMessage?.caption ??
     ''
   )
-}
-
-function leadPorRef(ref) {
-  if (!ref) return null
-  try {
-    const info = statSync(LEADS_FILE)
-    if (info.mtimeMs !== leadsCache.mtime) {
-      const porRef = new Map()
-      for (const linea of readFileSync(LEADS_FILE, 'utf8').split('\n')) {
-        if (!linea.trim()) continue
-        try {
-          const datos = JSON.parse(linea)?.datos
-          if (datos?.ref) porRef.set(String(datos.ref).toUpperCase(), datos)
-        } catch {
-          /* línea corrupta: se ignora */
-        }
-      }
-      leadsCache = { mtime: info.mtimeMs, porRef }
-    }
-    return leadsCache.porRef.get(String(ref).toUpperCase()) ?? null
-  } catch {
-    return null
-  }
 }
 
 /**
@@ -441,14 +411,21 @@ function wireEvents(socket, saveCreds) {
       if (!jid || message.key?.fromMe) continue
       if (jid === STORIES_JID || jid.endsWith('@g.us') || jid.endsWith('@broadcast')) continue
       const telefono = jid.split('@')[0].split(':')[0]
-      const lead = leadPorRef(refDeTexto(textoDelMensaje(message)))
+      const ref = refDeTexto(textoDelMensaje(message))
+      const lead = ref ? solicitudPorRef(ref) : null
       store.upsertWhatsappContact({
         phone: telefono,
         // Si el mensaje trae el código de la web, manda el nombre que escribió
         // el cliente en el formulario (suele ser mejor que el perfil).
-        name: lead?.nombre || message.pushName,
+        name: lead?.name || message.pushName,
         source: lead ? 'web' : 'chat',
       })
+      // El número real queda en la solicitud de la bandeja. En cuentas con LID el chat
+      // no trae el teléfono: se usa la dirección alterna si WhatsApp la manda.
+      if (lead) {
+        const alterna = [jid, message.key?.remoteJidAlt, message.key?.senderPn].find((j) => String(j ?? '').endsWith('@s.whatsapp.net'))
+        if (alterna) store.linkSolicitudPhone(lead.ref, alterna.split('@')[0].split(':')[0])
+      }
     }
   })
 

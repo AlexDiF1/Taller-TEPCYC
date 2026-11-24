@@ -7,6 +7,7 @@ import { Search, Plus, Inbox, TriangleAlert, X, Archive, ArchiveRestore, Loader2
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { OrderCard, orderBalance } from './order-card'
+import { SolicitudesAviso } from '@/components/solicitudes/solicitudes-aviso'
 import { useOrders } from '@/hooks/use-orders'
 import { STATUSES, isClosed, isDelivered, isInShop } from '@/lib/status'
 import { formatMoney } from '@/lib/business'
@@ -135,6 +136,8 @@ export function OrdersDashboard() {
           Nuevo ingreso
         </Button>
       </div>
+
+      <SolicitudesAviso />
 
       {/* ---------- resumen ---------- */}
       <section aria-label="Resumen" className="grid grid-cols-3 gap-2.5">

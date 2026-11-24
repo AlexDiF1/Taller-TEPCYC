@@ -4,6 +4,7 @@ import useSWR from 'swr'
 import { PageHeader } from '@/components/page-header'
 import { ConnectionPanel } from './connection-panel'
 import { EstadosPanel } from './estados-panel'
+import { RecordatoriosPanel } from './recordatorios-panel'
 import { waListEstados, waListPlanes, waStatus, type EstadoPlan, type EstadoProgramado } from '@/lib/wa'
 
 export function WhatsappDashboard() {
@@ -25,19 +26,22 @@ export function WhatsappDashboard() {
         <PageHeader
           eyebrow="Negocio"
           title="WhatsApp"
-          description="Conexión del número del taller, protecciones anti-bloqueo y estados programados."
+          description="Conexión del número del taller, protecciones anti-bloqueo, recordatorios automáticos y estados programados."
         />
       </div>
 
       {/* Dos bloques simétricos: conexión en vivo + visor del QR a la izquierda,
           creador y programador de Estados a la derecha. */}
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-2 xl:items-start [&>*]:min-w-0">
-        <ConnectionPanel
-          state={state}
-          isLoading={isLoading}
-          error={error}
-          onState={(next) => void mutate(next, false)}
-        />
+        <div className="flex flex-col gap-5 [&>*]:min-w-0">
+          <ConnectionPanel
+            state={state}
+            isLoading={isLoading}
+            error={error}
+            onState={(next) => void mutate(next, false)}
+          />
+          <RecordatoriosPanel connected={Boolean(state?.connected)} />
+        </div>
         <EstadosPanel
           estados={estados ?? []}
           planes={planes ?? []}
