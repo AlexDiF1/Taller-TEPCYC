@@ -101,9 +101,9 @@ export function OrderCard({ order }: { order: Order }) {
           rel="noopener noreferrer"
           aria-label={`Abrir el chat de WhatsApp de ${order.customer.name}`}
           title="Abrir chat de WhatsApp"
-          className="flex w-14 shrink-0 items-center justify-center border-l border-border/70 text-whatsapp transition-colors hover:bg-whatsapp/10"
+          className="mt-3 mr-3 grid size-9 shrink-0 place-items-center rounded-full bg-whatsapp/10 text-whatsapp transition-colors hover:bg-whatsapp/20"
         >
-          <MessageCircle className="size-6" aria-hidden="true" />
+          <MessageCircle className="size-[18px]" aria-hidden="true" />
         </a>
       )}
     </article>

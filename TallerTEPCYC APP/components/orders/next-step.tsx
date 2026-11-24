@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { ArrowRight, Loader2, ReceiptText } from 'lucide-react'
+import { ArrowRight, Loader2, MessageCircle, ReceiptText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { STATUS_MAP } from '@/lib/status'
@@ -12,6 +12,16 @@ import type { Order, OrderPatch, OrderStatus } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 type Move = { to: OrderStatus; label: string }
+
+/** Botón para avisar por WhatsApp el estado actual, en cualquier momento. */
+const NOTIFY_LABEL: Record<OrderStatus, string> = {
+  pendiente: 'Avisar que el equipo ingresó',
+  enRevision: 'Avisar que está en revisión',
+  esperandoConfirmacion: 'Reenviar el presupuesto',
+  completada: 'Avisar que está listo',
+  rechazada: 'Avisar al cliente',
+  fallida: 'Avisar al cliente',
+}
 
 /** El flujo del taller: qué toca hacer en cada estado. */
 const FLOW: Record<OrderStatus, { text: string; primary?: Move; others?: Move[]; invoice?: boolean }> = {
@@ -56,6 +66,7 @@ export function NextStep({
   const [notify, setNotify] = useState(true)
   const [withPhotos, setWithPhotos] = useState(false)
   const [busy, setBusy] = useState<OrderStatus | null>(null)
+  const [sending, setSending] = useState(false)
   const [cost, setCost] = useState(String(order.estimatedCost || ''))
   const needsCost = flow.primary?.to === 'esperandoConfirmacion'
 
@@ -80,6 +91,16 @@ export function NextStep({
       toast.error(error instanceof Error ? error.message : 'No se pudo cambiar el estado.')
     } finally {
       setBusy(null)
+    }
+  }
+
+  async function sendNow() {
+    if (sending) return
+    setSending(true)
+    try {
+      await notifyStatus(order, { includePhotos: withPhotos })
+    } finally {
+      setSending(false)
     }
   }
 
@@ -143,19 +164,30 @@ export function NextStep({
       )}
 
       {(flow.primary || flow.others) && (
-        <div className="mt-3 flex flex-col gap-2">
-          <label className="flex cursor-pointer items-center gap-2.5 text-[14px] font-semibold">
-            <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} className="size-5 accent-[var(--whatsapp)]" />
-            Avisar al cliente por WhatsApp
-          </label>
-          {notify && order.photos.length > 0 && (
-            <label className="flex cursor-pointer items-center gap-2.5 pl-7 text-[13.5px] text-muted-foreground">
-              <input type="checkbox" checked={withPhotos} onChange={(e) => setWithPhotos(e.target.checked)} className="size-4 accent-[var(--whatsapp)]" />
-              Adjuntar las {order.photos.length} fotos
-            </label>
-          )}
-        </div>
+        <label className="mt-3 flex cursor-pointer items-center gap-2.5 text-[14px] font-semibold">
+          <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} className="size-5 accent-[var(--whatsapp)]" />
+          Al cambiar de paso, avisar al cliente
+        </label>
       )}
+
+      {/* Avisar el estado actual cuando se quiera (p. ej. el ingreso, si no se avisó al registrar). */}
+      <div className="mt-3 border-t border-foreground/10 pt-3">
+        <Button
+          variant="outline"
+          className="w-full border-whatsapp/40 bg-surface text-[14.5px] text-foreground"
+          onClick={sendNow}
+          disabled={sending || !!busy}
+        >
+          {sending ? <Loader2 data-icon="inline-start" className="animate-spin" /> : <MessageCircle data-icon="inline-start" className="text-whatsapp" />}
+          {NOTIFY_LABEL[order.status]}
+        </Button>
+        {order.photos.length > 0 && (
+          <label className="mt-2 flex cursor-pointer items-center gap-2.5 text-[13.5px] text-muted-foreground">
+            <input type="checkbox" checked={withPhotos} onChange={(e) => setWithPhotos(e.target.checked)} className="size-4 accent-[var(--whatsapp)]" />
+            Incluir las {order.photos.length} fotos del equipo en los avisos
+          </label>
+        )}
+      </div>
     </section>
   )
 }

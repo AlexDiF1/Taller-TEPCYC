@@ -16,7 +16,7 @@ import {
   Plus,
   ReceiptText,
   RotateCcw,
-  Send,
+
   Trash2,
   X,
 } from 'lucide-react'
@@ -36,7 +36,7 @@ import { orderTotal, timeAgo } from './order-card'
 import { useOrders } from '@/hooks/use-orders'
 import { BRANDS, DEVICE_ICON, DEVICE_TYPES, STATUS_MAP, deviceLabel } from '@/lib/status'
 import { BUSINESS, formatDate, formatMoney } from '@/lib/business'
-import { chatUrl, notifyStatus } from '@/lib/notify'
+import { chatUrl } from '@/lib/notify'
 import type { DeviceType, Order, OrderPatch, OrderStatus, ServiceItem } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -105,9 +105,6 @@ export function OrderPage({ id }: { id: string }) {
           <DropdownMenuContent align="end" className="w-60 p-1.5">
             <DropdownMenuItem className="min-h-11 px-2.5 text-[15px]" onClick={() => setReceipt(order.status === 'completada' ? 'entrega' : 'recepcion')}>
               <ReceiptText /> Recibo
-            </DropdownMenuItem>
-            <DropdownMenuItem className="min-h-11 px-2.5 text-[15px]" onClick={() => void notifyStatus(order)}>
-              <Send /> Reenviar aviso del estado
             </DropdownMenuItem>
             <DropdownMenuItem className="min-h-11 px-2.5 text-[15px]" onClick={() => setFixStatus(true)}>
               <RotateCcw /> Corregir estado (sin avisar)
@@ -318,26 +315,28 @@ function CustomerBlock({ order, onSave }: { order: Order; onSave: (p: OrderPatch
           </p>
         </div>
         {phone && (
-          <a
-            href={`tel:${phone}`}
-            aria-label={`Llamar a ${order.customer.name}`}
-            className="grid size-12 shrink-0 place-items-center rounded-2xl border border-border bg-surface"
-          >
-            <Phone className="size-5" aria-hidden="true" />
-          </a>
+          <>
+            <a
+              href={`tel:${phone}`}
+              aria-label={`Llamar a ${order.customer.name}`}
+              title="Llamar"
+              className="grid size-10 shrink-0 place-items-center rounded-full border border-border bg-surface"
+            >
+              <Phone className="size-[18px]" aria-hidden="true" />
+            </a>
+            <a
+              href={chatUrl(order.customer.phone)}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Abrir el chat de WhatsApp de ${order.customer.name}`}
+              title="Abrir chat de WhatsApp"
+              className="grid size-10 shrink-0 place-items-center rounded-full border border-whatsapp/40 bg-whatsapp/10 text-whatsapp"
+            >
+              <MessageCircle className="size-[18px]" aria-hidden="true" />
+            </a>
+          </>
         )}
       </div>
-      {phone && (
-        <a
-          href={chatUrl(order.customer.phone)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-3 flex h-12 items-center justify-center gap-2 rounded-xl bg-whatsapp text-[15.5px] font-extrabold text-white transition-transform active:scale-[0.98] dark:text-black"
-        >
-          <MessageCircle className="size-5" aria-hidden="true" />
-          Abrir chat de WhatsApp
-        </a>
-      )}
     </Block>
   )
 }

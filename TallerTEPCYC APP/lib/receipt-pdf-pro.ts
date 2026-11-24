@@ -1,12 +1,10 @@
 /**
- * Comprobante "bonito" (A4) pensado para enviarse por WhatsApp.
+ * Recibo en PDF para enviar por WhatsApp, pensado para leerse en el celular.
  *
- * Diferencias con el ticket térmico de 80 mm:
- * - Página A5 vertical (mitad de A4) con diseño a color, compacta y legible
- *   en el celular: la hoja entra completa en pantalla.
- * - Incluye las fotos del ingreso del equipo con su fecha.
- * - Muestra todos los datos de la orden (cliente, equipo, falla, accesorios,
- *   observaciones, detalle facturado, abonos y garantía).
+ * - Una sola tira de 90 mm de ancho y alto según el contenido: en el teléfono
+ *   ocupa el ancho de la pantalla y se lee sin zoom, como un chat.
+ * - Lo importante primero: saldo o total, luego cliente, equipo y falla.
+ * - Incluye las fotos del ingreso, el detalle cobrado y la garantía.
  * - Nunca imprime costos internos ni ganancias: solo lo que ve el cliente.
  */
 import { BUSINESS, addDays, formatDate, formatMoney } from './business'
@@ -15,19 +13,20 @@ import type { IntakePhoto, Order, ServiceItem } from './types'
 
 export type ReceiptType = 'recepcion' | 'entrega'
 
-/**
- * A5 vertical (mitad de una A4): el mismo diseño, pero compacto. Al abrirla en
- * un celular la hoja entra completa en pantalla y el texto se lee sin zoom.
- */
-const PAGE = { width: 148, height: 210, margin: 8 }
-const CONTENT = PAGE.width - PAGE.margin * 2
-const BOTTOM = PAGE.height - 10
+const W = 90
+const M = 6
+const CW = W - M * 2
 
-const INK: [number, number, number] = [17, 17, 17]
-const MUTED: [number, number, number] = [95, 95, 99]
-const ACCENT: [number, number, number] = [139, 26, 26]
-const SOFT: [number, number, number] = [245, 245, 246]
-const WHITE: [number, number, number] = [255, 255, 255]
+const INK: RGB = [20, 18, 18]
+const MUTED: RGB = [110, 104, 102]
+const RED: RGB = [210, 31, 41]
+const SOFT: RGB = [244, 241, 240]
+const LINE: RGB = [226, 221, 219]
+const WHITE: RGB = [255, 255, 255]
+const DARK: RGB = [18, 16, 16]
+
+type RGB = [number, number, number]
+type Doc = import('jspdf').jsPDF
 
 const DEVICE_TYPE_LABEL: Record<string, string> = {
   consola: 'Consola',
@@ -37,24 +36,25 @@ const DEVICE_TYPE_LABEL: Record<string, string> = {
   accesorio: 'Accesorio',
 }
 
-type Doc = import('jspdf').jsPDF
+/* ------------------------------ utilidades ------------------------------ */
 
-/** Valores vacíos o «0» se muestran como «—» en la factura. */
-function shown(value?: string | null) {
-  const text = (value ?? '').trim()
-  return !text || text === '0' ? '—' : text
+function ink(doc: Doc, c: RGB) {
+  doc.setTextColor(c[0], c[1], c[2])
 }
 
-function setInk(doc: Doc, color: [number, number, number] = INK) {
-  doc.setTextColor(color[0], color[1], color[2])
-}
-
-function font(doc: Doc, size: number, style: 'normal' | 'bold' = 'normal', family = 'helvetica') {
-  doc.setFont(family, style)
+function font(doc: Doc, size: number, style: 'normal' | 'bold' = 'normal') {
+  doc.setFont('helvetica', style)
   doc.setFontSize(size)
 }
 
-/** Convierte una URL (/uploads/... o remota) en data URL para jsPDF. */
+/** Alto de una línea en mm para un tamaño de letra en pt. */
+const lh = (pt: number) => pt * 0.42
+
+function clean(value?: string | null) {
+  const t = (value ?? '').trim()
+  return t && t !== '0' ? t : ''
+}
+
 async function toDataUrl(url: string): Promise<string | null> {
   try {
     if (url.startsWith('data:')) return url
@@ -83,405 +83,232 @@ async function imageRatio(dataUrl: string): Promise<number> {
   })
 }
 
-type LoadedPhoto = { dataUrl: string; ratio: number; takenAt: string }
+type LoadedPhoto = { dataUrl: string; ratio: number }
 
 async function loadPhotos(photos: IntakePhoto[]): Promise<LoadedPhoto[]> {
   const results = await Promise.all(
-    photos.slice(0, 8).map(async (photo) => {
+    photos.slice(0, 6).map(async (photo) => {
       const dataUrl = await toDataUrl(photo.url)
       if (!dataUrl) return null
-      return { dataUrl, ratio: await imageRatio(dataUrl), takenAt: photo.takenAt }
+      return { dataUrl, ratio: await imageRatio(dataUrl) }
     }),
   )
   return results.filter((p): p is LoadedPhoto => p !== null)
 }
 
-function divider(doc: Doc, y: number, color: [number, number, number] = [214, 214, 216]) {
-  doc.setDrawColor(color[0], color[1], color[2])
-  doc.setLineWidth(0.25)
-  doc.line(PAGE.margin, y, PAGE.width - PAGE.margin, y)
-  return y + 2.8
-}
+/* ------------------------------- dibujo -------------------------------- */
 
-function footer(doc: Doc, order: Order, page: number, type: ReceiptType) {
-  const y = PAGE.height - 6
-  doc.setDrawColor(220, 220, 222)
-  doc.setLineWidth(0.25)
-  doc.line(PAGE.margin, y - 2.6, PAGE.width - PAGE.margin, y - 2.6)
-  setInk(doc, MUTED)
-  font(doc, 6, 'normal')
-  doc.text(`${BUSINESS.name} · ${BUSINESS.phone}`, PAGE.margin, y)
-  doc.text(
-    `${type === 'entrega' ? 'Factura' : 'Comprobante'} ${order.id} · página ${page}`,
-    PAGE.width - PAGE.margin,
-    y,
-    { align: 'right' },
-  )
-}
-
-/** Cierra la página actual y abre una nueva con encabezado corrido. */
-function newPage(doc: Doc, order: Order, page: number, type: ReceiptType) {
-  footer(doc, order, page, type)
-  doc.addPage()
-  const next = page + 1
-  doc.setFillColor(17, 17, 17)
-  doc.rect(0, 0, PAGE.width, 11, 'F')
-  doc.setFillColor(ACCENT[0], ACCENT[1], ACCENT[2])
-  doc.rect(0, 11, PAGE.width, 1.2, 'F')
-  setInk(doc, WHITE)
-  font(doc, 8, 'bold')
-  doc.text(BUSINESS.name, PAGE.margin, 7.4)
-  font(doc, 5.5, 'normal')
-  doc.text(`${type === 'entrega' ? 'Factura' : 'Comprobante'} ${order.id} (continuación)`, PAGE.width - PAGE.margin, 7.4, {
-    align: 'right',
-  })
-  return { y: 16.5, page: next }
-}
-
-function header(doc: Doc, order: Order, type: ReceiptType) {
-  doc.setFillColor(17, 17, 17)
-  doc.rect(0, 0, PAGE.width, 17.5, 'F')
-  doc.setFillColor(ACCENT[0], ACCENT[1], ACCENT[2])
-  doc.rect(0, 17.5, PAGE.width, 1.3, 'F')
-
-  setInk(doc, WHITE)
-  font(doc, 11.5, 'bold')
-  doc.text(BUSINESS.name, PAGE.margin, 7.8)
-  font(doc, 6, 'normal')
-  doc.text(BUSINESS.tagline, PAGE.margin, 11.6)
-  font(doc, 5.5, 'normal')
-  doc.text(`${BUSINESS.taxId} · ${BUSINESS.address}, ${BUSINESS.city}`, PAGE.margin, 15.2)
-  doc.text(`WhatsApp ${BUSINESS.phone}`, PAGE.width - PAGE.margin, 11.6, { align: 'right' })
-  doc.text(
-    formatDate(type === 'entrega' ? order.deliveredAt ?? new Date().toISOString() : order.createdAt, true),
-    PAGE.width - PAGE.margin,
-    15.2,
-    { align: 'right' },
-  )
-
-  let y = 23.8
-  setInk(doc, ACCENT)
-  font(doc, 6, 'bold')
-  doc.text(type === 'entrega' ? 'FACTURA DE ENTREGA' : 'COMPROBANTE DE RECEPCIÓN', PAGE.margin, y)
-  setInk(doc, INK)
-  font(doc, 15, 'bold')
-  doc.text(order.id, PAGE.margin, y + 5.9)
-  setInk(doc, MUTED)
-  font(doc, 7, 'bold')
-  doc.text(STATUS_MAP[order.status]?.label ?? order.status, PAGE.width - PAGE.margin, y + 5.9, { align: 'right' })
-  return y + 9.6
-}
-
-function sectionTitle(doc: Doc, title: string, y: number) {
-  setInk(doc, ACCENT)
-  font(doc, 6, 'bold')
-  doc.text(title.toUpperCase(), PAGE.margin, y)
-  setInk(doc, INK)
-  return y + 3.8
-}
-
-function softBox(doc: Doc, y: number, height: number) {
-  doc.setFillColor(SOFT[0], SOFT[1], SOFT[2])
-  doc.roundedRect(PAGE.margin, y, CONTENT, height, 2.5, 2.5, 'F')
-}
-
-function keyValue(doc: Doc, label: string, value: string, x: number, y: number, width: number) {
-  setInk(doc, MUTED)
-  font(doc, 5.5, 'normal')
-  doc.text(label.toUpperCase(), x, y)
-  setInk(doc, INK)
-  font(doc, 8, 'normal')
-  const lines = doc.splitTextToSize(value || '—', width)
-  doc.text(lines, x, y + 3.3)
-  return y + 3.3 + Math.max(1, lines.length) * 3.5
-}
-
-function bodyText(doc: Doc, text: string, x: number, y: number, width: number, size = 8) {
-  setInk(doc, INK)
-  font(doc, size, 'normal')
-  const lines = doc.splitTextToSize(text || '—', width)
+/** Texto con salto de línea; devuelve la y siguiente. */
+function para(doc: Doc, text: string, y: number, pt: number, color: RGB = INK, style: 'normal' | 'bold' = 'normal', x = M, width = CW) {
+  font(doc, pt, style)
+  ink(doc, color)
+  const lines = doc.splitTextToSize(text, width)
   doc.text(lines, x, y)
-  return y + Math.max(1, lines.length) * size * 0.42
+  return y + lines.length * lh(pt) * 1.25
 }
 
-function itemsHeader(doc: Doc, y: number) {
-  doc.setFillColor(17, 17, 17)
-  doc.rect(PAGE.margin, y - 3.6, CONTENT, 5.4, 'F')
-  setInk(doc, WHITE)
-  font(doc, 6, 'bold')
-  doc.text('DESCRIPCIÓN', PAGE.margin + 3, y)
-  doc.text('TIPO', PAGE.width - PAGE.margin - 28, y)
-  doc.text('VALOR', PAGE.width - PAGE.margin - 3, y, { align: 'right' })
-  return y + 5.2
+function label(doc: Doc, text: string, y: number) {
+  font(doc, 7, 'bold')
+  ink(doc, RED)
+  doc.text(text.toUpperCase(), M, y)
+  return y + 4.2
 }
 
-function photosBlock(doc: Doc, photos: LoadedPhoto[], y: number): number {
-  const gap = 3.5
-  const columns = 3
-  const cell = (CONTENT - gap * (columns - 1)) / columns
-  const maxHeight = 17
+function rule(doc: Doc, y: number) {
+  doc.setDrawColor(LINE[0], LINE[1], LINE[2])
+  doc.setLineWidth(0.25)
+  doc.line(M, y, W - M, y)
+  return y + 4.5
+}
 
-  for (let index = 0; index < photos.length; index += columns) {
-    const row = photos.slice(index, index + columns)
-    const rowHeight = Math.min(maxHeight, cell * Math.max(...row.map((p) => p.ratio))) + 4.2
-    if (y + rowHeight > BOTTOM) return -1
+function moneyRow(doc: Doc, left: string, right: string, y: number, pt = 9, strong = false) {
+  font(doc, pt, strong ? 'bold' : 'normal')
+  ink(doc, strong ? INK : MUTED)
+  doc.text(left, M, y)
+  ink(doc, INK)
+  doc.text(right, W - M, y, { align: 'right' })
+  return y + lh(pt) * 1.5
+}
 
-    row.forEach((photo, col) => {
-      const x = PAGE.margin + col * (cell + gap)
-      const height = Math.min(maxHeight, cell * photo.ratio)
-      let placed = false
-      for (const format of ['JPEG', 'PNG', 'WEBP'] as const) {
-        try {
-          doc.addImage(photo.dataUrl, format, x, y, cell, height)
-          placed = true
-          break
-        } catch {
-          /* se prueba el siguiente formato */
-        }
-      }
-      if (!placed) return
-      doc.setDrawColor(226, 226, 228)
-      doc.setLineWidth(0.2)
-      doc.rect(x, y, cell, height)
-      setInk(doc, MUTED)
-      font(doc, 5.5, 'normal')
-      doc.text(`Ingreso: ${formatDate(photo.takenAt, true)}`, x, y + height + 3)
-    })
-    y += rowHeight
+type Ctx = {
+  order: Order
+  type: ReceiptType
+  items: ServiceItem[]
+  photos: LoadedPhoto[]
+}
+
+/** Dibuja el recibo completo y devuelve la altura usada (mm). */
+function render(doc: Doc, { order, type, items, photos }: Ctx): number {
+  const isDelivery = type === 'entrega'
+  const deliveredAt = order.deliveredAt ?? new Date().toISOString()
+  const total = isDelivery ? items.reduce((s, i) => s + i.price, 0) || order.estimatedCost : order.estimatedCost
+  const balance = Math.max(total - order.deposit, 0)
+  const warrantyDays = order.warrantyDays ?? BUSINESS.warrantyDays
+
+  // ---------- encabezado ----------
+  doc.setFillColor(DARK[0], DARK[1], DARK[2])
+  doc.rect(0, 0, W, 19, 'F')
+  doc.setFillColor(RED[0], RED[1], RED[2])
+  doc.rect(0, 19, W, 1.2, 'F')
+  font(doc, 12.5, 'bold')
+  ink(doc, WHITE)
+  doc.text(BUSINESS.name, M, 8.6)
+  font(doc, 7.5, 'normal')
+  doc.text(`Servicio técnico · WhatsApp ${BUSINESS.phone}`, M, 14)
+
+  let y = 27
+  font(doc, 7.5, 'bold')
+  ink(doc, RED)
+  doc.text(isDelivery ? 'FACTURA DE ENTREGA' : 'RECIBO DE RECEPCIÓN', M, y)
+  font(doc, 7.5, 'normal')
+  ink(doc, MUTED)
+  doc.text(formatDate(isDelivery ? deliveredAt : order.createdAt, true), W - M, y, { align: 'right' })
+  y += 7
+  font(doc, 18, 'bold')
+  ink(doc, INK)
+  doc.text(order.id, M, y)
+  font(doc, 8, 'bold')
+  ink(doc, MUTED)
+  doc.text(STATUS_MAP[order.status]?.label ?? order.status, W - M, y, { align: 'right' })
+  y += 5
+
+  // ---------- valores (lo primero que se busca) ----------
+  const boxH = 26
+  doc.setFillColor(SOFT[0], SOFT[1], SOFT[2])
+  doc.roundedRect(M, y, CW, boxH, 3, 3, 'F')
+  font(doc, 8, 'bold')
+  ink(doc, MUTED)
+  doc.text(isDelivery ? 'TOTAL PAGADO' : 'SALDO PENDIENTE', M + 4, y + 6)
+  font(doc, 20, 'bold')
+  ink(doc, isDelivery ? INK : RED)
+  doc.text(formatMoney(isDelivery ? total : balance), M + 4, y + 14)
+  const ry = y + 20
+  font(doc, 8, 'normal')
+  ink(doc, MUTED)
+  doc.text(`${isDelivery ? 'Servicio' : 'Estimado'} ${formatMoney(total)}`, M + 4, ry)
+  doc.text(`Abono ${formatMoney(order.deposit)}`, W - M - 4, ry, { align: 'right' })
+  y += boxH + 6
+
+  // ---------- cliente ----------
+  y = label(doc, 'Cliente', y)
+  y = para(doc, order.customer.name || '—', y, 11, INK, 'bold')
+  const contact = [`+${BUSINESS.countryCode} ${order.customer.phone}`, clean(order.customer.documentId) && `Doc. ${clean(order.customer.documentId)}`]
+    .filter(Boolean)
+    .join(' · ')
+  y = para(doc, contact, y, 8.5, MUTED)
+  y = rule(doc, y + 1)
+
+  // ---------- equipo ----------
+  y = label(doc, 'Equipo', y)
+  y = para(doc, deviceLabel(order.device), y, 11, INK, 'bold')
+  const extra = [
+    DEVICE_TYPE_LABEL[order.device.type] ?? order.device.type,
+    clean(order.device.color),
+    clean(order.device.serial) && `Serie ${clean(order.device.serial)}`,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+  y = para(doc, extra, y, 8.5, MUTED)
+  y += 2.5
+  y = label(doc, isDelivery ? 'Falla atendida' : 'Falla reportada', y)
+  y = para(doc, order.reportedFault || 'Sin descripción registrada.', y, 9.5)
+
+  if (!isDelivery) {
+    y += 2
+    y = label(doc, 'Recibido con', y)
+    y = para(doc, order.accessories.length ? order.accessories.join(', ') : 'Sin accesorios.', y, 9)
+    if (clean(order.physicalNotes)) y = para(doc, `Estado físico: ${order.physicalNotes}`, y + 0.5, 8.5, MUTED)
+    if (order.estimatedDate) y = para(doc, `Entrega estimada: ${formatDate(order.estimatedDate)}`, y + 0.5, 8.5, MUTED)
   }
-  return y + 1
+  y = rule(doc, y + 1)
+
+  // ---------- detalle ----------
+  const list: ServiceItem[] = items.length
+    ? items
+    : [{ id: 'est', description: isDelivery ? 'Servicio técnico' : 'Reparación (estimado)', kind: 'servicio', price: order.estimatedCost }]
+  y = label(doc, isDelivery ? 'Detalle del servicio' : 'Presupuesto', y)
+  for (const item of list) {
+    font(doc, 9, 'normal')
+    const lines = doc.splitTextToSize(item.description || '—', CW - 26)
+    ink(doc, INK)
+    doc.text(lines, M, y)
+    font(doc, 9, 'bold')
+    doc.text(formatMoney(item.price), W - M, y, { align: 'right' })
+    y += lines.length * lh(9) * 1.25
+    font(doc, 7, 'normal')
+    ink(doc, MUTED)
+    doc.text(item.kind === 'repuesto' ? 'Repuesto' : 'Servicio', M, y)
+    y += 4.2
+  }
+  y = moneyRow(doc, 'Total', formatMoney(total), y + 1, 9.5, true)
+  y = rule(doc, y)
+
+  // ---------- fotos ----------
+  if (photos.length) {
+    y = label(doc, `Fotos del ingreso (${photos.length})`, y)
+    const gap = 2.5
+    const cell = (CW - gap) / 2
+    for (let i = 0; i < photos.length; i += 2) {
+      const row = photos.slice(i, i + 2)
+      const h = Math.min(34, cell * Math.max(...row.map((p) => p.ratio)))
+      row.forEach((p, col) => {
+        const x = M + col * (cell + gap)
+        const ph = Math.min(34, cell * p.ratio)
+        for (const format of ['JPEG', 'PNG', 'WEBP'] as const) {
+          try {
+            doc.addImage(p.dataUrl, format, x, y, cell, ph)
+            break
+          } catch {
+            /* se prueba el siguiente formato */
+          }
+        }
+      })
+      y += h + gap
+    }
+    y = rule(doc, y + 1.5)
+  }
+
+  // ---------- garantía / condiciones ----------
+  const clauses: string[] = []
+  if (isDelivery) {
+    clauses.push(`Garantía de ${warrantyDays} días, hasta el ${formatDate(addDays(deliveredAt, warrantyDays))}.`)
+    clauses.push('Cubre solo la reparación y los repuestos de esta factura. No cubre golpes, humedad, manipulación por terceros, sellos rotos ni otras fallas.')
+    if (order.device.type === 'celular' && order.warrantyScreenExcluded) clauses.push('No hay garantía por pantallas cambiadas.')
+    if (order.warrantyNoAfterReview !== false) clauses.push('Después de la entrega y revisión del cliente no hay garantía por daños posteriores.')
+  } else {
+    clauses.push('El diagnóstico puede cambiar el costo estimado.')
+    clauses.push('Equipos no reclamados en 60 días pueden generar cobro por bodegaje. Presente este recibo para retirar el equipo.')
+  }
+  y = label(doc, isDelivery ? 'Garantía' : 'Condiciones', y)
+  for (const c of clauses) y = para(doc, `• ${c}`, y, 8, INK) + 0.6
+  y += 3
+
+  // ---------- cierre ----------
+  font(doc, 10, 'bold')
+  ink(doc, INK)
+  doc.text('¡Gracias por su confianza!', W / 2, y, { align: 'center' })
+  y += 5
+  font(doc, 7.5, 'normal')
+  ink(doc, MUTED)
+  const address = doc.splitTextToSize(`${BUSINESS.address}, ${BUSINESS.city} · ${BUSINESS.taxId}`, CW)
+  doc.text(address, W / 2, y, { align: 'center' })
+  return y + address.length * lh(7.5) * 1.25 + 5
 }
 
 export async function buildPrettyReceiptPdf(order: Order, type: ReceiptType, items: ServiceItem[]) {
   const { jsPDF } = await import('jspdf')
-  const doc = new jsPDF({ unit: 'mm', format: [PAGE.width, PAGE.height], orientation: 'portrait', compress: true })
-  const isDelivery = type === 'entrega'
-  const deliveredAt = order.deliveredAt ?? new Date().toISOString()
-  const total = isDelivery ? items.reduce((sum, i) => sum + i.price, 0) || order.estimatedCost : order.estimatedCost
-  const balance = Math.max(total - order.deposit, 0)
-  const warrantyDays = order.warrantyDays ?? BUSINESS.warrantyDays
-  const warrantyUntil = addDays(deliveredAt, warrantyDays)
   const photos = await loadPhotos(order.photos ?? [])
-  let page = 1
+  const ctx: Ctx = { order, type, items, photos }
 
+  // Primera pasada en una hoja alta para medir; la segunda, con el alto exacto.
+  const probe = new jsPDF({ unit: 'mm', format: [W, 2000], orientation: 'portrait' })
+  const height = Math.max(120, Math.ceil(render(probe, ctx)))
+
+  const doc = new jsPDF({ unit: 'mm', format: [W, height], orientation: 'portrait', compress: true })
   doc.setFillColor(255, 255, 255)
-  doc.rect(0, 0, PAGE.width, PAGE.height, 'F')
+  doc.rect(0, 0, W, height, 'F')
+  render(doc, ctx)
 
-  let y = header(doc, order, type)
-
-  // ------------------------------- cliente ----------------------------------
-  const documentId = order.customer.documentId?.trim()
-  const hasDocument = Boolean(documentId && documentId !== '0')
-  font(doc, 10.5, 'bold')
-  const nameLines = doc.splitTextToSize(order.customer.name || '—', CONTENT - 8).slice(0, 2)
-  const nameHeight = nameLines.length * 4.6
-  const clientHeight = 10.4 + nameHeight + (hasDocument ? 4.2 : 0)
-  softBox(doc, y, clientHeight)
-  setInk(doc, ACCENT)
-  font(doc, 6, 'bold')
-  doc.text('CLIENTE', PAGE.margin + 4, y + 5.2)
-  setInk(doc, INK)
-  font(doc, 10.5, 'bold')
-  doc.text(nameLines, PAGE.margin + 4, y + 10.6)
-  const contactY = y + 10.6 + nameHeight + 0.2
-  setInk(doc, MUTED)
-  font(doc, 7, 'normal')
-  doc.text(`Tel/WhatsApp: +${BUSINESS.countryCode} ${order.customer.phone}`, PAGE.margin + 4, contactY)
-  if (hasDocument) doc.text(`Documento: ${documentId}`, PAGE.margin + 4, contactY + 4)
-  if (order.customer.email) doc.text(order.customer.email, PAGE.width - PAGE.margin - 4, contactY, { align: 'right' })
-  y += clientHeight + 4.4
-
-  // ------------------------------- equipo -----------------------------------
-  y = sectionTitle(doc, 'Equipo recibido', y)
-  const colW = (CONTENT - 6) / 2
-  const row1 = Math.max(
-    keyValue(doc, 'Equipo', deviceLabel(order.device), PAGE.margin, y, colW),
-    keyValue(doc, 'Tipo', DEVICE_TYPE_LABEL[order.device.type] ?? order.device.type, PAGE.margin + colW + 6, y, colW),
-  )
-  const row2 = Math.max(
-    keyValue(doc, 'Serie', shown(order.device.serial), PAGE.margin, row1 + 2.2, colW),
-    keyValue(doc, 'Color', shown(order.device.color), PAGE.margin + colW + 6, row1 + 2.2, colW),
-  )
-  const row3 = order.technician ? keyValue(doc, 'Técnico', order.technician, PAGE.margin, row2 + 2.2, colW) : 0
-  y = divider(doc, Math.max(row2, row3) + 2.6)
-
-  // ------------------------- falla y observaciones ---------------------------
-  y = sectionTitle(doc, isDelivery ? 'Diagnóstico y trabajo realizado' : 'Falla reportada', y)
-  y = bodyText(doc, order.reportedFault || 'Sin descripción registrada.', PAGE.margin, y, CONTENT, 8.5)
-  if (order.faultTags.length) {
-    setInk(doc, MUTED)
-    font(doc, 6, 'normal')
-    doc.text(`Etiquetas: ${order.faultTags.join(' · ')}`, PAGE.margin, y + 1.2)
-    y += 4.2
-  }
-  y += 1.2
-
-  if (!isDelivery) {
-    y = sectionTitle(doc, 'Accesorios y estado físico', y)
-    y = bodyText(
-      doc,
-      `Accesorios: ${order.accessories.length ? order.accessories.join(', ') : 'El equipo ingresa sin accesorios.'}`,
-      PAGE.margin,
-      y,
-      CONTENT,
-      7.2,
-    )
-    y = bodyText(
-      doc,
-      `Observaciones: ${order.physicalNotes || 'Sin observaciones adicionales.'}`,
-      PAGE.margin,
-      y + 0.8,
-      CONTENT,
-      7.2,
-    )
-    if (order.estimatedDate) {
-      y = bodyText(doc, `Entrega estimada: ${formatDate(order.estimatedDate)}`, PAGE.margin, y + 0.8, CONTENT, 7.2)
-    }
-    y = divider(doc, y + 1.2)
-  }
-
-  // -------------------------------- fotos ------------------------------------
-  if (photos.length) {
-    y = sectionTitle(doc, `Fotos del equipo (${photos.length})`, y)
-    let next = photosBlock(doc, photos, y)
-    if (next === -1) {
-      const start = newPage(doc, order, page, type)
-      page = start.page
-      y = start.y
-      setInk(doc, MUTED)
-      font(doc, 6.5, 'bold')
-      doc.text('FOTOS DEL EQUIPO (CONTINUACIÓN)', PAGE.margin, y)
-      y += 5
-      next = photosBlock(doc, photos, y)
-    }
-    y = divider(doc, (next === -1 ? BOTTOM : next) + 1)
-  }
-
-  // --------------------------- detalle facturado ------------------------------
-  const list: ServiceItem[] = items.length
-    ? items
-    : [{ id: 'est', description: 'Servicio técnico', kind: 'servicio', price: order.estimatedCost }]
-
-  // La tabla no se parte: si no entra completa con sus totales, pasa a la página siguiente.
-  const tableHeight =
-    list.reduce((sum, item) => {
-      const lines = doc.splitTextToSize(item.description || '—', CONTENT - 40)
-      return sum + Math.max(5.8, lines.length * 3.6 + 2.2)
-    }, 0) +
-    5.2 +
-    18 +
-    4.6 +
-    3.2
-  if (y + tableHeight > BOTTOM && tableHeight < BOTTOM - 20) {
-    const start = newPage(doc, order, page, type)
-    page = start.page
-    y = start.y
-  }
-
-  y = sectionTitle(doc, isDelivery ? 'Detalle del servicio' : 'Presupuesto estimado', y)
-  y = itemsHeader(doc, y)
-
-  for (const item of list) {
-    const lines = doc.splitTextToSize(item.description || '—', CONTENT - 40)
-    const height = Math.max(5.8, lines.length * 3.6 + 2.2)
-    if (y + height > BOTTOM) {
-      const start = newPage(doc, order, page, type)
-      page = start.page
-      y = itemsHeader(doc, start.y + 2)
-    }
-    setInk(doc, INK)
-    font(doc, 8, 'normal')
-    doc.text(lines, PAGE.margin + 3, y + 1)
-    setInk(doc, MUTED)
-    font(doc, 6, 'normal')
-    doc.text(item.kind === 'repuesto' ? 'Repuesto' : 'Servicio', PAGE.width - PAGE.margin - 28, y + 1)
-    setInk(doc, INK)
-    font(doc, 8, 'normal')
-    doc.text(formatMoney(item.price), PAGE.width - PAGE.margin - 3, y + 1, { align: 'right' })
-    y += height
-    doc.setDrawColor(232, 232, 234)
-    doc.setLineWidth(0.2)
-    doc.line(PAGE.margin, y - 1, PAGE.width - PAGE.margin, y - 1)
-  }
-  y += 3.2
-
-  // -------------------------------- totales ----------------------------------
-  const totalsHeight = 18
-  if (y + totalsHeight + 6 > BOTTOM) {
-    const start = newPage(doc, order, page, type)
-    page = start.page
-    y = start.y
-  }
-  softBox(doc, y, totalsHeight)
-  setInk(doc, MUTED)
-  font(doc, 7, 'normal')
-  doc.text(isDelivery ? 'Total servicio' : 'Costo estimado', PAGE.margin + 4, y + 4.8)
-  doc.text(formatMoney(total), PAGE.width - PAGE.margin - 4, y + 4.8, { align: 'right' })
-  doc.text('Abono recibido', PAGE.margin + 4, y + 9)
-  doc.text(`- ${formatMoney(order.deposit)}`, PAGE.width - PAGE.margin - 4, y + 9, { align: 'right' })
-  doc.setDrawColor(200, 200, 202)
-  doc.setLineWidth(0.2)
-  doc.line(PAGE.margin + 4, y + 12, PAGE.width - PAGE.margin - 4, y + 12)
-  setInk(doc, INK)
-  font(doc, 7.5, 'bold')
-  doc.text(isDelivery ? 'TOTAL PAGADO' : 'SALDO PENDIENTE', PAGE.margin + 4, y + 16.2)
-  font(doc, 11.5, 'bold')
-  doc.text(formatMoney(isDelivery ? total : balance), PAGE.width - PAGE.margin - 4, y + 16.2, { align: 'right' })
-  y += totalsHeight + 2.8
-
-  // -------------------------------- garantía ---------------------------------
-  const clauses: string[] = []
-  if (isDelivery) {
-    clauses.push(`Garantía de ${warrantyDays} días, válida hasta el ${formatDate(warrantyUntil)}.`)
-    clauses.push(
-      'Cubre exclusivamente la reparación y los repuestos descritos en esta factura. No cubre golpes, humedad, manipulación por terceros, sellos rotos ni fallas distintas a la reparada.',
-    )
-    if (order.device.type === 'celular' && order.warrantyScreenExcluded) {
-      clauses.push('No se otorga garantía por pantallas cambiadas.')
-    }
-    if (order.warrantyNoAfterReview !== false) {
-      clauses.push(
-        'Después de la entrega y revisión por parte del cliente no se otorga garantía por daños o fallas posteriores.',
-      )
-    }
-  } else {
-    clauses.push('El diagnóstico puede modificar el costo estimado.')
-    clauses.push(
-      'Los equipos no reclamados en 60 días podrán generar cobro por bodegaje. Presente este comprobante para retirar el equipo.',
-    )
-  }
-
-  const warrantyText = clauses.map((line) => `• ${line}`).join('\n')
-  const warrantyHeight = 8.6 + doc.splitTextToSize(warrantyText, CONTENT - 8).length * 3.2
-  if (y + warrantyHeight + 8.2 > BOTTOM) {
-    const start = newPage(doc, order, page, type)
-    page = start.page
-    y = start.y
-  }
-  softBox(doc, y, warrantyHeight)
-  setInk(doc, ACCENT)
-  font(doc, 6.2, 'bold')
-  doc.text(isDelivery ? 'GARANTÍA' : 'CONDICIONES', PAGE.margin + 4, y + 4.8)
-  setInk(doc, INK)
-  font(doc, 6.2, 'normal')
-  doc.text(doc.splitTextToSize(warrantyText, CONTENT - 8), PAGE.margin + 4, y + 8)
-  y += warrantyHeight + 2.6
-
-  // --------------------------- contacto y cierre -----------------------------
-  setInk(doc, INK)
-  font(doc, 9, 'bold')
-  doc.text('¡Gracias por su preferencia!', PAGE.width / 2, y, { align: 'center' })
-  setInk(doc, MUTED)
-  font(doc, 6, 'normal')
-  doc.text(
-    `Conserve este comprobante para su garantía · Dudas o reclamos: WhatsApp ${BUSINESS.phone}`,
-    PAGE.width / 2,
-    y + 4.2,
-    { align: 'center' },
-  )
-
-  footer(doc, order, page, type)
-
-  const filename = `${isDelivery ? 'Factura' : 'Comprobante'}-${order.id}-WhatsApp.pdf`
+  const filename = `${type === 'entrega' ? 'Factura' : 'Recibo'}-${order.id}.pdf`
   return { blob: doc.output('blob'), filename }
 }

@@ -9,7 +9,7 @@
 import { BUSINESS, addDays, formatDate } from './business'
 import { buildPrettyReceiptPdf } from './receipt-pdf-pro'
 import { buildReceiptMessage, buildWhatsAppUrl } from './whatsapp'
-import { STATUS_MAP } from './status'
+import { STATUS_MAP, deviceLabel } from './status'
 import type { Order, ServiceItem } from './types'
 import {
   TICKET,
@@ -76,7 +76,7 @@ function drawTicket(doc: TicketDoc, order: Order, type: ReceiptType, items: Serv
 
   // --------------------------------- equipo ----------------------------------
   y = row(doc, 'Equipo', DEVICE_TYPE_LABEL[order.device.type] ?? order.device.type, y)
-  y = row(doc, 'Marca/modelo', `${order.device.brand} ${order.device.model}`.trim(), y)
+  y = row(doc, 'Marca/modelo', deviceLabel(order.device), y)
   if (order.device.serial) y = row(doc, 'Serie', order.device.serial, y)
   if (order.device.color) y = row(doc, 'Color', order.device.color, y)
   y = divider(doc, y)

@@ -1,5 +1,5 @@
 import { BUSINESS, addDays, formatDate, formatMoney } from '@/lib/business'
-import { STATUS_MAP } from '@/lib/status'
+import { STATUS_MAP, deviceLabel } from '@/lib/status'
 import type { DeviceType, Order, ServiceItem } from '@/lib/types'
 
 export type ReceiptType = 'recepcion' | 'entrega'
@@ -69,7 +69,7 @@ export function ReceiptDocument({ order, type, items }: { order: Order; type: Re
         <div className="ticket-row">
           <span className="ticket-label">Marca/modelo:</span>
           <span className="text-right">
-            {order.device.brand} {order.device.model}
+            {deviceLabel(order.device)}
           </span>
         </div>
         {order.device.serial && (
