@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ClipboardList, Plus, ReceiptText, ShoppingBag, MessageCircle, MapPin, Phone } from 'lucide-react'
+import { ClipboardList, Plus, Search, ShoppingBag, MessageCircle, MapPin, Phone } from 'lucide-react'
 import { BrandLogo, BrandMark } from '@/components/brand-logo'
 import { LogoutButton } from '@/components/auth/logout-button'
 import { BUSINESS } from '@/lib/business'
@@ -13,20 +13,23 @@ type NavItem = { href: string; label: string; short: string; icon: typeof Clipbo
 const ORDENES: NavItem = { href: '/', label: 'Órdenes de trabajo', short: 'Órdenes', icon: ClipboardList }
 const INGRESO: NavItem = { href: '/ingreso', label: 'Nuevo ingreso', short: 'Ingreso', icon: Plus }
 const VENTAS: NavItem = { href: '/ventas', label: 'Ventas', short: 'Ventas', icon: ShoppingBag }
-const RECIBOS: NavItem = { href: '/comprobantes', label: 'Comprobantes', short: 'Recibos', icon: ReceiptText }
+const BUSCAR: NavItem = { href: '/?buscar=1', label: 'Buscar orden', short: 'Buscar', icon: Search }
 const WHATSAPP: NavItem = { href: '/whatsapp', label: 'WhatsApp', short: 'WhatsApp', icon: MessageCircle }
 
 const SIDEBAR: { title: string; items: NavItem[] }[] = [
-  { title: 'Taller', items: [ORDENES, RECIBOS] },
+  { title: 'Taller', items: [ORDENES] },
   { title: 'Negocio', items: [VENTAS, WHATSAPP] },
 ]
 
 function isActive(pathname: string, href: string) {
-  return href === '/' ? pathname === '/' : pathname.startsWith(href)
+  // La ficha de una orden cuenta como «Órdenes»; «Buscar» es un atajo y no se marca.
+  if (href.includes('?')) return false
+  return href === '/' ? pathname === '/' || pathname.startsWith('/orden/') : pathname.startsWith(href)
 }
 
 function sectionName(pathname: string) {
-  const all = [ORDENES, INGRESO, VENTAS, RECIBOS, WHATSAPP]
+  if (pathname.startsWith('/orden/')) return 'Orden'
+  const all = [ORDENES, INGRESO, VENTAS, WHATSAPP]
   return all.find((i) => isActive(pathname, i.href))?.short ?? ''
 }
 
@@ -117,7 +120,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       >
         <div className="mx-auto grid h-[66px] max-w-lg grid-cols-5 items-center px-1">
           <TabLink item={ORDENES} pathname={pathname} />
-          <TabLink item={VENTAS} pathname={pathname} />
+          <TabLink item={BUSCAR} pathname={pathname} />
           <Link
             href={INGRESO.href}
             aria-label="Nuevo ingreso"
@@ -129,7 +132,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </span>
             Ingreso
           </Link>
-          <TabLink item={RECIBOS} pathname={pathname} />
+          <TabLink item={VENTAS} pathname={pathname} />
           <TabLink item={WHATSAPP} pathname={pathname} />
         </div>
       </nav>

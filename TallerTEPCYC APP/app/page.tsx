@@ -1,5 +1,10 @@
+import { Suspense } from 'react'
 import { OrdersDashboard } from '@/components/orders/orders-dashboard'
 
 export default function Page() {
-  return <OrdersDashboard />
+  return (
+    <Suspense>
+      <OrdersDashboard />
+    </Suspense>
+  )
 }

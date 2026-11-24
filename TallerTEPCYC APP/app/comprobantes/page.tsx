@@ -1,17 +1,16 @@
-import type { Metadata } from 'next'
-import { ReceiptsView } from '@/components/receipts/receipts-view'
-import type { ReceiptType } from '@/components/receipts/receipt-document'
+import { redirect } from 'next/navigation'
 
-export const metadata: Metadata = {
-  title: 'Comprobantes · TEPCYC',
-}
-
+/**
+ * Los comprobantes ahora viven dentro de cada orden (/orden/[id]).
+ * Esta ruta se conserva para que los enlaces viejos sigan funcionando.
+ */
 export default async function ComprobantesPage({
   searchParams,
 }: {
   searchParams: Promise<{ orden?: string; tipo?: string }>
 }) {
   const { orden, tipo } = await searchParams
-  const type: ReceiptType = tipo === 'entrega' ? 'entrega' : 'recepcion'
-  return <ReceiptsView key={`${orden}-${type}`} initialOrderId={orden} initialType={type} />
+  if (!orden) redirect('/')
+  const recibo = tipo === 'entrega' ? 'entrega' : 'recepcion'
+  redirect(`/orden/${encodeURIComponent(orden)}?recibo=${recibo}`)
 }

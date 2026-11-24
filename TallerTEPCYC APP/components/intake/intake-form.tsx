@@ -181,7 +181,7 @@ export function IntakeForm() {
         action: { label: 'Avisar por WhatsApp', onClick: () => openWhatsApp(order) },
         duration: 8000,
       })
-      router.push(`/comprobantes?orden=${order.id}&tipo=recepcion`)
+      router.push(`/orden/${encodeURIComponent(order.id)}?recibo=recepcion`)
     } catch {
       toast.error('No se pudo registrar la orden. Intenta de nuevo.')
       setSubmitting(false)

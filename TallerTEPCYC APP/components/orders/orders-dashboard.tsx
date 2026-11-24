@@ -1,18 +1,14 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { toast } from 'sonner'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Search, Plus, Inbox, TriangleAlert, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { OrderCard, orderBalance } from './order-card'
-import { OrderDetailDialog } from './order-detail-dialog'
-import { OrderEditDialog } from './order-edit-dialog'
-import { PhotoViewer } from './photo-viewer'
 import { useOrders } from '@/hooks/use-orders'
-import { STATUSES, STATUS_MAP, isClosed } from '@/lib/status'
+import { STATUSES, isClosed } from '@/lib/status'
 import { formatMoney } from '@/lib/business'
-import { openWhatsApp } from '@/lib/whatsapp'
 import type { Order, OrderStatus } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -28,12 +24,19 @@ function shortMoney(n: number) {
 }
 
 export function OrdersDashboard() {
-  const { orders, isLoading, error, setStatus, updateOrder, addComment, deleteOrder } = useOrders()
+  const { orders, isLoading, error } = useOrders()
   const [filter, setFilter] = useState<Filter>('activas')
   const [query, setQuery] = useState('')
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [viewerId, setViewerId] = useState<string | null>(null)
+  const router = useRouter()
+  const buscar = useSearchParams().get('buscar')
+
+  // El botón «Buscar» del menú abre todas las órdenes con el cursor en la búsqueda.
+  useEffect(() => {
+    if (!buscar) return
+    setFilter('todas')
+    document.getElementById('order-search')?.focus()
+    router.replace('/', { scroll: false })
+  }, [buscar, router])
 
   const counts = useMemo(() => {
     const c = Object.fromEntries(STATUSES.map((s) => [s.value, 0])) as Record<OrderStatus, number>
@@ -65,45 +68,11 @@ export function OrdersDashboard() {
     )
   }, [filter, query, visible])
 
-  const selected = orders.find((o) => o.id === selectedId) ?? null
-  const editing = orders.find((o) => o.id === editingId) ?? null
-  const viewing = orders.find((o) => o.id === viewerId) ?? null
-
-  function startEditing(order: Order) {
-    setSelectedId(null)
-    setEditingId(order.id)
-  }
-
-  async function handleDelete(order: Order) {
-    await deleteOrder(order.id)
-    setSelectedId(null)
-    setEditingId(null)
-  }
-
-  async function handleStatusChange(order: Order, status: OrderStatus) {
-    const promise = setStatus(order.id, status)
-    toast.promise(promise, {
-      loading: 'Actualizando estado…',
-      success: (updated) => ({
-        message: `${updated.id} → ${STATUS_MAP[status]?.label ?? status}`,
-        description: `¿Avisar a ${updated.customer.name.split(' ')[0]}?`,
-        action: { label: 'WhatsApp', onClick: () => openWhatsApp(updated) },
-        duration: 8000,
-      }),
-      error: 'No se pudo actualizar el estado.',
-    })
-  }
-
   const cardList = (list: Order[]) => (
     <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
       {list.map((order) => (
         <li key={order.id} className="min-w-0">
-          <OrderCard
-            order={order}
-            onStatusChange={handleStatusChange}
-            onOpen={(o) => setSelectedId(o.id)}
-            onOpenPhotos={(o) => setViewerId(o.id)}
-          />
+          <OrderCard order={order} />
         </li>
       ))}
     </ul>
@@ -239,20 +208,6 @@ export function OrdersDashboard() {
         cardList(visible)
       )}
 
-      <OrderDetailDialog
-        order={selected}
-        onClose={() => setSelectedId(null)}
-        onEdit={startEditing}
-        onDelete={handleDelete}
-        onComment={addComment}
-      />
-      <OrderEditDialog order={editing} onClose={() => setEditingId(null)} onSave={updateOrder} />
-      <PhotoViewer
-        photos={viewing?.photos ?? []}
-        open={Boolean(viewing && viewing.photos.length > 0)}
-        label={viewing?.id}
-        onClose={() => setViewerId(null)}
-      />
     </div>
   )
 }
