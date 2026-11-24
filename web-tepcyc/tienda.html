@@ -18,8 +18,8 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20261108n">
 <link rel="preload" href="fonts/bebas-neue-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/archivo-400.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="css/sitio.css?v=20261121b">
-<link rel="stylesheet" href="css/paginas.css?v=20261124a">
+<link rel="stylesheet" href="css/sitio.css?v=20261124l">
+<link rel="stylesheet" href="css/paginas.css?v=20261124l">
 </head>
 <body>
 <a class="saltar" href="#contenido">Saltar al contenido</a>
@@ -90,6 +90,7 @@
   <p class="carrito__vacio" data-vacio>Tu carrito está vacío.</p>
   <div class="carrito__pie" data-pie>
     <p class="carrito__total"><span>Total</span><b data-total>$0</b></p>
+    <p class="nota-legal">Precios en pesos, con impuestos incluidos. Confirmamos existencias y valor por WhatsApp antes de que pagues. Ver <a href="terminos.html#ventas">garantías</a> y <a href="terminos.html#distancia">derecho de retracto</a>.</p>
     <a class="boton" data-enviar target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#i-wa"/></svg><span>Enviar pedido por WhatsApp</span></a>
     <button type="button" class="carrito__vaciar" data-vaciar>Vaciar carrito</button>
   </div>
@@ -104,7 +105,12 @@
       <a class="redes" href="https://www.instagram.com/todoenpcyconsolas2/" target="_blank" rel="noopener" aria-label="Instagram"><svg aria-hidden="true"><use href="#i-ig"/></svg></a>
     </div>
   </div>
-  <p class="envoltura pie__legal">PlayStation, Xbox y Nintendo son marcas de sus respectivos dueños.</p>
+  <nav class="envoltura pie__enlaces" aria-label="Información legal">
+    <a href="privacidad.html">Política de datos</a>
+    <a href="terminos.html">Términos y garantías</a>
+    <a href="https://www.sic.gov.co" target="_blank" rel="noopener">Superintendencia de Industria y Comercio</a>
+  </nav>
+  <p class="envoltura pie__legal">TODOENPCYCONSOLAS 2 · NIT 1007624883-1 · <a href="mailto:todoenpcyconsolas2@gmail.com">todoenpcyconsolas2@gmail.com</a>. PlayStation, Xbox y Nintendo son marcas de sus respectivos dueños.</p>
 </footer>
 
 <nav class="barra-movil" aria-label="Accesos rápidos">
@@ -117,6 +123,6 @@
 
 <script src="vendor/gsap.min.js" defer></script>
 <script src="js/sitio.js?v=20261121b" defer></script>
-<script src="js/tienda.js?v=20261124a" defer></script>
+<script src="js/tienda.js?v=20261124l" defer></script>
 </body>
 </html>

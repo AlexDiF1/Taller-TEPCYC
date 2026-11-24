@@ -6,7 +6,7 @@
  * - El PDF se descarga en el dispositivo y también se puede enviar por WhatsApp
  *   (Baileys) desde la interfaz del comprobante.
  */
-import { BUSINESS, addDays, formatDate } from './business'
+import { BUSINESS, DATA_CONSENT, INTAKE_TERMS, addDays, formatDate } from './business'
 import { buildPrettyReceiptPdf } from './receipt-pdf-pro'
 import { buildReceiptMessage, buildWhatsAppUrl } from './whatsapp'
 import { STATUS_MAP, deviceLabel } from './status'
@@ -156,10 +156,11 @@ function drawTicket(doc: TicketDoc, order: Order, type: ReceiptType, items: Serv
   } else {
     y = paragraph(
       doc,
-      'El diagnóstico puede modificar el costo estimado. Equipos no reclamados en 60 días generan cobro por bodegaje. Presente este comprobante para retirar el equipo.',
+      INTAKE_TERMS,
       y,
       7,
     )
+    y = paragraph(doc, DATA_CONSENT, y, 6.5)
   }
 
   // ---------------------------------- pie ------------------------------------

@@ -17,6 +17,9 @@
   if (!form) return;
   const $ = (s) => form.querySelector(s);
   const modelo = $('#modelo'), otro = $('#modelo-otro'), nombre = $('#nombre'), fallo = $('#fallo');
+  const autoriza = $('#autoriza-datos');
+  // Versión de la política aceptada (cambiarla si cambia privacidad.html).
+  const POLITICA = '2026-11-24';
   const campoModelo = $('[data-campo-modelo]'), campoOtro = $('[data-campo-otro]'), etiquetaOtro = $('[data-etiqueta-otro]');
   const confirmacion = $('[data-confirmacion]'), enlaceWa = $('[data-enlace-wa]');
 
@@ -47,11 +50,14 @@
     const faltaOtro = !campoOtro.hidden && !otro.value.trim();
     const faltaFallo = !fallo.value.trim();
     const faltaNombre = !nombre.value.trim();
+    const faltaAutoriza = !autoriza.checked;
     error('modelo', faltaSelect, modelo);
     error('modelo-otro', faltaOtro, otro);
     error('fallo', faltaFallo, fallo);
     error('nombre', faltaNombre, nombre);
-    const primero = faltaSelect ? modelo : faltaOtro ? otro : faltaFallo ? fallo : faltaNombre ? nombre : null;
+    error('autoriza', faltaAutoriza, autoriza);
+    autoriza.closest('.autoriza').setAttribute('aria-invalid', String(faltaAutoriza));
+    const primero = faltaSelect ? modelo : faltaOtro ? otro : faltaFallo ? fallo : faltaNombre ? nombre : faltaAutoriza ? autoriza : null;
     if (primero) primero.focus();
     return !primero;
   }
@@ -78,6 +84,11 @@
   fallo.addEventListener('input', () => error('fallo', false, fallo));
   otro.addEventListener('input', () => error('modelo-otro', false, otro));
   nombre.addEventListener('input', () => error('nombre', false, nombre));
+  autoriza.addEventListener('change', () => {
+    if (!autoriza.checked) return;
+    error('autoriza', false, autoriza);
+    autoriza.closest('.autoriza').setAttribute('aria-invalid', 'false');
+  });
 
   /* Registra el lead en el panel (n8n) sin bloquear al cliente: es "dispara y olvida". */
   function registrarLead() {
@@ -96,6 +107,8 @@
           desde: ($('#desde') || {}).value || '',
           ref: REF,
           sitio_web: ($('#sitio-web') || {}).value || '',
+          autoriza_datos: autoriza.checked,
+          politica: POLITICA,
           pagina: location.pathname + location.search
         })
       }).catch(() => {});

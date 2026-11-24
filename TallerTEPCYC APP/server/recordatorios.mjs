@@ -91,7 +91,7 @@ export function mensaje(kind, o) {
     `${SALUDO(o)}\n\n` +
     `Le recordamos que su ${equipo} ${orden} está listo desde el ${fechaCorta(o.since)} y puede pasar a recogerlo en nuestras instalaciones.\n\n` +
     (saldo > 0 ? `Saldo a pagar al recoger: ${plata(saldo)}\n\n` : '') +
-    `Recuerde que los equipos no reclamados en 60 días pueden generar cobro por bodegaje.\n\n` +
+    `Recuerde que si el equipo no se recoge en 60 días desde que le avisamos que estaba listo, se cobra bodegaje de $3.000 por día.\n\n` +
     FIRMA
   )
 }

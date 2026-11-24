@@ -1,4 +1,4 @@
-import { BUSINESS, addDays, formatDate, formatMoney } from '@/lib/business'
+import { BUSINESS, DATA_CONSENT, INTAKE_TERMS, addDays, formatDate, formatMoney } from '@/lib/business'
 import { STATUS_MAP, deviceLabel } from '@/lib/status'
 import type { DeviceType, Order, ServiceItem } from '@/lib/types'
 
@@ -172,7 +172,8 @@ export function ReceiptDocument({ order, type, items }: { order: Order; type: Re
         </div>
       ) : (
         <div className="text-[7pt]">
-          <p>El diagnóstico puede modificar el costo estimado. Equipos no reclamados en 60 días generan cobro por bodegaje. Presente este comprobante para retirar el equipo.</p>
+          <p>{INTAKE_TERMS}</p>
+          <p className="mt-1">{DATA_CONSENT}</p>
         </div>
       )}
 

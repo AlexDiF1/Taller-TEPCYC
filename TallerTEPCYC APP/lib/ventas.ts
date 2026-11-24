@@ -200,14 +200,18 @@ export async function deleteVenta(id: string | number): Promise<void> {
 
 /* ------------------------------- recibos -------------------------------- */
 
-/** Días de garantía por defectos de fábrica en la venta de productos. */
-export const SALE_WARRANTY_DAYS = 30
+/**
+ * Garantía de venta por tipo de producto. Debe coincidir con tepcyc.com/terminos.html
+ * y con las tarjetas de la tienda (web-tepcyc/js/tienda.js).
+ */
+export const SALE_WARRANTY_SUMMARY =
+  'consolas nuevas 1 año, consolas usadas 4 meses, controles y accesorios 30 días'
 
 /** Cláusulas de garantía impresas al pie del recibo de venta (POS). */
 export const SALE_WARRANTY_TERMS = [
-  `Garantía de ${SALE_WARRANTY_DAYS} días calendario por defectos de fábrica, contados desde la fecha de esta compra.`,
-  'Cubre fallas de funcionamiento con uso normal del producto. Para hacerla efectiva presenta este recibo.',
-  'No cubre: golpes, humedad o líquidos, manipulación o reparación por terceros, sellos o tornillos alterados, daños estéticos, accesorios ni consumibles.',
+  `Garantía desde la fecha de esta compra: ${SALE_WARRANTY_SUMMARY}.`,
+  'Cubre fallas de funcionamiento con uso normal. Para hacerla efectiva presenta este recibo. Condiciones: tepcyc.com/terminos.html',
+  'No cubre: golpes, humedad o líquidos, manipulación o reparación por terceros, sellos o tornillos alterados, ni marcas de uso o daños estéticos.',
 ]
 
 function plainMoney(value: number) {
@@ -325,7 +329,7 @@ export function buildSaleMessage(venta: Venta) {
     `Total: ${plainMoney(venta.total)}\n` +
     `Método de pago: ${PAYMENT_MAP[venta.paymentMethod]?.label ?? venta.paymentMethod}\n\n` +
     `El recibo va adjunto en PDF.\n\n` +
-    `Garantía: ${SALE_WARRANTY_DAYS} días calendario por defectos de fábrica, presentando este recibo.\n\n` +
+    `Garantía desde hoy, presentando este recibo: ${SALE_WARRANTY_SUMMARY}. Condiciones: tepcyc.com/terminos.html\n\n` +
     `Cualquier inquietud adicional, estaremos atentos a sus mensajes. Gracias por su compra.`
   )
 }

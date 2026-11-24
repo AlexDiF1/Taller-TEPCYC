@@ -7,7 +7,7 @@
  * - Incluye las fotos del ingreso, el detalle cobrado y la garantía.
  * - Nunca imprime costos internos ni ganancias: solo lo que ve el cliente.
  */
-import { BUSINESS, addDays, formatDate, formatMoney } from './business'
+import { BUSINESS, DATA_CONSENT, INTAKE_TERMS, addDays, formatDate, formatMoney } from './business'
 import { STATUS_MAP, deviceLabel } from './status'
 import type { IntakePhoto, Order, ServiceItem } from './types'
 
@@ -278,8 +278,8 @@ function render(doc: Doc, { order, type, items, photos }: Ctx): number {
     if (order.device.type === 'celular' && order.warrantyScreenExcluded) clauses.push('No hay garantía por pantallas cambiadas.')
     if (order.warrantyNoAfterReview !== false) clauses.push('Después de la entrega y revisión del cliente no hay garantía por daños posteriores.')
   } else {
-    clauses.push('El diagnóstico puede cambiar el costo estimado.')
-    clauses.push('Equipos no reclamados en 60 días pueden generar cobro por bodegaje. Presente este recibo para retirar el equipo.')
+    clauses.push(INTAKE_TERMS)
+    clauses.push(DATA_CONSENT)
   }
   y = label(doc, isDelivery ? 'Garantía' : 'Condiciones', y)
   for (const c of clauses) y = para(doc, `• ${c}`, y, 8, INK) + 0.6

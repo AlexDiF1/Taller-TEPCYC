@@ -574,8 +574,10 @@ export function IntakeForm({ solicitudId }: { solicitudId?: number } = {}) {
               className="mt-0.5 size-5 rounded-md"
             />
             <span className="text-[13.5px] leading-relaxed text-foreground/85">
-              <b className="font-bold">El cliente acepta las condiciones:</b> el diagnóstico puede cambiar el costo estimado
-              y los equipos no reclamados en 60 días pueden generar cobro por bodegaje.
+              <b className="font-bold">El cliente acepta las condiciones y autoriza el uso de sus datos:</b> el diagnóstico
+              puede cambiar el costo estimado; si no recoge el equipo en {BUSINESS.storageFreeDays} días desde el aviso de que
+              está listo, se cobra bodegaje de {formatMoney(BUSINESS.storageFeePerDay)} por día; sus datos se usan para atender
+              la orden y escribirle por WhatsApp (tepcyc.com/privacidad.html).
             </span>
           </label>
           {errors.acceptedTerms && <p className="mt-2 text-[13px] font-medium text-destructive">{errors.acceptedTerms}</p>}

@@ -11,8 +11,8 @@
   const CATS = {
     nuevas: { sello: 'Nueva', etiqueta: 'consola nueva', garantia: 'Garantía de 1 año' },
     usadas: { sello: 'Usada', etiqueta: 'consola usada', garantia: 'Garantía de 4 meses' },
-    controles: { sello: 'Control', etiqueta: 'control', garantia: '' },
-    accesorios: { sello: 'Accesorio', etiqueta: 'accesorio', garantia: '' }
+    controles: { sello: 'Control', etiqueta: 'control', garantia: 'Garantía de 30 días' },
+    accesorios: { sello: 'Accesorio', etiqueta: 'accesorio', garantia: 'Garantía de 30 días' }
   };
   const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const hayGsap = typeof window.gsap !== 'undefined' && !RM;

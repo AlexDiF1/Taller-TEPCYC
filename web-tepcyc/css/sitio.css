@@ -109,6 +109,10 @@ h3{font-size:20px;font-weight:800;line-height:1.2}
 .pie__fila p{color:var(--gris);font-size:15px;flex:1;min-width:240px}
 .pie__redes{display:flex;gap:10px}
 .pie__legal{color:var(--gris-osc);font-size:13px;margin-top:24px}
+.pie__legal a{color:var(--gris);text-decoration:underline;text-underline-offset:3px}
+.pie__enlaces{display:flex;flex-wrap:wrap;gap:4px 22px;margin-top:22px}
+.pie__enlaces a{display:inline-flex;align-items:center;min-height:44px;color:#E9E7E4;font-size:15px;font-weight:700;text-decoration:underline;text-decoration-color:var(--gris-osc);text-underline-offset:4px;transition:color .2s,text-decoration-color .2s}
+.pie__enlaces a:hover,.pie__enlaces a[aria-current]{color:#fff;text-decoration-color:var(--rojo-texto)}
 .redes{display:inline-grid;place-items:center;width:54px;height:54px;border-radius:50%;border:2px solid var(--linea);transition:background .3s,border-color .3s,transform .3s var(--ease)}
 .redes svg{width:22px;height:22px;fill:#fff}
 .redes:hover{background:#fff;border-color:#fff;transform:translateY(-2px)}
