@@ -24,6 +24,8 @@ export interface VentaItem {
   cost: number
   quantity: number
   subtotal: number
+  /** Producto del catálogo (descuenta existencias); vacío = artículo escrito a mano. */
+  productId?: number
 }
 
 export interface Venta {
@@ -55,7 +57,7 @@ export interface VentaListResponse {
 }
 
 export interface NewVentaInput {
-  items: { name: string; price: number; cost: number; quantity: number }[]
+  items: { name: string; price: number; cost: number; quantity: number; productId?: number }[]
   paymentMethod: PaymentMethod
   customerName?: string
   customerPhone?: string
@@ -64,7 +66,7 @@ export interface NewVentaInput {
 
 /** Campos editables de una venta ya registrada (PUT /api/ventas/:id). */
 export interface VentaPatch {
-  items?: { name: string; price: number; cost: number; quantity: number }[]
+  items?: { name: string; price: number; cost: number; quantity: number; productId?: number }[]
   paymentMethod?: PaymentMethod
   customerName?: string
   customerPhone?: string

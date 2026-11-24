@@ -18,6 +18,7 @@ interface DraftItem {
   price: string
   cost: string
   quantity: string
+  productId?: number
 }
 
 function toDraft(venta: Venta): DraftItem[] {
@@ -27,6 +28,7 @@ function toDraft(venta: Venta): DraftItem[] {
     price: String(item.price),
     cost: String(item.cost),
     quantity: String(item.quantity),
+    productId: item.productId,
   }))
 }
 
@@ -103,6 +105,7 @@ function Editor({
         price: Math.round(Number(item.price) || 0),
         cost: Math.round(Number(item.cost) || 0),
         quantity: Math.max(1, Math.trunc(Number(item.quantity) || 1)),
+        productId: item.productId,
       })),
     }
 

@@ -1,15 +1,18 @@
-/* Tienda: filtros, carrito guardado en el navegador y pedido por WhatsApp */
+/* Tienda: lee el catálogo del taller (/api/productos), filtros, carrito guardado en el navegador y pedido por WhatsApp */
 (() => {
   'use strict';
   const WHATSAPP = '573180223184';
-  const CLAVE = 'tepcyc-carrito';
+  // v2: los ids ahora son los del catálogo del taller (los carritos de ejemplo se descartan).
+  const CLAVE = 'tepcyc-carrito-v2';
   const d = document, $ = (s) => d.querySelector(s);
-  const datos = window.TIENDA || { productos: [] };
-  const catalogo = new Map(datos.productos.map((p) => [p.id, p]));
+  /* El catálogo llega del taller; mientras tanto (o si falla) queda vacío. */
+  const datos = { productos: [] };
+  let catalogo = new Map();
   const CATS = {
     nuevas: { sello: 'Nueva', etiqueta: 'consola nueva', garantia: 'Garantía de 1 año' },
     usadas: { sello: 'Usada', etiqueta: 'consola usada', garantia: 'Garantía de 4 meses' },
-    controles: { sello: 'Control', etiqueta: 'control', garantia: '' }
+    controles: { sello: 'Control', etiqueta: 'control', garantia: '' },
+    accesorios: { sello: 'Accesorio', etiqueta: 'accesorio', garantia: '' }
   };
   const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const hayGsap = typeof window.gsap !== 'undefined' && !RM;
@@ -17,18 +20,21 @@
   const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const DIBUJO = '<svg viewBox="0 0 120 80" aria-hidden="true"><path d="M34 14h52c13 0 20 10 23 25 3 14 3 27-6 29-8 2-14-8-20-16H37c-6 8-12 18-20 16-9-2-9-15-6-29 3-15 10-25 23-25Z"/><path d="M36 26v14M29 33h14"/><circle cx="84" cy="28" r="2"/><circle cx="92" cy="36" r="2"/></svg>';
 
-  /* Carrito: { idProducto: cantidad } */
+  /* Carrito: { idProducto: cantidad }. Se recupera cuando llega el catálogo: lo que ya no está, se cae. */
   let carrito = {};
-  try {
-    const guardado = JSON.parse(localStorage.getItem(CLAVE) || '{}');
-    Object.entries(guardado).forEach(([id, c]) => { if (catalogo.has(id) && Number.isInteger(c) && c > 0) carrito[id] = c; });
-  } catch (e) { carrito = {}; }
+  function recuperarCarrito() {
+    carrito = {};
+    try {
+      const guardado = JSON.parse(localStorage.getItem(CLAVE) || '{}');
+      Object.entries(guardado).forEach(([id, c]) => { if (catalogo.has(id) && Number.isInteger(c) && c > 0) carrito[id] = Math.min(c, 99); });
+    } catch (e) { carrito = {}; }
+  }
   const guardar = () => { try { localStorage.setItem(CLAVE, JSON.stringify(carrito)); } catch (e) { /* sin almacenamiento: sigue en memoria */ } };
 
   const caja = $('[data-productos]'), filtros = $('[data-filtros]'), dialogo = $('[data-carrito]'), botonCarrito = $('[data-abrir-carrito]');
   const lineas = $('[data-lineas]'), vacio = $('[data-vacio]'), pie = $('[data-pie]'), enviar = $('[data-enviar]');
 
-  if (datos.ejemplo) $('[data-aviso-ejemplo]').hidden = false;
+  const cartel = $('[data-cartel]'), barra = $('[data-barra]');
 
   function pintarProductos(cat) {
     const lista = datos.productos.filter((p) => cat === 'todos' || p.categoria === cat);
@@ -46,6 +52,7 @@
         <div class="producto__info">
           <h2>${esc(p.nombre)}</h2>
           ${c.garantia ? `<p class="producto__garantia">${c.garantia}</p>` : ''}
+          ${p.descripcion ? `<p class="producto__detalle">${esc(p.descripcion)}</p>` : ''}
           <p class="producto__precio">${pesos(p.precio)}</p>
           <button class="boton" type="button" data-agregar="${esc(p.id)}"><span>Agregar</span></button>
         </div>
@@ -149,8 +156,49 @@
   });
   $('[data-vaciar]').addEventListener('click', () => { carrito = {}; pintarCarrito(); dialogo.close(); });
 
-  /* Si viene de un botón de la portada: tienda.html?cat=usadas */
-  const pedido = new URLSearchParams(location.search).get('cat');
-  elegirFiltro(pedido && CATS[pedido] ? pedido : 'todos');
+  /* Sin productos (o sin conexión con el taller): cartel de «Próximamente» y WhatsApp. */
+  function sinCatalogo(texto) {
+    cartel.hidden = false;
+    barra.hidden = true;
+    caja.innerHTML = texto ? `<p class="aviso productos__vacio">${texto}</p>` : '';
+    botonCarrito.hidden = true;
+  }
+
+  async function cargar() {
+    let lista = [];
+    try {
+      const r = await fetch('/api/productos', { cache: 'no-store', headers: { Accept: 'application/json' } });
+      if (!r.ok) throw new Error(String(r.status));
+      lista = ((await r.json()).productos || []).filter((p) => p && p.nombre && Number(p.precio) > 0 && CATS[p.categoria]);
+    } catch (e) {
+      sinCatalogo(`No pudimos cargar los productos en este momento. <a href="https://wa.me/${WHATSAPP}?text=${encodeURIComponent('Hola, quiero preguntar por disponibilidad')}" target="_blank" rel="noopener">Pregúntanos por WhatsApp</a>.`);
+      return;
+    }
+    datos.productos = lista.map((p) => ({
+      id: String(p.id),
+      nombre: String(p.nombre),
+      categoria: p.categoria,
+      descripcion: p.descripcion ? String(p.descripcion) : '',
+      precio: Number(p.precio),
+      foto: p.foto ? `/api/productos/${encodeURIComponent(p.id)}/foto?v=${encodeURIComponent(p.foto)}` : ''
+    }));
+    catalogo = new Map(datos.productos.map((p) => [p.id, p]));
+    if (!datos.productos.length) { sinCatalogo(''); return; }
+    cartel.hidden = true;
+    barra.hidden = false;
+    botonCarrito.hidden = false;
+    /* Solo se muestran los filtros que tienen productos. */
+    filtros.querySelectorAll('[data-cat]').forEach((b) => {
+      b.hidden = b.dataset.cat !== 'todos' && !datos.productos.some((p) => p.categoria === b.dataset.cat);
+    });
+    recuperarCarrito();
+    /* Si viene de un botón de la portada: tienda.html?cat=usadas */
+    const pedido = new URLSearchParams(location.search).get('cat');
+    const hay = pedido && CATS[pedido] && datos.productos.some((p) => p.categoria === pedido);
+    elegirFiltro(hay ? pedido : 'todos');
+    pintarCarrito();
+  }
+
   pintarCarrito();
+  cargar();
 })();

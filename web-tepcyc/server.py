@@ -23,6 +23,9 @@ HOST = os.environ.get("HOST", "127.0.0.1")
 # App del taller (Express + SQLite) para la consulta pública de una orden.
 TALLER = os.environ.get("TALLER_URL", "http://127.0.0.1:3005").rstrip("/")
 PREFIJO_ORDEN = "/api/orden/"
+# Tienda: catálogo público del taller (solo lectura) y la foto de cada producto.
+RUTA_PRODUCTOS = "/api/productos"
+FOTO_PRODUCTO = re.compile(r"/api/productos/([1-9][0-9]{0,8})/foto")
 # Automatizaciones (n8n): los leads del formulario entran por aquí, mismo origen,
 # y se reenvían al webhook local. Si n8n está caído se guardan en cola: no se pierde ninguno.
 N8N_LEADS = os.environ.get("N8N_LEADS_WEBHOOK", "http://127.0.0.1:5678/webhook/leads")
@@ -60,12 +63,45 @@ class Handler(SimpleHTTPRequestHandler):
         ruta = self.path.split("?", 1)[0]
         if ruta.startswith(PREFIJO_ORDEN):
             return self.consultar_orden(ruta)
+        if ruta == RUTA_PRODUCTOS or FOTO_PRODUCTO.fullmatch(ruta):
+            return self.tienda(ruta)
         return super().do_GET()
 
     def do_HEAD(self):
-        if self.path.split("?", 1)[0].startswith(PREFIJO_ORDEN):
-            return self.consultar_orden(self.path.split("?", 1)[0])
+        ruta = self.path.split("?", 1)[0]
+        if ruta.startswith(PREFIJO_ORDEN):
+            return self.consultar_orden(ruta)
+        if ruta == RUTA_PRODUCTOS or FOTO_PRODUCTO.fullmatch(ruta):
+            return self.tienda(ruta)
         return super().do_HEAD()
+
+    def tienda(self, ruta):
+        """Puente con el catálogo del taller: la lista de productos o la foto de uno.
+
+        El taller solo entrega lo disponible y sin costos ni existencias.
+        """
+        foto = FOTO_PRODUCTO.fullmatch(ruta)
+        url = f"{TALLER}/api/public/productos/{foto.group(1)}/foto" if foto else f"{TALLER}/api/public/productos"
+        tipo = "application/json; charset=utf-8"
+        try:
+            with urllib.request.urlopen(url, timeout=8) as resp:
+                cuerpo, estado = resp.read(), resp.status
+                tipo = resp.headers.get("Content-Type") or tipo
+        except urllib.error.HTTPError as err:
+            cuerpo, estado = b'{"error":"no encontrado"}', err.code
+        except (urllib.error.URLError, OSError, TimeoutError):
+            cuerpo, estado = b'{"error":"taller no disponible"}', 503
+        if foto and estado == 200 and not tipo.startswith("image/"):
+            cuerpo, estado, tipo = b'{"error":"no encontrado"}', 404, "application/json; charset=utf-8"
+        # La foto se puede guardar un día (la URL cambia con ?v= al cambiar); la lista no se guarda:
+        # así un producto nuevo o vendido se ve al instante en la tienda.
+        self._cache = "public, max-age=86400" if (foto and estado == 200) else "no-store"
+        self.send_response(estado)
+        self.send_header("Content-Type", tipo)
+        self.send_header("Content-Length", str(len(cuerpo)))
+        self.end_headers()
+        if self.command != "HEAD":
+            self.wfile.write(cuerpo)
 
     def do_POST(self):
         ruta = self.path.split("?", 1)[0]
@@ -181,7 +217,9 @@ class Handler(SimpleHTTPRequestHandler):
     def end_headers(self):
         ruta = self.path.split("?", 1)[0]
         es_html = ruta.endswith((".html", "/")) or ruta in ("", "/")
-        if getattr(self, "_api", False) or getattr(self, "_es_404", False):
+        if getattr(self, "_cache", None):
+            self.send_header("Cache-Control", self._cache)
+        elif getattr(self, "_api", False) or getattr(self, "_es_404", False):
             self.send_header("Cache-Control", "no-store, must-revalidate")
         elif es_html:
             # El HTML nunca se cachea: Cloudflare (Browser Cache TTL por defecto) guardaba

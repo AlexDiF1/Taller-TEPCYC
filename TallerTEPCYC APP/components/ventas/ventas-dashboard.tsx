@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ShoppingCart, History, BarChart3, ChevronRight, Wallet } from 'lucide-react'
+import { ShoppingCart, History, BarChart3, ChevronRight, Package, Wallet } from 'lucide-react'
 import { SaleForm } from './sale-form'
 import { SalesHistory } from './sales-history'
 import { SaleEditDialog } from './sale-edit-dialog'
@@ -54,20 +54,35 @@ export function VentasDashboard() {
         <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-primary">Negocio</p>
         <h1 className="mt-1 text-[32px] font-extrabold tracking-tight">Ventas</h1>
       </div>
-      {/* En el celular la Caja no cabe en la barra inferior: se llega desde aquí. */}
-      <Link
-        href="/caja"
-        className="flex min-h-12 items-center gap-3 rounded-2xl border border-border bg-surface px-3.5 py-2.5 transition-colors hover:border-foreground/25 lg:hidden"
-      >
-        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-status-done/12 text-status-done">
-          <Wallet className="size-[18px]" aria-hidden="true" />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-[15px] font-bold">Caja del día</span>
-          <span className="block truncate text-[12.5px] text-muted-foreground">Ventas y pagos de reparaciones, por método</span>
-        </span>
-        <ChevronRight className="size-5 text-muted-foreground" aria-hidden="true" />
-      </Link>
+      {/* En el celular Caja y Catálogo no caben en la barra inferior: se llega desde aquí. */}
+      <div className="grid grid-cols-2 gap-2 lg:hidden">
+        <Link
+          href="/caja"
+          className="flex min-h-14 items-center gap-2.5 rounded-2xl border border-border bg-surface px-3 py-2.5 transition-colors hover:border-foreground/25"
+        >
+          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-status-done/12 text-status-done">
+            <Wallet className="size-[18px]" aria-hidden="true" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15px] font-bold">Caja</span>
+            <span className="block truncate text-[12px] text-muted-foreground">Lo que entró</span>
+          </span>
+          <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+        </Link>
+        <Link
+          href="/catalogo"
+          className="flex min-h-14 items-center gap-2.5 rounded-2xl border border-border bg-surface px-3 py-2.5 transition-colors hover:border-foreground/25"
+        >
+          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-status-pending/12 text-status-pending">
+            <Package className="size-[18px]" aria-hidden="true" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15px] font-bold">Catálogo</span>
+            <span className="block truncate text-[12px] text-muted-foreground">Productos</span>
+          </span>
+          <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+        </Link>
+      </div>
       <div
         className="grid grid-cols-2 gap-1 rounded-2xl bg-surface-2 p-1 sm:inline-grid sm:w-fit"
         role="tablist"

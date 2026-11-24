@@ -232,6 +232,27 @@ function migrateDepositsToPayments() {
 }
 migrateDepositsToPayments()
 
+// Catálogo: lo que se vende en el local y en la tienda de la web.
+// `stock` NULL = no se llevan existencias; un número = se descuenta al vender.
+db.exec(`
+CREATE TABLE IF NOT EXISTS productos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  category TEXT NOT NULL DEFAULT 'nuevas',
+  description TEXT,
+  price REAL NOT NULL DEFAULT 0,
+  cost REAL NOT NULL DEFAULT 0,
+  photo_url TEXT,
+  available INTEGER NOT NULL DEFAULT 1,
+  stock INTEGER,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_productos_category ON productos(category);
+`)
+// Qué producto del catálogo se vendió en cada línea (para devolver existencias al editar o borrar).
+ensureColumn('venta_items', 'product_id', 'INTEGER')
+
 /* ------------------------------- lectura -------------------------------- */
 
 function rows(sql, params = []) {
@@ -859,6 +880,7 @@ function rowToVenta(row, items) {
       cost: i.cost,
       quantity: i.quantity,
       subtotal: i.subtotal,
+      productId: i.product_id ?? undefined,
     })),
   }
 }
@@ -931,6 +953,51 @@ export function getVenta(id) {
   return rowToVenta(row, items)
 }
 
+/* Existencias del catálogo: se descuentan al vender y se devuelven al editar o borrar la venta. */
+function stockError(message) {
+  return Object.assign(new Error(message), { status: 409 })
+}
+
+/** Id de producto válido y existente, o null (la línea queda como artículo libre). */
+function productRef(value) {
+  const id = intId(value)
+  if (!Number.isFinite(id)) return null
+  return db.prepare('SELECT id FROM productos WHERE id = ?').get(id) ? id : null
+}
+
+/** Descuenta las existencias de las líneas del catálogo. Lanza 409 si no alcanzan. */
+function takeStock(items) {
+  const need = new Map()
+  for (const item of items) {
+    if (item.productId) need.set(item.productId, (need.get(item.productId) ?? 0) + item.quantity)
+  }
+  for (const [productId, quantity] of need) {
+    const product = db.prepare('SELECT name, stock FROM productos WHERE id = ?').get(productId)
+    if (!product || product.stock === null || product.stock === undefined) continue
+    if (product.stock < quantity) {
+      throw stockError(
+        product.stock > 0
+          ? `Solo ${product.stock === 1 ? 'queda 1' : `quedan ${product.stock}`} de «${product.name}». Ajusta la cantidad o las existencias en el catálogo.`
+          : `«${product.name}» está agotado en el catálogo. Ajusta las existencias si sí lo tienes.`,
+      )
+    }
+    db.prepare('UPDATE productos SET stock = stock - ?, updated_at = ? WHERE id = ?').run(quantity, new Date().toISOString(), productId)
+  }
+}
+
+/** Devuelve al catálogo las existencias de las líneas ya guardadas de una venta. */
+function returnStock(ventaId) {
+  const lines = rows('SELECT product_id, quantity FROM venta_items WHERE venta_id = ? AND product_id IS NOT NULL', [ventaId])
+  const now = new Date().toISOString()
+  for (const line of lines) {
+    db.prepare('UPDATE productos SET stock = stock + ?, updated_at = ? WHERE id = ? AND stock IS NOT NULL').run(
+      line.quantity,
+      now,
+      line.product_id,
+    )
+  }
+}
+
 export function createVenta(input = {}) {
   const now = new Date().toISOString()
   const items = (Array.isArray(input.items) ? input.items : []).map((i) => ({
@@ -938,6 +1005,7 @@ export function createVenta(input = {}) {
     price: Math.max(0, Number(i?.price) || 0),
     cost: Math.max(0, Number(i?.cost) || 0),
     quantity: Math.max(1, Math.trunc(Number(i?.quantity) || 1)),
+    productId: productRef(i?.productId),
   }))
   const total = items.reduce((s, i) => s + i.price * i.quantity, 0)
   const totalCost = items.reduce((s, i) => s + i.cost * i.quantity, 0)
@@ -959,11 +1027,12 @@ export function createVenta(input = {}) {
       )
     const ventaId = Number(info.lastInsertRowid)
     const insertItem = db.prepare(
-      'INSERT INTO venta_items (venta_id, name, price, cost, quantity, subtotal) VALUES (?,?,?,?,?,?)',
+      'INSERT INTO venta_items (venta_id, name, price, cost, quantity, subtotal, product_id) VALUES (?,?,?,?,?,?,?)',
     )
     for (const item of items) {
-      insertItem.run(ventaId, item.name, item.price, item.cost, item.quantity, item.price * item.quantity)
+      insertItem.run(ventaId, item.name, item.price, item.cost, item.quantity, item.price * item.quantity, item.productId)
     }
+    takeStock(items)
     return ventaId
   })
   return getVenta(tx())
@@ -973,6 +1042,7 @@ export function deleteVenta(id) {
   const row = db.prepare('SELECT id FROM ventas WHERE id = ?').get(ventaRowId(id))
   if (!row) return false
   const tx = db.transaction(() => {
+    returnStock(row.id)
     db.prepare('DELETE FROM venta_items WHERE venta_id = ?').run(row.id)
     db.prepare('DELETE FROM ventas WHERE id = ?').run(row.id)
   })
@@ -990,13 +1060,17 @@ export function updateVenta(id, patch = {}) {
 
   const tx = db.transaction(() => {
     if (Array.isArray(patch.items)) {
+      // Primero vuelven las existencias de las líneas viejas; luego se descuentan las nuevas.
+      returnStock(row.id)
       db.prepare('DELETE FROM venta_items WHERE venta_id = ?').run(row.id)
       const insert = db.prepare(
-        'INSERT INTO venta_items (venta_id, name, price, cost, quantity, subtotal) VALUES (?,?,?,?,?,?)',
+        'INSERT INTO venta_items (venta_id, name, price, cost, quantity, subtotal, product_id) VALUES (?,?,?,?,?,?,?)',
       )
-      for (const item of patch.items) {
-        insert.run(row.id, item.name, item.price, item.cost, item.quantity, item.price * item.quantity)
+      const items = patch.items.map((item) => ({ ...item, productId: productRef(item.productId) }))
+      for (const item of items) {
+        insert.run(row.id, item.name, item.price, item.cost, item.quantity, item.price * item.quantity, item.productId)
       }
+      takeStock(items)
     }
 
     const items = rows('SELECT * FROM venta_items WHERE venta_id = ? ORDER BY id', [row.id])
@@ -1416,6 +1490,111 @@ export function markEstado(id, status, error = null) {
   )
 }
 
+/* -------------------------------- catálogo ------------------------------- */
+
+export const PRODUCT_CATEGORIES = ['nuevas', 'usadas', 'controles', 'accesorios']
+
+function rowToProducto(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    category: row.category,
+    description: row.description || undefined,
+    price: row.price,
+    cost: row.cost,
+    photoUrl: row.photo_url || undefined,
+    available: Boolean(row.available),
+    stock: row.stock ?? null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }
+}
+
+export function listProductos() {
+  return rows('SELECT * FROM productos ORDER BY available DESC, category, name COLLATE NOCASE').map(rowToProducto)
+}
+
+export function getProducto(id) {
+  const row = db.prepare('SELECT * FROM productos WHERE id = ?').get(intId(id))
+  return row ? rowToProducto(row) : undefined
+}
+
+/** Lo que ve la web: disponibles y con existencias (o sin control de existencias). */
+export function listProductosPublicos() {
+  return rows(
+    `SELECT * FROM productos WHERE available = 1 AND (stock IS NULL OR stock > 0)
+      ORDER BY category, price, name COLLATE NOCASE`,
+  ).map(rowToProducto)
+}
+
+/** `input` ya viene validado desde la API. */
+export function createProducto(input) {
+  const now = new Date().toISOString()
+  const info = db
+    .prepare(`INSERT INTO productos (name, category, description, price, cost, photo_url, available, stock, created_at, updated_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?)`)
+    .run(
+      input.name,
+      input.category,
+      input.description || null,
+      input.price,
+      input.cost ?? 0,
+      input.photoUrl || null,
+      input.available === false ? 0 : 1,
+      input.stock ?? null,
+      now,
+      now,
+    )
+  return getProducto(Number(info.lastInsertRowid))
+}
+
+const PRODUCT_COLUMNS = {
+  name: 'name',
+  category: 'category',
+  description: 'description',
+  price: 'price',
+  cost: 'cost',
+  photoUrl: 'photo_url',
+  available: 'available',
+  stock: 'stock',
+}
+
+export function updateProducto(id, patch = {}) {
+  const current = getProducto(id)
+  if (!current) return undefined
+  const sets = []
+  const params = []
+  for (const [key, column] of Object.entries(PRODUCT_COLUMNS)) {
+    if (patch[key] === undefined) continue
+    let value = patch[key]
+    if (key === 'available') value = value ? 1 : 0
+    else if (key === 'description' || key === 'photoUrl') value = value || null
+    sets.push(`${column} = ?`)
+    params.push(value)
+  }
+  if (sets.length === 0) return current
+  sets.push('updated_at = ?')
+  params.push(new Date().toISOString())
+  db.prepare(`UPDATE productos SET ${sets.join(', ')} WHERE id = ?`).run(...params, current.id)
+  return getProducto(current.id)
+}
+
+/** Borra el producto; las ventas ya hechas conservan su nombre y precio. Devuelve el producto borrado. */
+export function deleteProducto(id) {
+  const current = getProducto(id)
+  if (!current) return undefined
+  db.transaction(() => {
+    db.prepare('UPDATE venta_items SET product_id = NULL WHERE product_id = ?').run(current.id)
+    db.prepare('DELETE FROM productos WHERE id = ?').run(current.id)
+  })()
+  return current
+}
+
+/** ¿Otro producto usa esta foto? (para no borrar del disco una foto compartida). */
+export function productPhotoInUse(url) {
+  return Boolean(db.prepare('SELECT 1 FROM productos WHERE photo_url = ?').get(url))
+}
+
 export function stats() {
   return {
     orders: db.prepare('SELECT COUNT(*) c FROM orders').get().c,
@@ -1423,6 +1602,7 @@ export function stats() {
     photos: db.prepare('SELECT COUNT(*) c FROM order_photos').get().c,
     invoices: db.prepare('SELECT COUNT(*) c FROM invoices').get().c,
     sales: db.prepare('SELECT COUNT(*) c FROM ventas').get().c,
+    products: db.prepare('SELECT COUNT(*) c FROM productos').get().c,
   }
 }
 

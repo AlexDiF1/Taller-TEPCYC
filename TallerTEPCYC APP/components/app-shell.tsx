@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ClipboardList, Plus, Search, ShoppingBag, MessageCircle, MapPin, Phone, Wallet } from 'lucide-react'
+import { ClipboardList, Plus, Search, ShoppingBag, MessageCircle, MapPin, Package, Phone, Wallet } from 'lucide-react'
 import { BrandLogo, BrandMark } from '@/components/brand-logo'
 import { LogoutButton } from '@/components/auth/logout-button'
 import { BUSINESS } from '@/lib/business'
@@ -13,13 +13,14 @@ type NavItem = { href: string; label: string; short: string; icon: typeof Clipbo
 const ORDENES: NavItem = { href: '/', label: 'Órdenes de trabajo', short: 'Órdenes', icon: ClipboardList }
 const INGRESO: NavItem = { href: '/ingreso', label: 'Nuevo ingreso', short: 'Ingreso', icon: Plus }
 const VENTAS: NavItem = { href: '/ventas', label: 'Ventas', short: 'Ventas', icon: ShoppingBag }
+const CATALOGO: NavItem = { href: '/catalogo', label: 'Catálogo', short: 'Catálogo', icon: Package }
 const CAJA: NavItem = { href: '/caja', label: 'Caja del día', short: 'Caja', icon: Wallet }
 const BUSCAR: NavItem = { href: '/?buscar=1', label: 'Buscar orden', short: 'Buscar', icon: Search }
 const WHATSAPP: NavItem = { href: '/whatsapp', label: 'WhatsApp', short: 'WhatsApp', icon: MessageCircle }
 
 const SIDEBAR: { title: string; items: NavItem[] }[] = [
   { title: 'Taller', items: [ORDENES] },
-  { title: 'Negocio', items: [VENTAS, CAJA, WHATSAPP] },
+  { title: 'Negocio', items: [VENTAS, CATALOGO, CAJA, WHATSAPP] },
 ]
 
 function isActive(pathname: string, href: string) {
@@ -30,7 +31,7 @@ function isActive(pathname: string, href: string) {
 
 function sectionName(pathname: string) {
   if (pathname.startsWith('/orden/')) return 'Orden'
-  const all = [ORDENES, INGRESO, VENTAS, CAJA, WHATSAPP]
+  const all = [ORDENES, INGRESO, VENTAS, CATALOGO, CAJA, WHATSAPP]
   return all.find((i) => isActive(pathname, i.href))?.short ?? ''
 }
 

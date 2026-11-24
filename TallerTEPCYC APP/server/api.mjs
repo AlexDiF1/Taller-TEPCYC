@@ -330,7 +330,9 @@ function cleanVentaItems(rawItems) {
     if (!Number.isFinite(quantity) || quantity < 1 || quantity > 999) {
       fail(`Cantidad inválida en el artículo #${index + 1}.`)
     }
-    return { name, price, cost, quantity }
+    // Línea del catálogo (descuenta existencias); si no, es un artículo escrito a mano.
+    const productId = /^[1-9]\d{0,15}$/.test(String(item?.productId ?? '')) ? Number(item.productId) : null
+    return { name, price, cost, quantity, productId }
   })
 }
 
@@ -357,13 +359,20 @@ api.post('/ventas', (req, res) => {
     return res.status(error?.status ?? 400).json({ error: error.message })
   }
 
-  const venta = store.createVenta({
-    items: cleanItems,
-    paymentMethod: method,
-    customerName: customer.customerName,
-    customerPhone: customer.customerPhone,
-    notes: String(body.notes ?? '').slice(0, 400),
-  })
+  let venta
+  try {
+    venta = store.createVenta({
+      items: cleanItems,
+      paymentMethod: method,
+      customerName: customer.customerName,
+      customerPhone: customer.customerPhone,
+      notes: String(body.notes ?? '').slice(0, 400),
+    })
+  } catch (error) {
+    // 409: no alcanzan las existencias del catálogo (la venta no se guarda).
+    if (error?.status === 409) return res.status(409).json({ error: error.message })
+    throw error
+  }
   res.status(201).json(venta)
 })
 
@@ -394,9 +403,140 @@ api.put('/ventas/:id', (req, res) => {
 
   if (Object.keys(patch).length === 0) return res.status(400).json({ error: 'Nada que actualizar.' })
 
-  const venta = store.updateVenta(req.params.id, patch)
+  let venta
+  try {
+    venta = store.updateVenta(req.params.id, patch)
+  } catch (error) {
+    if (error?.status === 409) return res.status(409).json({ error: error.message })
+    throw error
+  }
   if (!venta) return res.status(404).json({ error: 'Venta no encontrada.' })
   res.json(venta)
+})
+
+/* -------------------------------- catálogo ------------------------------- */
+
+const PHOTO_URL = /^\/uploads\/[\w-]+\.(?:jpg|png|webp)$/
+
+/** Valida un producto. `partial` = edición (solo lo que venga). Lanza {status:400}. */
+function cleanProducto(body, partial = false) {
+  const fail = (message) => {
+    throw Object.assign(new Error(message), { status: 400 })
+  }
+  const out = {}
+  const has = (key) => body[key] !== undefined
+  if (!partial || has('name')) {
+    const name = String(body.name ?? '').trim().replace(/\s+/g, ' ')
+    if (!name) fail('Escribe el nombre del producto.')
+    if (name.length > 80) fail('El nombre es demasiado largo (máximo 80 letras).')
+    out.name = name
+  }
+  if (!partial || has('category')) {
+    const category = String(body.category ?? '')
+    if (!store.PRODUCT_CATEGORIES.includes(category)) fail('Elige una categoría válida.')
+    out.category = category
+  }
+  if (!partial || has('price')) {
+    const price = normalizeMoney(body.price)
+    if (Number.isNaN(price) || price <= 0) fail('El precio debe ser mayor a cero.')
+    if (price > 99_999_999) fail('El precio es demasiado alto.')
+    out.price = price
+  }
+  if (has('cost')) {
+    const cost = normalizeMoney(body.cost)
+    if (Number.isNaN(cost) || cost > 99_999_999) fail('El costo no es válido.')
+    out.cost = cost
+  }
+  if (has('description')) out.description = String(body.description ?? '').trim().slice(0, 300)
+  if (has('photoUrl')) {
+    const photoUrl = String(body.photoUrl ?? '')
+    if (photoUrl && !PHOTO_URL.test(photoUrl)) fail('La foto no es válida: súbela de nuevo.')
+    out.photoUrl = photoUrl
+  }
+  if (has('available')) out.available = Boolean(body.available)
+  if (has('stock')) {
+    if (body.stock === null || body.stock === '') out.stock = null
+    else {
+      const stock = Number(body.stock)
+      if (!Number.isInteger(stock) || stock < 0 || stock > 9999) fail('Las existencias deben ser un número entre 0 y 9999.')
+      out.stock = stock
+    }
+  }
+  return out
+}
+
+/** Borra del disco la foto de un producto si ya nadie la usa. */
+function removeProductPhoto(url) {
+  if (!url || !PHOTO_URL.test(url) || store.productPhotoInUse(url)) return
+  try {
+    unlinkSync(join(uploadsDir, basename(url)))
+  } catch {
+    /* ya no estaba */
+  }
+}
+
+api.get('/productos', (_req, res) => {
+  res.json(store.listProductos())
+})
+
+api.post('/productos', (req, res) => {
+  let input
+  try {
+    input = cleanProducto(req.body ?? {})
+  } catch (error) {
+    return res.status(400).json({ error: error.message })
+  }
+  res.status(201).json(store.createProducto(input))
+})
+
+api.put('/productos/:id', (req, res) => {
+  let patch
+  try {
+    patch = cleanProducto(req.body ?? {}, true)
+  } catch (error) {
+    return res.status(400).json({ error: error.message })
+  }
+  const before = store.getProducto(req.params.id)
+  if (!before) return res.status(404).json({ error: 'Producto no encontrado.' })
+  const producto = store.updateProducto(before.id, patch)
+  if (patch.photoUrl !== undefined && before.photoUrl && before.photoUrl !== producto.photoUrl) {
+    removeProductPhoto(before.photoUrl)
+  }
+  res.json(producto)
+})
+
+api.delete('/productos/:id', (req, res) => {
+  const removed = store.deleteProducto(req.params.id)
+  if (!removed) return res.status(404).json({ error: 'Producto no encontrado.' })
+  removeProductPhoto(removed.photoUrl)
+  res.json({ ok: true })
+})
+
+/* Tienda de la web (tepcyc.com la pide a través de su server.py): solo lectura y sin costos. */
+api.get('/public/productos', (_req, res) => {
+  const productos = store.listProductosPublicos().map((p) => ({
+    id: p.id,
+    nombre: p.name,
+    categoria: p.category,
+    descripcion: p.description ?? '',
+    precio: p.price,
+    // La web arma la ruta de la foto; `foto` es la versión (cambia al cambiar la foto o el producto).
+    foto: p.photoUrl ? Date.parse(p.updatedAt).toString(36) : '',
+  }))
+  res.setHeader('Cache-Control', 'no-store')
+  res.json({ productos })
+})
+
+api.get('/public/productos/:id/foto', (req, res) => {
+  const producto = store.getProducto(req.params.id)
+  const visible = producto?.available && (producto.stock === null || producto.stock > 0)
+  if (!visible || !producto.photoUrl || !PHOTO_URL.test(producto.photoUrl)) {
+    return res.status(404).json({ error: 'Sin foto.' })
+  }
+  res.setHeader('Cache-Control', 'public, max-age=86400')
+  res.sendFile(join(uploadsDir, basename(producto.photoUrl)), (error) => {
+    if (error && !res.headersSent) res.status(404).json({ error: 'Sin foto.' })
+  })
 })
 
 api.get('/ventas/:id', (req, res) => {
