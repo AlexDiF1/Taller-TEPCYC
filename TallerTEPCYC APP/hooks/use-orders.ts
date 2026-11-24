@@ -2,7 +2,7 @@
 
 import useSWR from 'swr'
 import * as api from '@/lib/api'
-import type { NewOrderInput, OrderPatch, OrderStatus, ServiceItem } from '@/lib/types'
+import type { NewOrderInput, OrderPatch, OrderStatus, PaymentMethod, ServiceItem } from '@/lib/types'
 
 const ORDERS_KEY = 'orders'
 
@@ -45,6 +45,30 @@ export function useOrders() {
     return updated
   }
 
+  async function addPayment(id: string, payment: { amount: number; method: PaymentMethod; note?: string }) {
+    const updated = await api.addOrderPayment(id, payment)
+    await mutate()
+    return updated
+  }
+
+  async function deletePayment(id: string, paymentId: string) {
+    const updated = await api.deleteOrderPayment(id, paymentId)
+    await mutate()
+    return updated
+  }
+
+  async function deliverOrder(id: string, payment?: { amount: number; method: PaymentMethod }) {
+    const updated = await api.deliverOrder(id, payment)
+    await mutate()
+    return updated
+  }
+
+  async function undeliverOrder(id: string) {
+    const updated = await api.undeliverOrder(id)
+    await mutate()
+    return updated
+  }
+
   /** Borrado definitivo: solo para órdenes ya archivadas. */
   async function deleteOrder(id: string) {
     await api.deleteOrder(id)
@@ -75,5 +99,9 @@ export function useOrders() {
     archiveOrder,
     restoreOrder,
     deleteOrder,
+    addPayment,
+    deletePayment,
+    deliverOrder,
+    undeliverOrder,
   }
 }

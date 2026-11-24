@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { Camera, MessageCircle } from 'lucide-react'
-import { DEVICE_ICON, STATUS_MAP, deviceLabel, isClosed } from '@/lib/status'
+import { DEVICE_ICON, STATUS_MAP, deviceLabel, isDelivered } from '@/lib/status'
 import { formatMoney } from '@/lib/business'
 import { chatUrl } from '@/lib/notify'
 import type { Order } from '@/lib/types'
@@ -23,8 +23,14 @@ export function orderTotal(order: Order) {
   return order.items.reduce((s, i) => s + i.price, 0) || order.estimatedCost || 0
 }
 
+/**
+ * Lo que falta por cobrar. En rechazadas y fallidas el presupuesto no se cobra:
+ * solo cuenta lo que se haya cargado como ítems (p. ej. la revisión).
+ */
 export function orderBalance(order: Order) {
-  return Math.max(orderTotal(order) - (order.deposit || 0), 0)
+  const noRepair = order.status === 'rechazada' || order.status === 'fallida'
+  const total = noRepair ? order.items.reduce((s, i) => s + i.price, 0) : orderTotal(order)
+  return Math.max(total - (order.deposit || 0), 0)
 }
 
 /**
@@ -35,7 +41,8 @@ export function OrderCard({ order }: { order: Order }) {
   const Icon = DEVICE_ICON[order.device.type]
   const meta = STATUS_MAP[order.status] ?? STATUS_MAP.pendiente
   const photo = order.photos[0]?.url
-  const closed = isClosed(order.status)
+  // Entregada = ya salió del taller; las listas sin recoger siguen «vivas» en la lista.
+  const closed = isDelivered(order)
   const days = Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 86400000)
   const old = !closed && days >= 7
   const balance = orderBalance(order)
@@ -80,14 +87,21 @@ export function OrderCard({ order }: { order: Order }) {
             {order.reportedFault && !closed && <span className="text-foreground/80"> · {order.reportedFault}</span>}
           </span>
           <span className="mt-2 flex items-center justify-between gap-2">
-            <span className={cn('inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12.5px] font-bold', meta.bg, meta.text)}>
-              <span className={cn('size-2 rounded-full', meta.dot)} aria-hidden="true" />
-              {meta.short}
-            </span>
+            {closed ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[12.5px] font-bold text-muted-foreground">
+                <span className={cn('size-2 rounded-full', meta.dot)} aria-hidden="true" />
+                Entregada
+              </span>
+            ) : (
+              <span className={cn('inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12.5px] font-bold', meta.bg, meta.text)}>
+                <span className={cn('size-2 rounded-full', meta.dot)} aria-hidden="true" />
+                {meta.short}
+              </span>
+            )}
             {balance > 0 && (
-              <span className="tabular text-[13.5px] font-bold">
-                <span className="mr-1 text-[11.5px] font-semibold text-muted-foreground">{closed ? 'Total' : 'Saldo'}</span>
-                {formatMoney(closed ? orderTotal(order) : balance)}
+              <span className={cn('tabular text-[13.5px] font-bold', closed && 'text-primary')}>
+                <span className="mr-1 text-[11.5px] font-semibold text-muted-foreground">{closed ? 'Debe' : 'Saldo'}</span>
+                {formatMoney(balance)}
               </span>
             )}
           </span>

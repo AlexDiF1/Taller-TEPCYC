@@ -8,15 +8,26 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { OrderCard, orderBalance } from './order-card'
 import { useOrders } from '@/hooks/use-orders'
-import { STATUSES, isClosed } from '@/lib/status'
+import { STATUSES, isClosed, isDelivered, isInShop } from '@/lib/status'
 import { formatMoney } from '@/lib/business'
 import type { Order, OrderStatus } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
-type Filter = 'todas' | 'activas' | 'archivadas' | OrderStatus
+type Filter = 'todas' | 'activas' | 'entregadas' | 'archivadas' | OrderStatus
 
 const ACTIVE_STATUSES = STATUSES.filter((s) => !isClosed(s.value))
 const CLOSED = STATUSES.filter((s) => isClosed(s.value))
+
+/**
+ * «Activas» = equipos que siguen en el taller (también los listos sin recoger).
+ * Los estados cerrados (Lista, Rechazada, Fallida) cuentan solo los que faltan por entregar.
+ */
+function matches(o: Order, filter: Filter) {
+  if (filter === 'todas' || filter === 'archivadas') return true
+  if (filter === 'activas') return isInShop(o)
+  if (filter === 'entregadas') return isDelivered(o)
+  return o.status === filter && isInShop(o)
+}
 
 function shortMoney(n: number) {
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1).replace('.0', '').replace('.', ',')}M`
@@ -42,23 +53,20 @@ export function OrdersDashboard() {
 
   const counts = useMemo(() => {
     const c = Object.fromEntries(STATUSES.map((s) => [s.value, 0])) as Record<OrderStatus, number>
-    orders.forEach((o) => (c[o.status] += 1))
+    orders.forEach((o) => {
+      if (isInShop(o)) c[o.status] += 1
+    })
     return c
   }, [orders])
-  const active = orders.filter((o) => !isClosed(o.status))
+  const active = orders.filter(isInShop)
+  const delivered = orders.filter(isDelivered).length
   const porCobrar = active.reduce((s, o) => s + orderBalance(o), 0)
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase()
     const source = filter === 'archivadas' ? archivedOrders : orders
     return source.filter((o) => {
-      const matchesFilter =
-        filter === 'todas' || filter === 'archivadas'
-          ? true
-          : filter === 'activas'
-            ? !isClosed(o.status)
-            : o.status === filter
-      if (!matchesFilter) return false
+      if (!matches(o, filter)) return false
       if (!q) return true
       return [o.id, o.customer.name, o.customer.phone, o.device.brand, o.device.model, o.device.serial ?? '', o.reportedFault]
         .join(' ')
@@ -82,7 +90,7 @@ export function OrdersDashboard() {
   // En «Activas» la lista se agrupa por estado, en el orden del flujo del taller.
   const groups = useMemo(() => {
     if (filter !== 'activas' || query.trim()) return null
-    return ACTIVE_STATUSES.map((s) => ({ meta: s, items: visible.filter((o) => o.status === s.value) })).filter(
+    return STATUSES.map((s) => ({ meta: s, items: visible.filter((o) => o.status === s.value) })).filter(
       (g) => g.items.length > 0,
     )
   }, [filter, query, visible])
@@ -197,6 +205,7 @@ export function OrdersDashboard() {
             dot={s.dot}
           />
         ))}
+        <Chip active={filter === 'entregadas'} onClick={() => setFilter('entregadas')} label="Entregadas" count={delivered} />
         <Chip active={filter === 'todas'} onClick={() => setFilter('todas')} label="Todas" count={orders.length} />
         <Chip
           active={filter === 'archivadas'}

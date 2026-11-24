@@ -89,7 +89,11 @@ const TEMPLATES: Record<OrderStatus, (o: Order, opts: MsgOpts) => string> = {
     `${greeting(o)}\n\n` +
     `Tenemos excelentes noticias. La reparación de su ${deviceLabel(o)} ${orderRef(o)} ha concluido de manera exitosa.\n\n` +
     `Ya puede acercarse a nuestras instalaciones para retirar su equipo.\n\n` +
-    `Valor del servicio: ${plainMoney(totalOf(o))}\n\n` +
+    `Valor del servicio: ${plainMoney(totalOf(o))}\n` +
+    (o.deposit > 0
+      ? `Ya pagó: ${plainMoney(o.deposit)}\nSaldo a pagar al recoger: ${plainMoney(Math.max(totalOf(o) - o.deposit, 0))}\n`
+      : '') +
+    `\n` +
     cierre([webLine(opts), mapsLine()]),
   rechazada: (o) =>
     `${greeting(o)}\n\n` +
@@ -119,8 +123,8 @@ export function buildReceiptMessage(order: Order, type: ReceiptKind) {
   const lines = isDelivery
     ? [
         `Total del servicio: ${plainMoney(totalOf(order))}`,
-        `Abono recibido: ${plainMoney(order.deposit)}`,
-        `Total pagado: ${plainMoney(totalOf(order))}`,
+        `Total pagado: ${plainMoney(order.deposit)}`,
+        ...(totalOf(order) > order.deposit ? [`Saldo pendiente: ${plainMoney(totalOf(order) - order.deposit)}`] : []),
       ]
     : [
         `Costo estimado: ${plainMoney(order.estimatedCost)}`,

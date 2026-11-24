@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { ArrowRight, Loader2, MessageCircle, ReceiptText } from 'lucide-react'
+import { ArrowRight, Loader2, MessageCircle, PackageCheck, ReceiptText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { STATUS_MAP } from '@/lib/status'
-import { BUSINESS } from '@/lib/business'
+import { BUSINESS, addDays, formatDate } from '@/lib/business'
 import { notifyStatus } from '@/lib/notify'
 import type { Order, OrderPatch, OrderStatus } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -18,13 +18,13 @@ const NOTIFY_LABEL: Record<OrderStatus, string> = {
   pendiente: 'Avisar que el equipo ingresó',
   enRevision: 'Avisar que está en revisión',
   esperandoConfirmacion: 'Reenviar el presupuesto',
-  completada: 'Avisar que está listo',
+  completada: 'Avisar que está listo para recoger',
   rechazada: 'Avisar al cliente',
   fallida: 'Avisar al cliente',
 }
 
 /** El flujo del taller: qué toca hacer en cada estado. */
-const FLOW: Record<OrderStatus, { text: string; primary?: Move; others?: Move[]; invoice?: boolean }> = {
+const FLOW: Record<OrderStatus, { text: string; primary?: Move; others?: Move[]; deliver?: boolean }> = {
   pendiente: {
     text: 'El equipo está en fila. Cuando lo tomes, empieza la revisión.',
     primary: { to: 'enRevision', label: 'Empezar revisión' },
@@ -35,19 +35,19 @@ const FLOW: Record<OrderStatus, { text: string; primary?: Move; others?: Move[];
     others: [{ to: 'fallida', label: 'No se pudo reparar' }],
   },
   esperandoConfirmacion: {
-    text: 'Si el cliente acepta, repara el equipo y márcalo como terminado.',
-    primary: { to: 'completada', label: 'Reparación terminada' },
+    text: 'Si el cliente acepta, repara el equipo y márcalo como listo: le avisamos que ya puede recogerlo.',
+    primary: { to: 'completada', label: 'Listo para recoger' },
     others: [
       { to: 'rechazada', label: 'El cliente no aceptó' },
       { to: 'fallida', label: 'No se pudo reparar' },
     ],
   },
   completada: {
-    text: 'Reparación terminada. Al entregar, envía la factura con la garantía.',
-    invoice: true,
+    text: 'Reparado y esperando al cliente. Cuando venga, cobra el saldo y entrégale el equipo: la garantía empieza ese día.',
+    deliver: true,
   },
-  rechazada: { text: 'El cliente no autorizó la reparación. El equipo se devuelve con el cobro de revisión.' },
-  fallida: { text: 'No se pudo reparar. El equipo queda listo para devolver.' },
+  rechazada: { text: 'El cliente no autorizó la reparación. El equipo se devuelve con el cobro de revisión.', deliver: true },
+  fallida: { text: 'No se pudo reparar. El equipo queda listo para devolver.', deliver: true },
 }
 
 export function NextStep({
@@ -55,13 +55,28 @@ export function NextStep({
   onMove,
   onSave,
   onInvoice,
+  onDeliver,
 }: {
   order: Order
   onMove: (status: OrderStatus) => Promise<Order>
   onSave: (patch: OrderPatch) => Promise<Order>
   onInvoice: () => void
+  /** Abre el diálogo de entrega (cobro del saldo). */
+  onDeliver: () => void
 }) {
-  const flow = FLOW[order.status]
+  const delivered = Boolean(order.deliveredAt)
+  const warrantyDays = order.warrantyDays ?? BUSINESS.warrantyDays
+  const flow = delivered
+    ? {
+        text:
+          order.status === 'completada'
+            ? `Entregada el ${formatDate(order.deliveredAt!)}. Garantía hasta el ${formatDate(addDays(order.deliveredAt!, warrantyDays))}.`
+            : `Equipo devuelto al cliente el ${formatDate(order.deliveredAt!)}.`,
+        primary: undefined,
+        others: undefined,
+        deliver: false,
+      }
+    : FLOW[order.status]
   const meta = STATUS_MAP[order.status] ?? STATUS_MAP.pendiente
   const [notify, setNotify] = useState(true)
   const [withPhotos, setWithPhotos] = useState(false)
@@ -111,6 +126,7 @@ export function NextStep({
       <p className={cn('flex items-center gap-2 text-[13px] font-extrabold uppercase tracking-[0.08em]', meta.text)}>
         <span className={cn('size-2.5 rounded-full', meta.dot)} aria-hidden="true" />
         {meta.label}
+        {delivered && <span className="text-muted-foreground"> · Entregada</span>}
       </p>
       <p className="mt-1.5 text-[14.5px] leading-snug text-foreground/85">{flow.text}</p>
 
@@ -145,8 +161,15 @@ export function NextStep({
         </Button>
       )}
 
-      {flow.invoice && (
-        <Button size="lg" className="mt-3 h-13 w-full text-[16px] font-extrabold" onClick={onInvoice}>
+      {flow.deliver && (
+        <Button size="lg" className="mt-3 h-13 w-full text-[16px] font-extrabold" onClick={onDeliver}>
+          <PackageCheck data-icon="inline-start" />
+          Entregar equipo
+        </Button>
+      )}
+
+      {delivered && order.status === 'completada' && (
+        <Button variant="outline" size="lg" className="mt-3 w-full bg-surface" onClick={onInvoice}>
           <ReceiptText data-icon="inline-start" />
           Factura de entrega
         </Button>
@@ -171,6 +194,7 @@ export function NextStep({
       )}
 
       {/* Avisar el estado actual cuando se quiera (p. ej. el ingreso, si no se avisó al registrar). */}
+      {!delivered && (
       <div className="mt-3 border-t border-foreground/10 pt-3">
         <Button
           variant="outline"
@@ -188,6 +212,7 @@ export function NextStep({
           </label>
         )}
       </div>
+      )}
     </section>
   )
 }

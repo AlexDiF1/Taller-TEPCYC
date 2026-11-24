@@ -33,8 +33,10 @@
   if (previo) numero.value = previo.slice(0, 30);
 
   function pintar(datos) {
-    pon('estado', ETIQUETA[datos.estado] || datos.estado);
-    res('estado').dataset.estado = datos.estado || '';
+    // «Lista para recoger» y «Entregada» ya son distintos: la entrega viene aparte.
+    const entregada = datos.entregada === true || (datos.entregada === undefined && !!datos.entregadaEl);
+    pon('estado', entregada ? 'Entregada' : (ETIQUETA[datos.estado] || datos.estado));
+    res('estado').dataset.estado = entregada ? 'entregada' : (datos.estado || '');
     pon('cliente', datos.cliente || ''); ver('cliente', !!datos.cliente);
     const eq = datos.equipo || {};
     pon('equipo', [eq.tipo, eq.marca, eq.modelo].filter(Boolean).join(' · ') || 'Equipo registrado');

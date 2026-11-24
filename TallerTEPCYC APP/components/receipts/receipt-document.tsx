@@ -129,7 +129,7 @@ export function ReceiptDocument({ order, type, items }: { order: Order; type: Re
           <span className="font-mono">{formatMoney(total)}</span>
         </div>
         <div className="ticket-row">
-          <span>ABONO</span>
+          <span>{isDelivery ? 'PAGADO' : 'ABONO'}</span>
           <span className="font-mono">- {formatMoney(order.deposit)}</span>
         </div>
       </div>
@@ -137,8 +137,8 @@ export function ReceiptDocument({ order, type, items }: { order: Order; type: Re
       <div className="ticket-divider" />
 
       <div className="ticket-row ticket-total">
-        <span>{isDelivery ? 'TOTAL PAGADO' : 'SALDO PENDIENTE'}</span>
-        <span className="font-mono">{formatMoney(isDelivery ? total : balance)}</span>
+        <span>{isDelivery && balance === 0 ? 'TOTAL PAGADO' : 'SALDO PENDIENTE'}</span>
+        <span className="font-mono">{formatMoney(isDelivery && balance === 0 ? total : balance)}</span>
       </div>
 
       <div className="ticket-divider" />
@@ -146,7 +146,7 @@ export function ReceiptDocument({ order, type, items }: { order: Order; type: Re
       <div className="flex flex-col gap-0.5 text-[7.5pt]">
         <div className="ticket-row">
           <span>Estado:</span>
-          <span className="text-right font-bold">{STATUS_MAP[order.status]?.label ?? order.status}</span>
+          <span className="text-right font-bold">{(order.deliveredAt ? 'Entregada' : STATUS_MAP[order.status]?.label ?? order.status)}</span>
         </div>
         {!isDelivery && order.estimatedDate && (
           <div className="ticket-row">

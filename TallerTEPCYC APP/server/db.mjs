@@ -201,6 +201,37 @@ ensureColumn('orders', 'warranty_no_after_review', 'INTEGER NOT NULL DEFAULT 1')
 // Órdenes archivadas: no salen en la lista, no se pierde nada y se pueden restaurar.
 ensureColumn('orders', 'archived_at', 'TEXT')
 
+// Pagos de las órdenes: el abono del ingreso es el primero; al entregar se cobra el saldo.
+// `orders.deposit` queda como la suma de los pagos (lo siguen leyendo los comprobantes).
+db.exec(`
+CREATE TABLE IF NOT EXISTS order_payments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  amount REAL NOT NULL,
+  method TEXT NOT NULL DEFAULT 'efectivo',
+  paid_at TEXT NOT NULL,
+  note TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_order_payments_order ON order_payments(order_id);
+CREATE INDEX IF NOT EXISTS idx_order_payments_paid ON order_payments(paid_at);
+`)
+
+/* El abono que ya tenían las órdenes pasa a ser su primer pago (una sola vez por orden). */
+function migrateDepositsToPayments() {
+  const pending = db
+    .prepare(
+      `SELECT id, deposit, created_at FROM orders
+        WHERE deposit > 0 AND NOT EXISTS (SELECT 1 FROM order_payments p WHERE p.order_id = orders.id)`,
+    )
+    .all()
+  if (pending.length === 0) return
+  const insert = db.prepare('INSERT INTO order_payments (order_id, amount, method, paid_at, note) VALUES (?,?,?,?,?)')
+  db.transaction(() => {
+    for (const o of pending) insert.run(o.id, o.deposit, 'efectivo', o.created_at, 'Abono del ingreso')
+  })()
+}
+migrateDepositsToPayments()
+
 /* ------------------------------- lectura -------------------------------- */
 
 function rows(sql, params = []) {
@@ -218,7 +249,7 @@ function groupByOrder(table, orderIds) {
   return map
 }
 
-function rowToOrder(row, items, photos, events, comments = []) {
+function rowToOrder(row, items, photos, events, comments = [], payments = []) {
   return {
     id: row.order_number,
     createdAt: row.created_at,
@@ -251,6 +282,13 @@ function rowToOrder(row, items, photos, events, comments = []) {
     items: items.map((i) => ({ id: String(i.id), description: i.description, kind: i.kind, price: i.price })),
     history: events.map((e) => ({ status: e.status, at: e.at, note: e.note || undefined })),
     comments: comments.map((c) => ({ id: String(c.id), author: c.author || undefined, text: c.text, at: c.at })),
+    payments: payments.map((p) => ({
+      id: String(p.id),
+      amount: p.amount,
+      method: p.method,
+      paidAt: p.paid_at,
+      note: p.note || undefined,
+    })),
     deliveredAt: row.delivered_at || undefined,
     archivedAt: row.archived_at || undefined,
   }
@@ -268,8 +306,16 @@ export function listOrders() {
   const photos = groupByOrder('order_photos', ids)
   const events = groupByOrder('status_events', ids)
   const comments = groupByOrder('order_comments', ids)
+  const payments = groupByOrder('order_payments', ids)
   return orders.map((o) =>
-    rowToOrder(o, items.get(o.id) ?? [], photos.get(o.id) ?? [], events.get(o.id) ?? [], comments.get(o.id) ?? []),
+    rowToOrder(
+      o,
+      items.get(o.id) ?? [],
+      photos.get(o.id) ?? [],
+      events.get(o.id) ?? [],
+      comments.get(o.id) ?? [],
+      payments.get(o.id) ?? [],
+    ),
   )
 }
 
@@ -280,7 +326,8 @@ export function getOrder(orderNumber) {
   const photos = groupByOrder('order_photos', [row.id]).get(row.id) ?? []
   const events = groupByOrder('status_events', [row.id]).get(row.id) ?? []
   const comments = groupByOrder('order_comments', [row.id]).get(row.id) ?? []
-  return rowToOrder(row, items, photos, events, comments)
+  const payments = groupByOrder('order_payments', [row.id]).get(row.id) ?? []
+  return rowToOrder(row, items, photos, events, comments, payments)
 }
 
 /* ------------------------------- escritura ------------------------------ */
@@ -392,6 +439,16 @@ export function createOrder(input) {
       now,
       'Equipo ingresado al taller',
     )
+    const deposit = Number(input.deposit)
+    if (Number.isFinite(deposit) && deposit > 0) {
+      db.prepare('INSERT INTO order_payments (order_id, amount, method, paid_at, note) VALUES (?,?,?,?,?)').run(
+        orderId,
+        deposit,
+        PAYMENT_METHODS.includes(input.depositMethod) ? input.depositMethod : 'efectivo',
+        now,
+        'Abono del ingreso',
+      )
+    }
     addInvoice(orderId, 'recepcion', orderNumber)
     return orderNumber
   })
@@ -419,11 +476,12 @@ export function updateOrderStatus(orderNumber, status) {
   const row = findRow(orderNumber)
   if (!row) return undefined
   const now = new Date().toISOString()
-  const closed = ['completada', 'rechazada', 'fallida'].includes(status)
+  // Cerrar una orden ya no es entregarla: la entrega se marca aparte (deliverOrder).
+  const closed = CLOSED_STATUSES.includes(status)
   const tx = db.transaction(() => {
     db.prepare('UPDATE orders SET status = ?, delivered_at = ?, updated_at = ? WHERE id = ?').run(
       status,
-      closed ? row.delivered_at ?? now : null,
+      closed ? row.delivered_at : null,
       now,
       row.id,
     )
@@ -484,7 +542,8 @@ export function updateOrderDetails(orderNumber, patch = {}) {
     sets.push(`${column} = ?`)
     params.push(value || null)
   }
-  for (const [column, key] of [['estimated_cost', 'estimatedCost'], ['deposit', 'deposit']]) {
+  // El abono ya no se edita aquí: es la suma de los pagos (order_payments).
+  for (const [column, key] of [['estimated_cost', 'estimatedCost']]) {
     if (patch[key] === undefined) continue
     sets.push(`${column} = ?`)
     params.push(Number(patch[key]) || 0)
@@ -512,7 +571,7 @@ export function updateOrderDetails(orderNumber, patch = {}) {
     sets.push('status = ?')
     params.push(nextStatus)
     sets.push('delivered_at = ?')
-    params.push(CLOSED_STATUSES.includes(nextStatus) ? row.delivered_at ?? now : null)
+    params.push(CLOSED_STATUSES.includes(nextStatus) ? row.delivered_at : null)
   }
   sets.push('updated_at = ?')
   params.push(now)
@@ -566,6 +625,166 @@ export function setOrderArchived(orderNumber, archived) {
   return getOrder(orderNumber)
 }
 
+/* -------------------------- pagos y entrega -------------------------- */
+
+/** Recalcula `orders.deposit` (lo pagado) y los comprobantes tras un cambio en los pagos. */
+function syncPaid(row) {
+  const paid = db.prepare('SELECT COALESCE(SUM(amount), 0) AS s FROM order_payments WHERE order_id = ?').get(row.id).s
+  db.prepare('UPDATE orders SET deposit = ?, updated_at = ? WHERE id = ?').run(paid, new Date().toISOString(), row.id)
+  db.prepare('DELETE FROM invoices WHERE order_id = ?').run(row.id)
+  addInvoice(row.id, 'recepcion', row.order_number)
+  const status = db.prepare('SELECT status FROM orders WHERE id = ?').get(row.id).status
+  if (status === 'completada') addInvoice(row.id, 'entrega', row.order_number)
+}
+
+function insertPayment(orderId, { amount, method, note, paidAt }) {
+  db.prepare('INSERT INTO order_payments (order_id, amount, method, paid_at, note) VALUES (?,?,?,?,?)').run(
+    orderId,
+    amount,
+    method,
+    paidAt ?? new Date().toISOString(),
+    note?.trim() ? note.trim().slice(0, 200) : null,
+  )
+}
+
+/** Registra un pago (valor > 0, método válido: lo comprueba quien llama). */
+export function addOrderPayment(orderNumber, payment) {
+  const row = findRow(orderNumber)
+  if (!row) return undefined
+  db.transaction(() => {
+    insertPayment(row.id, payment)
+    syncPaid(row)
+  })()
+  return getOrder(orderNumber)
+}
+
+/** Borra un pago mal registrado. Devuelve null si el pago no es de esa orden. */
+export function deleteOrderPayment(orderNumber, paymentId) {
+  const row = findRow(orderNumber)
+  if (!row) return undefined
+  const id = intId(paymentId)
+  const found = db.prepare('SELECT id FROM order_payments WHERE id = ? AND order_id = ?').get(id, row.id)
+  if (!found) return null
+  db.transaction(() => {
+    db.prepare('DELETE FROM order_payments WHERE id = ?').run(found.id)
+    syncPaid(row)
+  })()
+  return getOrder(orderNumber)
+}
+
+/**
+ * Entrega el equipo al cliente: marca la fecha de entrega (desde ahí cuenta la garantía)
+ * y, si se cobra algo, lo registra como pago. Solo para órdenes cerradas
+ * (lista, rechazada o fallida). Devuelve { error } si no se puede.
+ */
+export function deliverOrder(orderNumber, payment) {
+  const row = findRow(orderNumber)
+  if (!row) return { error: 'not_found' }
+  if (!CLOSED_STATUSES.includes(row.status)) return { error: 'not_ready' }
+  if (row.delivered_at) return { error: 'already' }
+  const now = new Date().toISOString()
+  db.transaction(() => {
+    if (payment) insertPayment(row.id, { ...payment, paidAt: now, note: payment.note || 'Saldo al entregar' })
+    db.prepare('UPDATE orders SET delivered_at = ?, updated_at = ? WHERE id = ?').run(now, now, row.id)
+    db.prepare('INSERT INTO status_events (order_id, status, at, note) VALUES (?,?,?,?)').run(
+      row.id,
+      row.status,
+      now,
+      'Entregada al cliente',
+    )
+    syncPaid(row)
+  })()
+  return { order: getOrder(orderNumber) }
+}
+
+/** Corrige una entrega marcada por error (no toca los pagos). */
+export function undeliverOrder(orderNumber) {
+  const row = findRow(orderNumber)
+  if (!row) return undefined
+  if (row.delivered_at) {
+    const now = new Date().toISOString()
+    db.transaction(() => {
+      db.prepare('UPDATE orders SET delivered_at = NULL, updated_at = ? WHERE id = ?').run(now, row.id)
+      db.prepare('INSERT INTO status_events (order_id, status, at, note) VALUES (?,?,?,?)').run(
+        row.id,
+        row.status,
+        now,
+        'Entrega deshecha (corrección)',
+      )
+    })()
+  }
+  return getOrder(orderNumber)
+}
+
+/**
+ * Caja: lo que entró entre `from` y `to` (ISO), sumando ventas y pagos de reparaciones,
+ * por método de pago, con la lista de movimientos.
+ */
+export function cashSummary({ from, to }) {
+  const pagos = rows(
+    `SELECT p.id, p.amount, p.method, p.paid_at, p.note, o.order_number, c.name AS customer_name,
+            o.device_brand, o.device_model
+       FROM order_payments p
+       JOIN orders o ON o.id = p.order_id
+       JOIN customers c ON c.id = o.customer_id
+      WHERE p.paid_at >= ? AND p.paid_at <= ?
+      ORDER BY p.paid_at DESC, p.id DESC`,
+    [from, to],
+  )
+  const ventas = rows(
+    `SELECT id, sale_number, created_at, customer_name, payment_method, total
+       FROM ventas WHERE created_at >= ? AND created_at <= ? ORDER BY created_at DESC, id DESC`,
+    [from, to],
+  )
+  const empty = () => Object.fromEntries(PAYMENT_METHODS.map((m) => [m, 0]))
+  const block = () => ({ count: 0, total: 0, byMethod: empty() })
+  const reparaciones = block()
+  const ventasBlock = block()
+  const byMethod = empty()
+  for (const p of pagos) {
+    reparaciones.count += 1
+    reparaciones.total += p.amount
+    reparaciones.byMethod[p.method] = (reparaciones.byMethod[p.method] ?? 0) + p.amount
+    byMethod[p.method] = (byMethod[p.method] ?? 0) + p.amount
+  }
+  for (const v of ventas) {
+    ventasBlock.count += 1
+    ventasBlock.total += v.total
+    ventasBlock.byMethod[v.payment_method] = (ventasBlock.byMethod[v.payment_method] ?? 0) + v.total
+    byMethod[v.payment_method] = (byMethod[v.payment_method] ?? 0) + v.total
+  }
+  const movimientos = [
+    ...pagos.map((p) => ({
+      kind: 'pago',
+      id: `p${p.id}`,
+      ref: p.order_number,
+      label: [p.customer_name, [p.device_brand, p.device_model].filter(Boolean).join(' ')].filter(Boolean).join(' · '),
+      note: p.note || undefined,
+      method: p.method,
+      amount: p.amount,
+      at: p.paid_at,
+    })),
+    ...ventas.map((v) => ({
+      kind: 'venta',
+      id: `v${v.id}`,
+      ref: v.sale_number,
+      label: v.customer_name || 'Venta de mostrador',
+      method: v.payment_method,
+      amount: v.total,
+      at: v.created_at,
+    })),
+  ].sort((a, b) => b.at.localeCompare(a.at))
+  return {
+    from,
+    to,
+    total: reparaciones.total + ventasBlock.total,
+    byMethod,
+    reparaciones,
+    ventas: ventasBlock,
+    movimientos,
+  }
+}
+
 /**
  * Borrado definitivo, solo de una orden ya archivada.
  * Devuelve { ok: false, reason: 'not_found' | 'not_archived' } o { ok: true, photos }:
@@ -582,6 +801,7 @@ export function deleteOrder(orderNumber) {
     db.prepare('DELETE FROM order_photos WHERE order_id = ?').run(row.id)
     db.prepare('DELETE FROM status_events WHERE order_id = ?').run(row.id)
     db.prepare('DELETE FROM order_comments WHERE order_id = ?').run(row.id)
+    db.prepare('DELETE FROM order_payments WHERE order_id = ?').run(row.id)
     db.prepare('DELETE FROM invoices WHERE order_id = ?').run(row.id)
     db.prepare('DELETE FROM orders WHERE id = ?').run(row.id)
     // Si el cliente no tiene más órdenes, se elimina también para no dejar registros huérfanos.

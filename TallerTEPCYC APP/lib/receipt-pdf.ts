@@ -118,14 +118,15 @@ function drawTicket(doc: TicketDoc, order: Order, type: ReceiptType, items: Serv
   doc.text(money(total), TICKET.width - TICKET.margin, y, { align: 'right' })
   y += 3.8
   setTicketFont(doc, 8, 'normal')
-  doc.text('ABONO', TICKET.margin, y)
+  doc.text(isDelivery ? 'PAGADO' : 'ABONO', TICKET.margin, y)
   doc.text(`- ${money(order.deposit)}`, TICKET.width - TICKET.margin, y, { align: 'right' })
   y += 2
   y = divider(doc, y)
-  y = totalLine(doc, isDelivery ? 'TOTAL PAGADO' : 'SALDO PENDIENTE', money(isDelivery ? total : balance), y, 11)
+  const paidInFull = isDelivery && balance === 0
+  y = totalLine(doc, paidInFull ? 'TOTAL PAGADO' : 'SALDO PENDIENTE', money(paidInFull ? total : balance), y, 11)
 
   // ------------------------------ estado / fecha -----------------------------
-  y = row(doc, 'Estado', STATUS_MAP[order.status]?.label ?? order.status, y, 7.5)
+  y = row(doc, 'Estado', (order.deliveredAt ? 'Entregada' : STATUS_MAP[order.status]?.label ?? order.status), y, 7.5)
   if (!isDelivery && order.estimatedDate) {
     y = row(doc, 'Entrega estimada', formatDate(order.estimatedDate), y, 7.5)
   }

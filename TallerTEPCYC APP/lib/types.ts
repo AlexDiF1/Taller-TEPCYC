@@ -1,3 +1,15 @@
+/** Métodos de pago (los mismos en Ventas y en las órdenes). */
+export type PaymentMethod = 'efectivo' | 'nequi' | 'daviplata' | 'llave' | 'tarjeta'
+
+/** Pago de una orden: el abono del ingreso es el primero; al entregar se cobra el saldo. */
+export interface OrderPayment {
+  id: string
+  amount: number
+  method: PaymentMethod
+  paidAt: string
+  note?: string
+}
+
 export type OrderStatus =
   | 'pendiente'
   | 'enRevision'
@@ -63,7 +75,12 @@ export interface Order {
   physicalNotes?: string
   photos: IntakePhoto[]
   estimatedCost: number
+  /** Lo pagado hasta ahora (suma de `payments`). Al crear la orden, el abono del ingreso. */
   deposit: number
+  /** Solo al crear: método del abono del ingreso. */
+  depositMethod?: PaymentMethod
+  /** Pagos registrados, del más antiguo al más reciente. */
+  payments?: OrderPayment[]
   estimatedDate?: string
   /** Días de garantía definidos por el taller. Vacío = valor por defecto del negocio. */
   warrantyDays?: number
@@ -75,6 +92,7 @@ export interface Order {
   items: ServiceItem[]
   history: StatusEvent[]
   comments?: OrderComment[]
+  /** Fecha en que se entregó al cliente (desde ahí cuenta la garantía). «Lista» no es «entregada». */
   deliveredAt?: string
   /** Fecha en que se archivó. Las archivadas no salen en la lista y se pueden restaurar. */
   archivedAt?: string
@@ -95,7 +113,6 @@ export interface OrderPatch {
   accessories?: string[]
   physicalNotes?: string
   estimatedCost?: number
-  deposit?: number
   estimatedDate?: string
   warrantyDays?: number | null
   warrantyScreenExcluded?: boolean
@@ -105,5 +122,5 @@ export interface OrderPatch {
 
 export type NewOrderInput = Omit<
   Order,
-  'id' | 'createdAt' | 'status' | 'history' | 'items' | 'deliveredAt' | 'technician' | 'archivedAt'
+  'id' | 'createdAt' | 'status' | 'history' | 'items' | 'deliveredAt' | 'technician' | 'archivedAt' | 'payments'
 >

@@ -10,15 +10,16 @@ import {
   ArrowLeft,
   Camera,
   Check,
+  HandCoins,
   Loader2,
   MessageCircle,
   MoreHorizontal,
+  PackageX,
   Pencil,
   Phone,
   Plus,
   ReceiptText,
   RotateCcw,
-
   Trash2,
   X,
 } from 'lucide-react'
@@ -31,29 +32,47 @@ import { Field } from '@/components/intake/form-section'
 import { ItemsEditor } from '@/components/receipts/items-editor'
 import type { ReceiptType } from '@/components/receipts/receipt-document'
 import { NextStep } from './next-step'
+import { DeliverDialog, PaymentDialog } from './payment-dialogs'
 import { ReceiptSheet } from './receipt-sheet'
 import { PhotoViewer } from './photo-viewer'
 import { StatusSelect } from './status-select'
-import { orderTotal, timeAgo } from './order-card'
+import { orderBalance, orderTotal, timeAgo } from './order-card'
 import { useOrders } from '@/hooks/use-orders'
 import { BRANDS, DEVICE_ICON, DEVICE_TYPES, STATUS_MAP, deviceLabel } from '@/lib/status'
 import { BUSINESS, formatDate, formatMoney } from '@/lib/business'
+import { PAYMENT_MAP } from '@/lib/ventas'
 import { chatUrl } from '@/lib/notify'
-import type { DeviceType, Order, OrderPatch, OrderStatus, ServiceItem } from '@/lib/types'
+import type { DeviceType, Order, OrderPatch, OrderPayment, OrderStatus, PaymentMethod, ServiceItem } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 /** Ficha única de una orden: todo lo que se hace con ella está aquí. */
 export function OrderPage({ id }: { id: string }) {
   const router = useRouter()
   const params = useSearchParams()
-  const { allOrders, isLoading, error, setStatus, updateOrder, setItems, addComment, archiveOrder, restoreOrder, deleteOrder } =
-    useOrders()
+  const {
+    allOrders,
+    isLoading,
+    error,
+    setStatus,
+    updateOrder,
+    setItems,
+    addComment,
+    archiveOrder,
+    restoreOrder,
+    deleteOrder,
+    addPayment,
+    deletePayment,
+    deliverOrder,
+    undeliverOrder,
+  } = useOrders()
   const order = allOrders.find((o) => o.id === id)
 
   const [receipt, setReceipt] = useState<ReceiptType | null>(null)
   const [photoIndex, setPhotoIndex] = useState<number | null>(null)
   const [fixStatus, setFixStatus] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [payOpen, setPayOpen] = useState(false)
+  const [deliverOpen, setDeliverOpen] = useState(false)
 
   // Al llegar desde el ingreso se abre el recibo de recepción.
   const pedido = params.get('recibo')
@@ -104,6 +123,24 @@ export function OrderPage({ id }: { id: string }) {
     }
   }
 
+  async function handleDeliver(payment?: { amount: number; method: PaymentMethod }) {
+    const updated = await deliverOrder(order!.id, payment)
+    toast.success(`${updated.id} entregada`, {
+      description: payment ? `Cobrado ${formatMoney(payment.amount)} en ${PAYMENT_MAP[payment.method].label}.` : undefined,
+    })
+    // Con la entrega va la factura con la garantía (solo si se reparó).
+    if (updated.status === 'completada') setReceipt('entrega')
+  }
+
+  async function handleUndeliver() {
+    try {
+      await undeliverOrder(order!.id)
+      toast.success('Entrega deshecha: la orden vuelve a estar por entregar.')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'No se pudo deshacer la entrega.')
+    }
+  }
+
   async function handleDelete() {
     try {
       await deleteOrder(order!.id)
@@ -135,6 +172,11 @@ export function OrderPage({ id }: { id: string }) {
             <DropdownMenuItem className="min-h-11 px-2.5 text-[15px]" onClick={() => setFixStatus(true)}>
               <RotateCcw /> Corregir estado (sin avisar)
             </DropdownMenuItem>
+            {order.deliveredAt && (
+              <DropdownMenuItem className="min-h-11 px-2.5 text-[15px]" onClick={handleUndeliver}>
+                <PackageX /> Deshacer entrega
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             {order.archivedAt ? (
               <>
@@ -189,10 +231,18 @@ export function OrderPage({ id }: { id: string }) {
         onMove={(to) => setStatus(order.id, to)}
         onSave={save}
         onInvoice={() => setReceipt('entrega')}
+        onDeliver={() => setDeliverOpen(true)}
       />
 
       {/* ---------- cobro ---------- */}
-      <MoneyBlock order={order} onSave={save} onItems={(items) => setItems(order.id, items)} onReceipt={() => setReceipt(order.status === 'completada' ? 'entrega' : 'recepcion')} />
+      <MoneyBlock
+        order={order}
+        onSave={save}
+        onItems={(items) => setItems(order.id, items)}
+        onReceipt={() => setReceipt(order.status === 'completada' ? 'entrega' : 'recepcion')}
+        onPay={() => setPayOpen(true)}
+        onDeletePayment={(paymentId) => deletePayment(order.id, paymentId)}
+      />
 
       {/* ---------- equipo y falla ---------- */}
       <DeviceBlock order={order} onSave={save} onPhoto={setPhotoIndex} />
@@ -202,6 +252,8 @@ export function OrderPage({ id }: { id: string }) {
 
       {/* ---------- ventanas ---------- */}
       <ReceiptSheet order={order} open={receipt !== null} initialType={receipt ?? 'recepcion'} onClose={() => setReceipt(null)} />
+      <PaymentDialog order={order} open={payOpen} onClose={() => setPayOpen(false)} onSave={(p) => addPayment(order.id, p)} />
+      <DeliverDialog order={order} open={deliverOpen} onClose={() => setDeliverOpen(false)} onDeliver={handleDeliver} />
       <PhotoViewer photos={order.photos} open={photoIndex !== null} startIndex={photoIndex ?? 0} label={order.id} onClose={() => setPhotoIndex(null)} />
 
       <Dialog open={fixStatus} onOpenChange={setFixStatus}>
@@ -403,28 +455,31 @@ function MoneyBlock({
   onSave,
   onItems,
   onReceipt,
+  onPay,
+  onDeletePayment,
 }: {
   order: Order
   onSave: (p: OrderPatch) => Promise<Order>
   onItems: (items: ServiceItem[]) => Promise<Order>
   onReceipt: () => void
+  onPay: () => void
+  onDeletePayment: (paymentId: string) => Promise<Order>
 }) {
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [items, setItemsDraft] = useState<ServiceItem[]>(order.items)
   const [cost, setCost] = useState(String(order.estimatedCost || ''))
-  const [deposit, setDeposit] = useState(String(order.deposit || ''))
   const [days, setDays] = useState(order.warrantyDays ? String(order.warrantyDays) : '')
   const [screenExcluded, setScreenExcluded] = useState(order.warrantyScreenExcluded ?? false)
   const [noAfterReview, setNoAfterReview] = useState(order.warrantyNoAfterReview ?? true)
 
   const total = orderTotal(order)
-  const saldo = Math.max(total - (order.deposit || 0), 0)
+  const saldo = orderBalance(order)
+  const [removing, setRemoving] = useState<OrderPayment | null>(null)
 
   function start() {
     setItemsDraft(order.items)
     setCost(String(order.estimatedCost || ''))
-    setDeposit(String(order.deposit || ''))
     setDays(order.warrantyDays ? String(order.warrantyDays) : '')
     setScreenExcluded(order.warrantyScreenExcluded ?? false)
     setNoAfterReview(order.warrantyNoAfterReview ?? true)
@@ -437,7 +492,6 @@ function MoneyBlock({
     const tasks: Promise<unknown>[] = [
       onSave({
         estimatedCost: Number(cost) || 0,
-        deposit: Number(deposit) || 0,
         warrantyDays: days.trim() === '' ? null : Number(days),
         warrantyScreenExcluded: screenExcluded,
         warrantyNoAfterReview: noAfterReview,
@@ -454,14 +508,9 @@ function MoneyBlock({
     return (
       <Block title="Cobro y garantía" editing>
         <form onSubmit={submit} className="flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Valor estimado" htmlFor="m-cost">
-              <MoneyInput id="m-cost" value={cost} onChange={setCost} />
-            </Field>
-            <Field label="Abono" htmlFor="m-dep">
-              <MoneyInput id="m-dep" value={deposit} onChange={setDeposit} />
-            </Field>
-          </div>
+          <Field label="Valor estimado" htmlFor="m-cost" hint="Los pagos se registran aparte, con «Registrar pago».">
+            <MoneyInput id="m-cost" value={cost} onChange={setCost} />
+          </Field>
           <div>
             <p className="mb-2 text-[13.5px] font-semibold text-foreground/85">Lo que se cobra (servicios y repuestos)</p>
             <ItemsEditor items={items} onChange={setItemsDraft} />
@@ -492,7 +541,7 @@ function MoneyBlock({
     <Block title="Cobro y garantía" onEdit={start}>
       <div className="grid grid-cols-3 overflow-hidden rounded-2xl border border-border">
         <Money label="Total" value={total} />
-        <Money label="Abono" value={order.deposit || 0} className="border-x border-border" />
+        <Money label="Pagado" value={order.deposit || 0} className="border-x border-border" />
         <Money label="Saldo" value={saldo} strong />
       </div>
       {order.items.length > 0 && (
@@ -508,15 +557,90 @@ function MoneyBlock({
           ))}
         </ul>
       )}
+      <PaymentsList payments={order.payments ?? []} onRemove={setRemoving} />
       <p className="mt-3 text-[13px] text-muted-foreground">
-        Garantía: {order.warrantyDays ?? BUSINESS.warrantyDays} días
+        Garantía: {order.warrantyDays ?? BUSINESS.warrantyDays} días{order.deliveredAt ? ' desde la entrega' : ' (empieza al entregar)'}
         {order.estimatedDate ? ` · Entrega estimada ${formatDate(order.estimatedDate)}` : ''}
       </p>
-      <Button variant="outline" size="lg" className="mt-3 w-full" onClick={onReceipt}>
-        <ReceiptText data-icon="inline-start" />
-        Recibo
-      </Button>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <Button variant="outline" size="lg" onClick={onPay}>
+          <HandCoins data-icon="inline-start" />
+          Registrar pago
+        </Button>
+        <Button variant="outline" size="lg" onClick={onReceipt}>
+          <ReceiptText data-icon="inline-start" />
+          Recibo
+        </Button>
+      </div>
+
+      <Dialog open={removing !== null} onOpenChange={(o) => !o && setRemoving(null)}>
+        <DialogContent>
+          <DialogTitle>¿Borrar este pago?</DialogTitle>
+          <DialogDescription>
+            {removing
+              ? `${formatMoney(removing.amount)} en ${PAYMENT_MAP[removing.method]?.label ?? removing.method} del ${formatDate(removing.paidAt, true)}. Úsalo solo si se registró por error: también sale de la caja.`
+              : ''}
+          </DialogDescription>
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="outline" size="lg" onClick={() => setRemoving(null)}>
+              Cancelar
+            </Button>
+            <Button
+              size="lg"
+              className="bg-destructive text-white hover:bg-destructive/90"
+              onClick={async () => {
+                const p = removing
+                setRemoving(null)
+                if (p) await withToast(onDeletePayment(p.id), 'Pago borrado.')
+              }}
+            >
+              <Trash2 data-icon="inline-start" />
+              Borrar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Block>
+  )
+}
+
+function PaymentsList({ payments, onRemove }: { payments: OrderPayment[]; onRemove: (p: OrderPayment) => void }) {
+  if (payments.length === 0) return <p className="mt-3 text-[13.5px] text-muted-foreground">Sin pagos registrados.</p>
+  return (
+    <div className="mt-3">
+      <p className="text-[13px] font-semibold text-muted-foreground">Pagos</p>
+      <ul className="mt-1.5 flex flex-col divide-y divide-border rounded-2xl border border-border">
+        {payments.map((p) => {
+          const m = PAYMENT_MAP[p.method]
+          const Icon = m?.icon
+          return (
+            <li key={p.id} className="flex items-center gap-2.5 py-1.5 pr-1 pl-3">
+              {Icon && (
+                <span className={cn('grid size-8 shrink-0 place-items-center rounded-lg', m.bg, m.text)}>
+                  <Icon className="size-4" aria-hidden="true" />
+                </span>
+              )}
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[14px] font-semibold">
+                  {m?.label ?? p.method}
+                  {p.note ? <span className="font-normal text-muted-foreground"> · {p.note}</span> : null}
+                </span>
+                <span className="block text-[12px] text-muted-foreground">{formatDate(p.paidAt, true)}</span>
+              </span>
+              <span className="tabular shrink-0 text-[14.5px] font-bold">{formatMoney(p.amount)}</span>
+              <button
+                type="button"
+                onClick={() => onRemove(p)}
+                aria-label={`Borrar el pago de ${formatMoney(p.amount)}`}
+                className="grid size-10 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+              >
+                <X className="size-4" aria-hidden="true" />
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
   )
 }
 

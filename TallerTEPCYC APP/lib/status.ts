@@ -12,7 +12,7 @@ import {
   Cable,
   type LucideIcon,
 } from 'lucide-react'
-import type { DeviceType, OrderStatus } from './types'
+import type { DeviceType, Order, OrderStatus } from './types'
 
 export interface StatusMeta {
   value: OrderStatus
@@ -60,8 +60,9 @@ export const STATUSES: StatusMeta[] = [
   },
   {
     value: 'completada',
-    label: 'Completada',
-    short: 'Completada',
+    // Reparada y esperando al cliente. La entrega se marca aparte (Order.deliveredAt).
+    label: 'Lista para recoger',
+    short: 'Lista',
     icon: PackageCheck,
     text: 'text-status-done',
     bg: 'bg-status-done/12',
@@ -92,6 +93,16 @@ export const STATUSES: StatusMeta[] = [
 
 /** Órdenes que ya salieron del banco de trabajo. */
 export const CLOSED_STATUSES: OrderStatus[] = ['completada', 'rechazada', 'fallida']
+
+/** El equipo ya se le devolvió al cliente. */
+export function isDelivered(order: Pick<Order, 'deliveredAt'>) {
+  return Boolean(order.deliveredAt)
+}
+
+/** El equipo sigue físicamente en el taller: en trabajo, o cerrado pero sin entregar. */
+export function isInShop(order: Pick<Order, 'status' | 'deliveredAt'>) {
+  return !isDelivered(order)
+}
 
 export function isClosed(status: OrderStatus) {
   return CLOSED_STATUSES.includes(status)

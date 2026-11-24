@@ -14,7 +14,8 @@ import {
   type TicketDoc,
 } from './ticket-pdf'
 
-export type PaymentMethod = 'efectivo' | 'nequi' | 'daviplata' | 'llave' | 'tarjeta'
+import type { PaymentMethod } from './types'
+export type { PaymentMethod }
 
 export interface VentaItem {
   id?: string

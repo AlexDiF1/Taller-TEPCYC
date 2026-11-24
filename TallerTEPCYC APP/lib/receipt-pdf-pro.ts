@@ -169,7 +169,7 @@ function render(doc: Doc, { order, type, items, photos }: Ctx): number {
   doc.text(order.id, M, y)
   font(doc, 8, 'bold')
   ink(doc, MUTED)
-  doc.text(STATUS_MAP[order.status]?.label ?? order.status, W - M, y, { align: 'right' })
+  doc.text((order.deliveredAt ? 'Entregada' : STATUS_MAP[order.status]?.label ?? order.status), W - M, y, { align: 'right' })
   y += 5
 
   // ---------- valores (lo primero que se busca) ----------
@@ -178,15 +178,17 @@ function render(doc: Doc, { order, type, items, photos }: Ctx): number {
   doc.roundedRect(M, y, CW, boxH, 3, 3, 'F')
   font(doc, 8, 'bold')
   ink(doc, MUTED)
-  doc.text(isDelivery ? 'TOTAL PAGADO' : 'SALDO PENDIENTE', M + 4, y + 6)
+  // En la entrega: si aún debe algo, se muestra el saldo; si no, lo pagado.
+  const paidInFull = isDelivery && balance === 0
+  doc.text(paidInFull ? 'TOTAL PAGADO' : 'SALDO PENDIENTE', M + 4, y + 6)
   font(doc, 20, 'bold')
-  ink(doc, isDelivery ? INK : RED)
-  doc.text(formatMoney(isDelivery ? total : balance), M + 4, y + 14)
+  ink(doc, paidInFull ? INK : RED)
+  doc.text(formatMoney(paidInFull ? total : balance), M + 4, y + 14)
   const ry = y + 20
   font(doc, 8, 'normal')
   ink(doc, MUTED)
   doc.text(`${isDelivery ? 'Servicio' : 'Estimado'} ${formatMoney(total)}`, M + 4, ry)
-  doc.text(`Abono ${formatMoney(order.deposit)}`, W - M - 4, ry, { align: 'right' })
+  doc.text(`${isDelivery ? 'Pagado' : 'Abono'} ${formatMoney(order.deposit)}`, W - M - 4, ry, { align: 'right' })
   y += boxH + 6
 
   // ---------- cliente ----------

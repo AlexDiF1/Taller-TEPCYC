@@ -22,13 +22,14 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { FormSection, ChipToggle, Field } from './form-section'
 import { PhotoCapture } from './photo-capture'
+import { MethodPicker } from '@/components/orders/payment-dialogs'
 import { IntakeSummary } from './intake-summary'
 import { useOrders } from '@/hooks/use-orders'
 import { uploadPhoto } from '@/lib/api'
 import { ACCESSORIES, BRANDS, CONSOLE_MODELS, CUSTOM_DEVICE_TYPES, DEVICE_TYPES } from '@/lib/status'
 import { BUSINESS, formatMoney } from '@/lib/business'
 import { openWhatsApp } from '@/lib/whatsapp'
-import type { DeviceType, IntakePhoto, NewOrderInput } from '@/lib/types'
+import type { DeviceType, IntakePhoto, NewOrderInput, PaymentMethod } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 export interface IntakeDraft {
@@ -46,6 +47,8 @@ export interface IntakeDraft {
   photos: IntakePhoto[]
   estimatedCost: string
   deposit: string
+  /** Cómo pagó el abono: queda como el primer pago de la orden. */
+  depositMethod: PaymentMethod | ''
   estimatedDate: string
   acceptedTerms: boolean
 }
@@ -65,6 +68,7 @@ const EMPTY: IntakeDraft = {
   photos: [],
   estimatedCost: '',
   deposit: '',
+  depositMethod: '',
   estimatedDate: '',
   acceptedTerms: false,
 }
@@ -82,6 +86,7 @@ function validate(d: IntakeDraft): Errors {
   if (!d.brand.trim()) errors.brand = 'Indica la marca del equipo.'
   if (!d.model.trim()) errors.model = 'Indica el modelo del equipo.'
   if (!d.reportedFault.trim()) errors.reportedFault = 'Describe la falla reportada.'
+  if (Number(d.deposit) > 0 && !d.depositMethod) errors.depositMethod = 'Elige cómo pagó el abono.'
   if (!d.acceptedTerms) errors.acceptedTerms = 'El cliente debe aceptar las condiciones del servicio.'
   return errors
 }
@@ -168,6 +173,7 @@ export function IntakeForm() {
       photos: [],
       estimatedCost: Number(draft.estimatedCost) || 0,
       deposit: Number(draft.deposit) || 0,
+      depositMethod: Number(draft.deposit) > 0 && draft.depositMethod ? draft.depositMethod : undefined,
       estimatedDate: draft.estimatedDate ? new Date(draft.estimatedDate).toISOString() : undefined,
     }
 
@@ -434,6 +440,11 @@ export function IntakeForm() {
             <Field label="Abono" htmlFor="deposit">
               <MoneyInput id="deposit" value={draft.deposit} onChange={(v) => set('deposit', v)} />
             </Field>
+            {Number(draft.deposit) > 0 && (
+              <Field label="¿Cómo pagó el abono?" htmlFor="dep-efectivo" className="col-span-2" required error={errors.depositMethod}>
+                <MethodPicker value={draft.depositMethod} onChange={(m) => set('depositMethod', m)} idPrefix="dep" />
+              </Field>
+            )}
             <Field label="Entrega estimada" htmlFor="estimatedDate" className="col-span-2">
               <Input
                 id="estimatedDate"

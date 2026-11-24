@@ -77,6 +77,53 @@ api.post('/orders/:id/restore', (req, res) => {
   res.json(order)
 })
 
+/* ------------------------- pagos y entrega ------------------------- */
+
+const MAX_PAGO = 100_000_000
+
+/** Valida { amount, method, note }; devuelve el pago limpio o { error }. */
+function readPayment(body, { optional = false } = {}) {
+  const amount = Math.round(Number(body?.amount))
+  if (optional && (body?.amount === undefined || body?.amount === null || amount === 0)) return { payment: null }
+  if (!Number.isFinite(amount) || amount <= 0 || amount > MAX_PAGO) return { error: 'El valor del pago no es válido.' }
+  const method = String(body?.method ?? '')
+  if (!store.PAYMENT_METHODS.includes(method)) return { error: 'Método de pago inválido.' }
+  const note = typeof body?.note === 'string' ? body.note.slice(0, 200) : undefined
+  return { payment: { amount, method, note } }
+}
+
+api.post('/orders/:id/payments', (req, res) => {
+  const { payment, error } = readPayment(req.body)
+  if (error) return res.status(400).json({ error })
+  const order = store.addOrderPayment(req.params.id, payment)
+  if (!order) return res.status(404).json({ error: 'Orden no encontrada.' })
+  res.status(201).json(order)
+})
+
+api.delete('/orders/:id/payments/:paymentId', (req, res) => {
+  const order = store.deleteOrderPayment(req.params.id, req.params.paymentId)
+  if (order === undefined) return res.status(404).json({ error: 'Orden no encontrada.' })
+  if (order === null) return res.status(404).json({ error: 'Pago no encontrado.' })
+  res.json(order)
+})
+
+/* Entregar: marca la entrega (desde ahí cuenta la garantía) y cobra el saldo si se indica. */
+api.post('/orders/:id/deliver', (req, res) => {
+  const { payment, error } = readPayment(req.body, { optional: true })
+  if (error) return res.status(400).json({ error })
+  const result = store.deliverOrder(req.params.id, payment)
+  if (result.error === 'not_found') return res.status(404).json({ error: 'Orden no encontrada.' })
+  if (result.error === 'not_ready') return res.status(409).json({ error: 'La orden todavía está en el taller: primero márcala como lista.' })
+  if (result.error === 'already') return res.status(409).json({ error: 'Esta orden ya se entregó.' })
+  res.json(result.order)
+})
+
+api.post('/orders/:id/undeliver', (req, res) => {
+  const order = store.undeliverOrder(req.params.id)
+  if (!order) return res.status(404).json({ error: 'Orden no encontrada.' })
+  res.json(order)
+})
+
 /* Borrado definitivo: solo de una orden archivada; borra también sus fotos del disco. */
 api.delete('/orders/:id', (req, res) => {
   const result = store.deleteOrder(req.params.id)
@@ -195,16 +242,30 @@ api.get('/public/orden/:numero', (req, res) => {
     saldo: Math.max(total - abono, 0),
     recibidaEl: orden.createdAt,
     estimadaEl: orden.estimatedDate ?? null,
+    // «Lista para recoger» (completada) y «Entregada» ya no son lo mismo: la entrega se marca aparte.
+    entregada: Boolean(orden.deliveredAt),
     entregadaEl: orden.deliveredAt ?? null,
     garantiaDias: orden.warrantyDays ?? null,
   })
 })
 
-/* --------------------------------- ventas -------------------------------- */
+/* ---------------------------------- caja --------------------------------- */
 
 function isIsoDate(value) {
   return typeof value === 'string' && value.length >= 10 && !Number.isNaN(new Date(value).getTime())
 }
+
+/* Lo que entró en un rango (ventas + pagos de reparaciones), por método de pago. */
+api.get('/caja', (req, res) => {
+  const { from, to } = req.query ?? {}
+  if (!isIsoDate(from) || !isIsoDate(to)) return res.status(400).json({ error: 'Indica el rango de fechas (desde y hasta).' })
+  const desde = new Date(String(from)).toISOString()
+  const hasta = new Date(String(to)).toISOString()
+  if (desde > hasta) return res.status(400).json({ error: 'La fecha «desde» es posterior a «hasta».' })
+  res.json(store.cashSummary({ from: desde, to: hasta }))
+})
+
+/* --------------------------------- ventas -------------------------------- */
 
 function normalizeMoney(value) {
   const n = Number(value)
