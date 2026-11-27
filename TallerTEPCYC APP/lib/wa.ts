@@ -80,6 +80,9 @@ export interface EstadoPlan {
   mediaType?: 'image' | 'video'
   backgroundColor?: string
   days: number[]
+  /** >1 = «cada N días» desde `anchorDate`; 1 = semanal por día de la semana. */
+  everyDays?: number
+  anchorDate?: string
   time: string
   timezone: string
   active: boolean
@@ -95,6 +98,8 @@ export type NewEstadoPlanInput = {
   mediaType?: 'image' | 'video'
   backgroundColor?: string
   days: number[]
+  everyDays?: number
+  anchorDate?: string
   time: string
 }
 
@@ -220,7 +225,10 @@ export function waSetPlanActive(id: number, active: boolean) {
   return request<EstadoPlan>(`${BASE}/planes/${id}`, { method: 'PATCH', body: JSON.stringify({ active }) })
 }
 
-export function waUpdatePlan(id: number, patch: { time?: string; days?: number[]; active?: boolean }) {
+export function waUpdatePlan(
+  id: number,
+  patch: { time?: string; days?: number[]; active?: boolean; everyDays?: number; anchorDate?: string },
+) {
   return request<EstadoPlan>(`${BASE}/planes/${id}`, { method: 'PATCH', body: JSON.stringify(patch) })
 }
 

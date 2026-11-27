@@ -890,10 +890,22 @@ api.post('/whatsapp/planes', (req, res) => {
   const time = String(body.time ?? '').trim()
   const timezone = String(body.timezone ?? 'America/Bogota').trim() || 'America/Bogota'
   const mediaType = body.mediaType === 'video' ? 'video' : 'image'
+  // Automático «cada N días» (día sí y día no = 2); 1 = semanal por día de la semana.
+  const everyDays = body.everyDays === undefined ? 1 : Number(body.everyDays)
+  const anchorDate = String(body.anchorDate ?? '').trim()
 
-  if (!days.length) return res.status(400).json({ error: 'Elige al menos un día de la semana.' })
-  if (days.some((d) => !Number.isInteger(d) || d < 0 || d > 6)) {
-    return res.status(400).json({ error: 'Día de la semana inválido.' })
+  if (!Number.isInteger(everyDays) || everyDays < 1 || everyDays > 30) {
+    return res.status(400).json({ error: 'La frecuencia debe ser cada 1 a 30 días.' })
+  }
+  if (everyDays > 1) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(anchorDate) || Number.isNaN(Date.parse(anchorDate))) {
+      return res.status(400).json({ error: 'Falta la fecha de inicio (AAAA-MM-DD).' })
+    }
+  } else {
+    if (!days.length) return res.status(400).json({ error: 'Elige al menos un día de la semana.' })
+    if (days.some((d) => !Number.isInteger(d) || d < 0 || d > 6)) {
+      return res.status(400).json({ error: 'Día de la semana inválido.' })
+    }
   }
   if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) return res.status(400).json({ error: 'La hora debe ser HH:MM.' })
 
@@ -916,6 +928,8 @@ api.post('/whatsapp/planes', (req, res) => {
     mediaType: media ? mediaType : undefined,
     backgroundColor: !media && typeof body.backgroundColor === 'string' ? body.backgroundColor.slice(0, 9) : undefined,
     days,
+    everyDays,
+    anchorDate: everyDays > 1 ? anchorDate : undefined,
     time,
     timezone,
   })
@@ -931,8 +945,22 @@ api.patch('/whatsapp/planes/:id', (req, res) => {
   if (body.days !== undefined && (!Array.isArray(body.days) || !body.days.length)) {
     return res.status(400).json({ error: 'Elige al menos un día de la semana.' })
   }
-  if (body.time !== undefined || body.days !== undefined) {
-    store.updatePlan(req.params.id, { time: body.time, days: body.days })
+  if (body.everyDays !== undefined) {
+    const n = Number(body.everyDays)
+    if (!Number.isInteger(n) || n < 1 || n > 30) {
+      return res.status(400).json({ error: 'La frecuencia debe ser cada 1 a 30 días.' })
+    }
+  }
+  if (body.anchorDate !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(String(body.anchorDate))) {
+    return res.status(400).json({ error: 'La fecha de inicio debe ser AAAA-MM-DD.' })
+  }
+  if (body.time !== undefined || body.days !== undefined || body.everyDays !== undefined || body.anchorDate !== undefined) {
+    store.updatePlan(req.params.id, {
+      time: body.time,
+      days: body.days,
+      everyDays: body.everyDays,
+      anchorDate: body.anchorDate,
+    })
   }
   if (body.active !== undefined) store.setPlanActive(req.params.id, Boolean(body.active))
   res.json(store.getPlan(req.params.id))

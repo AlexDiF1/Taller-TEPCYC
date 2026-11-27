@@ -39,6 +39,13 @@ import { cn } from '@/lib/utils'
 const COLORS = ['#101014', '#7f1d1d', '#14532d', '#1e3a8a', '#3b0764', '#78350f']
 const MAX_VIDEO_BYTES = 12 * 1024 * 1024
 // Lunes primero: es como se lee la semana en el taller.
+/** Fecha local de hoy en AAAA-MM-DD (el plan «cada N días» cuenta desde ahí). */
+function todayLocal() {
+  const d = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
 const WEEK = [
   { day: 1, label: 'Lun' },
   { day: 2, label: 'Mar' },
@@ -76,6 +83,9 @@ export function EstadosPanel({
   const [busy, setBusy] = useState<'now' | 'later' | null>(null)
   const [removing, setRemoving] = useState<number | null>(null)
   const [planDays, setPlanDays] = useState<number[]>([1])
+  const [planMode, setPlanMode] = useState<'weekly' | 'interval'>('weekly')
+  const [planEvery, setPlanEvery] = useState(2)
+  const [planStart, setPlanStart] = useState(todayLocal())
   const [planTime, setPlanTime] = useState('09:00')
   const [planBusy, setPlanBusy] = useState<'save' | null>(null)
   const [planToggling, setPlanToggling] = useState<number | null>(null)
@@ -188,8 +198,17 @@ export function EstadosPanel({
       toast.error('Escribe un texto o adjunta una imagen/video para el estado automático.')
       return
     }
-    if (!planDays.length) {
+    const interval = planMode === 'interval'
+    if (!interval && !planDays.length) {
       toast.error('Elige al menos un día de la semana.')
+      return
+    }
+    if (interval && (!Number.isInteger(planEvery) || planEvery < 2 || planEvery > 30)) {
+      toast.error('La frecuencia debe ser cada 2 a 30 días.')
+      return
+    }
+    if (interval && !/^\d{4}-\d{2}-\d{2}$/.test(planStart)) {
+      toast.error('Elige la fecha en la que empieza el automático.')
       return
     }
     if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(planTime)) {
@@ -204,7 +223,9 @@ export function EstadosPanel({
         mediaDataUrl: media?.dataUrl,
         mediaType: media?.type,
         backgroundColor: media ? undefined : color,
-        days: planDays,
+        days: planMode === 'interval' ? [] : planDays,
+        everyDays: planMode === 'interval' ? planEvery : 1,
+        anchorDate: planMode === 'interval' ? planStart : undefined,
         time: planTime,
       })
       toast.success('Estado automático guardado.')
@@ -405,9 +426,30 @@ export function EstadosPanel({
                 Repetir todas las semanas
               </p>
               <p className="mt-0.5 text-[11px] text-muted-foreground">
-                Se publica cada día marcado a esa hora (hora de Colombia), con el texto y el archivo de arriba.
+                {planMode === 'weekly'
+                  ? 'Se publica cada día marcado a esa hora (hora de Colombia), con el texto y el archivo de arriba.'
+                  : 'Se publica cada N días contando desde la fecha de inicio (hora de Colombia). «Día sí y día no» = cada 2 días.'}
               </p>
             </div>
+            <div className="flex gap-1.5" role="group" aria-label="Frecuencia del automático">
+              {(['weekly', 'interval'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setPlanMode(mode)}
+                  aria-pressed={planMode === mode}
+                  className={cn(
+                    'h-8 rounded-lg border px-2.5 text-xs font-medium transition-colors',
+                    planMode === mode
+                      ? 'border-primary bg-primary text-primary-foreground'
+                      : 'border-border bg-background/60 text-muted-foreground hover:border-primary/50',
+                  )}
+                >
+                  {mode === 'weekly' ? 'Todas las semanas' : 'Cada N días'}
+                </button>
+              ))}
+            </div>
+            {planMode === 'weekly' ? (
             <div className="flex flex-wrap gap-1.5">
               {WEEK.map(({ day, label }) => {
                 const on = planDays.includes(day)
@@ -429,6 +471,31 @@ export function EstadosPanel({
                 )
               })}
             </div>
+            ) : (
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="text-[11px] text-muted-foreground" htmlFor="plan-every">
+                  Cada
+                </label>
+                <Input
+                  id="plan-every"
+                  type="number"
+                  min={2}
+                  max={30}
+                  value={planEvery}
+                  onChange={(e) => setPlanEvery(Number(e.target.value))}
+                  aria-label="Publicar cada cuántos días"
+                  className="h-10 w-20 rounded-xl bg-background/60 text-base"
+                />
+                <span className="text-[11px] text-muted-foreground">días, desde</span>
+                <Input
+                  type="date"
+                  value={planStart}
+                  onChange={(e) => setPlanStart(e.target.value)}
+                  aria-label="Fecha de inicio del automático"
+                  className="h-10 w-40 rounded-xl bg-background/60 text-base"
+                />
+              </div>
+            )}
             <div className="flex flex-wrap items-center gap-2">
               <Input
                 type="time"
@@ -508,7 +575,7 @@ export function EstadosPanel({
           <section className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-2.5">
             <div className="flex items-center gap-1.5">
               <Repeat className="size-3.5 text-primary" aria-hidden="true" />
-              <h3 className="text-xs font-semibold">Automáticos semanales</h3>
+              <h3 className="text-xs font-semibold">Automáticos</h3>
             </div>
             <ul className="flex flex-col gap-2">
               {planes.map((plan) => (
@@ -524,9 +591,11 @@ export function EstadosPanel({
                       )}
                     </p>
                     <p className="mt-1 font-mono text-[10px] text-muted-foreground">
-                      {WEEK.filter((w) => plan.days.includes(w.day))
-                        .map((w) => w.label)
-                        .join(', ')}{' '}
+                      {plan.everyDays && plan.everyDays > 1
+                        ? `Cada ${plan.everyDays} días desde ${plan.anchorDate}`
+                        : WEEK.filter((w) => plan.days.includes(w.day))
+                            .map((w) => w.label)
+                            .join(', ')}{' '}
                       · {plan.time}
                     </p>
                     <p className="text-[10px] text-muted-foreground">

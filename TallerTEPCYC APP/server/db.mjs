@@ -200,6 +200,10 @@ ensureColumn('orders', 'warranty_screen_excluded', 'INTEGER NOT NULL DEFAULT 0')
 ensureColumn('orders', 'warranty_no_after_review', 'INTEGER NOT NULL DEFAULT 1')
 // Órdenes archivadas: no salen en la lista, no se pierde nada y se pueden restaurar.
 ensureColumn('orders', 'archived_at', 'TEXT')
+// Automáticos «cada N días» (p. ej. día sí y día no): every_days > 1 cuenta desde
+// `anchor_date` (YYYY-MM-DD local) en vez de mirar el día de la semana.
+ensureColumn('estados_planes', 'every_days', 'INTEGER NOT NULL DEFAULT 1')
+ensureColumn('estados_planes', 'anchor_date', 'TEXT')
 
 // Pagos de las órdenes: el abono del ingreso es el primero; al entregar se cobra el saldo.
 // `orders.deposit` queda como la suma de los pagos (lo siguen leyendo los comprobantes).
@@ -1441,6 +1445,19 @@ export function localClock(date = new Date(), timeZone = 'America/Bogota') {
   }
 }
 
+/** Días completos entre dos fechas locales YYYY-MM-DD (`b - a`); null si no se pueden leer. */
+function daysBetween(a, b) {
+  const parse = (value) => {
+    const [y, m, d] = String(value ?? '').split('-').map(Number)
+    if (!y || !m || !d) return null
+    return Date.UTC(y, m - 1, d)
+  }
+  const from = parse(a)
+  const to = parse(b)
+  if (from === null || to === null) return null
+  return Math.round((to - from) / 86400000)
+}
+
 function rowToPlan(row) {
   return {
     id: row.id,
@@ -1451,8 +1468,11 @@ function rowToPlan(row) {
     backgroundColor: row.background_color || undefined,
     days: String(row.days || '')
       .split(',')
+      .filter((d) => String(d).trim() !== '')
       .map((d) => Number(d))
       .filter((d) => Number.isInteger(d) && d >= 0 && d <= 6),
+    everyDays: Number(row.every_days) > 1 ? Number(row.every_days) : 1,
+    anchorDate: row.anchor_date || undefined,
     time: row.hora,
     timezone: row.timezone,
     active: Boolean(row.active),
@@ -1476,10 +1496,16 @@ export function createPlan(input = {}) {
     .filter((d) => Number.isInteger(d) && d >= 0 && d <= 6)
     .sort()
     .join(',')
+  const everyDays = Number(input.everyDays) > 1 ? Math.min(Math.trunc(Number(input.everyDays)), 30) : 1
+  const anchorDate = /^\d{4}-\d{2}-\d{2}$/.test(String(input.anchorDate ?? ''))
+    ? String(input.anchorDate)
+    : everyDays > 1
+      ? localClock(new Date(), input.timezone || 'America/Bogota').date
+      : null
   const info = db
     .prepare(
       `INSERT INTO estados_planes (text, caption, media_url, media_type, background_color,
-        days, hora, timezone, active, created_at) VALUES (?,?,?,?,?,?,?,?,1,?)`,
+        days, hora, timezone, active, created_at, every_days, anchor_date) VALUES (?,?,?,?,?,?,?,?,1,?,?,?)`,
     )
     .run(
       input.text?.trim() || null,
@@ -1491,6 +1517,8 @@ export function createPlan(input = {}) {
       input.time,
       input.timezone || 'America/Bogota',
       new Date().toISOString(),
+      everyDays,
+      anchorDate,
     )
   return getPlan(Number(info.lastInsertRowid))
 }
@@ -1504,7 +1532,7 @@ export function setPlanActive(id, active) {
 }
 
 /** Edita día/hora de un plan (lo que usa el «aplicar a todos» de la UI). */
-export function updatePlan(id, { days, time } = {}) {
+export function updatePlan(id, { days, time, everyDays, anchorDate } = {}) {
   const plan = getPlan(id)
   if (!plan) return false
   let nextDays = plan.days
@@ -1513,6 +1541,15 @@ export function updatePlan(id, { days, time } = {}) {
       .filter((d) => Number.isInteger(d) && d >= 0 && d <= 6)
       .sort()
     if (!nextDays.length) return false
+  }
+  if (everyDays !== undefined) {
+    const n = Number(everyDays)
+    if (!Number.isInteger(n) || n < 1 || n > 30) return false
+    db.prepare('UPDATE estados_planes SET every_days = ? WHERE id = ?').run(n, intId(id))
+  }
+  if (anchorDate !== undefined) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(anchorDate))) return false
+    db.prepare('UPDATE estados_planes SET anchor_date = ? WHERE id = ?').run(String(anchorDate), intId(id))
   }
   const nextTime = /^([01]\d|2[0-3]):[0-5]\d$/.test(String(time ?? '')) ? String(time) : plan.time
   db.prepare('UPDATE estados_planes SET days = ?, hora = ? WHERE id = ?').run(
@@ -1536,15 +1573,24 @@ export function markPlanFired(id, now = new Date(), localDate) {
   )
 }
 
-/** Planes activos cuya hora ya llegó hoy y que aún no se dispararon hoy. */
+/**
+ * Planes activos cuya hora ya llegó hoy y que aún no se dispararon hoy.
+ * Con `everyDays > 1` (día sí y día no) se cuenta desde `anchorDate` en vez de
+ * mirar el día de la semana; la primera publicación es la fecha ancla.
+ */
 export function planesDue(now = new Date()) {
   const due = []
   for (const plan of listPlanes()) {
-    if (!plan.active || plan.days.length === 0) continue
+    if (!plan.active) continue
     const clock = localClock(now, plan.timezone)
-    if (!plan.days.includes(clock.weekday)) continue
     if (clock.time < plan.time) continue
     if (plan.lastFiredDate === clock.date) continue
+    if (plan.everyDays > 1) {
+      const diff = daysBetween(plan.anchorDate, clock.date)
+      if (diff === null || diff < 0 || diff % plan.everyDays !== 0) continue
+    } else if (plan.days.length === 0 || !plan.days.includes(clock.weekday)) {
+      continue
+    }
     due.push({ ...plan, _localDate: clock.date })
   }
   return due
