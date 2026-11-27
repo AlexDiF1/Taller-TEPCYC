@@ -14,13 +14,7 @@ import {
   Banknote,
   Send,
   Printer,
-  Package,
-  Search,
-  ImageOff,
 } from 'lucide-react'
-import Link from 'next/link'
-import { useProductos } from '@/hooks/use-productos'
-import { CATEGORY_MAP, inStock, type Producto } from '@/lib/catalogo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -47,10 +41,6 @@ interface DraftItem {
   price: number
   cost: number
   quantity: number
-  /** Línea del catálogo: descuenta existencias al registrar. */
-  productId?: number
-  /** Tope de unidades (existencias del catálogo); null = sin tope. */
-  max?: number | null
 }
 
 interface Delivery {
@@ -77,41 +67,6 @@ export function SaleForm({ onCreated }: { onCreated: () => void }) {
   const [sale, setSale] = useState<Venta | null>(null)
   const [delivery, setDelivery] = useState<Delivery | null>(null)
   const nameRef = useRef<HTMLInputElement>(null)
-  const { productos, refresh: refreshProductos } = useProductos()
-  const [catalogQuery, setCatalogQuery] = useState('')
-
-  const catalogMatches = useMemo(() => {
-    const plain = (t: string) => t.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
-    const q = plain(catalogQuery.trim())
-    return productos
-      .filter((p) => p.available && (!q || plain(p.name).includes(q)))
-      .sort((a, b) => Number(inStock(b)) - Number(inStock(a)))
-  }, [productos, catalogQuery])
-
-  // Copia síncrona del carrito: dos toques seguidos no deben leer el carrito viejo (antes de pintar).
-  const cartRef = useRef<DraftItem[]>(items)
-  useEffect(() => {
-    cartRef.current = items
-  }, [items])
-
-  function addProduct(p: Producto) {
-    const max = p.stock
-    const current = cartRef.current
-    const existing = current.find((i) => i.productId === p.id)
-    if (existing && max !== null && existing.quantity >= max) {
-      toast.error(max === 1 ? `Solo queda 1 de ${p.name}.` : `Solo quedan ${max} de ${p.name}.`)
-      return
-    }
-    const next: DraftItem[] = existing
-      ? current.map((i) => (i.key === existing.key ? { ...i, quantity: Math.min(999, i.quantity + 1), max } : i))
-      : [
-          ...current,
-          { key: `p${p.id}-${Date.now()}`, name: p.name, price: p.price, cost: p.cost, quantity: 1, productId: p.id, max },
-        ]
-    cartRef.current = next
-    setItems(next)
-    toast.success(existing ? `${p.name}: ${existing.quantity + 1} en el carrito.` : `${p.name} agregado al carrito.`)
-  }
 
   const totals = useMemo(() => {
     const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0)
@@ -164,7 +119,7 @@ export function SaleForm({ onCreated }: { onCreated: () => void }) {
     if (!Number.isFinite(quantity) || quantity < 1) return toast.error('La cantidad debe ser mínimo 1.')
 
     const existing = items.find(
-      (i) => !i.productId && i.name.toLowerCase() === name.toLowerCase() && i.price === price && i.cost === cost,
+      (i) => i.name.toLowerCase() === name.toLowerCase() && i.price === price && i.cost === cost,
     )
     if (existing) {
       setItems((prev) =>
@@ -191,8 +146,7 @@ export function SaleForm({ onCreated }: { onCreated: () => void }) {
     setItems((prev) =>
       prev.map((i) => {
         if (i.key !== key) return i
-        const top = i.max != null ? Math.max(1, Math.min(999, i.max)) : 999
-        return { ...i, quantity: Math.max(1, Math.min(top, Math.trunc(next) || 1)) }
+        return { ...i, quantity: Math.max(1, Math.min(999, Math.trunc(next) || 1)) }
       }),
     )
   }
@@ -220,7 +174,7 @@ export function SaleForm({ onCreated }: { onCreated: () => void }) {
     if (!paymentMethod) return toast.error('Elige el método de pago.')
 
     const input: NewVentaInput = {
-      items: items.map(({ name, price, cost, quantity, productId }) => ({ name, price, cost, quantity, productId })),
+      items: items.map(({ name, price, cost, quantity }) => ({ name, price, cost, quantity })),
       paymentMethod,
       customerName: customerName.trim() || undefined,
       customerPhone: customerPhone.trim() || undefined,
@@ -231,15 +185,11 @@ export function SaleForm({ onCreated }: { onCreated: () => void }) {
       const created = await createVenta(input)
       setSale(created)
       onCreated()
-      // Las existencias del catálogo cambiaron.
-      if (items.some((i) => i.productId)) void refreshProductos()
       toast.success(`Venta ${created.id} registrada por ${money(created.total)}.`, {
         description: 'Puedes descargar el recibo o enviarlo por WhatsApp.',
       })
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudo registrar la venta.')
-      // Si fue por existencias, trae las cifras actuales del catálogo.
-      void refreshProductos()
     } finally {
       setSaving(false)
     }
@@ -292,98 +242,12 @@ export function SaleForm({ onCreated }: { onCreated: () => void }) {
 
         <section className="rounded-3xl border border-border bg-card p-4 md:p-5">
           <header className="flex items-center gap-2">
-            <span className="grid size-9 place-items-center rounded-xl bg-primary/12 text-primary">
-              <Package className="size-4" aria-hidden="true" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <h2 className="text-[16px] font-extrabold tracking-tight">Del catálogo</h2>
-              <p className="text-xs text-muted-foreground">Toca un producto para sumarlo. Descuenta existencias.</p>
-            </div>
-            <Link href="/catalogo" className="shrink-0 rounded-lg px-2 py-2 text-[13px] font-semibold text-primary hover:underline">
-              Editar
-            </Link>
-          </header>
-
-          {productos.filter((p) => p.available).length === 0 ? (
-            <p className="mt-3 rounded-xl bg-surface-2 px-3.5 py-3 text-[13.5px] text-muted-foreground">
-              Aún no hay productos disponibles.{' '}
-              <Link href="/catalogo" className="font-semibold text-primary hover:underline">
-                Agrégalos en el catálogo
-              </Link>{' '}
-              o escribe el artículo abajo.
-            </p>
-          ) : (
-            <>
-              <div className="relative mt-3">
-                <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-                <Input
-                  type="search"
-                  value={catalogQuery}
-                  onChange={(e) => setCatalogQuery(e.target.value)}
-                  placeholder="Buscar en el catálogo"
-                  aria-label="Buscar en el catálogo"
-                  className="h-11 rounded-xl bg-surface pl-10 text-base"
-                />
-              </div>
-              <ul className="mt-2 flex max-h-72 flex-col gap-1 overflow-y-auto">
-                {catalogMatches.length === 0 && (
-                  <li className="px-2 py-3 text-[13.5px] text-muted-foreground">Nada con «{catalogQuery}».</li>
-                )}
-                {catalogMatches.map((p) => {
-                  const ok = inStock(p)
-                  const inCart = items.find((i) => i.productId === p.id)?.quantity ?? 0
-                  return (
-                    <li key={p.id}>
-                      <button
-                        type="button"
-                        disabled={!ok}
-                        onClick={() => addProduct(p)}
-                        className="flex min-h-14 w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left transition-colors hover:bg-surface-2 disabled:opacity-50"
-                      >
-                        <span className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-lg bg-surface-2">
-                          {p.photoUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={p.photoUrl} alt="" loading="lazy" className="size-full object-cover" />
-                          ) : (
-                            <ImageOff className="size-4 text-muted-foreground/60" aria-hidden="true" />
-                          )}
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="line-clamp-2 block text-[14.5px] leading-snug font-bold">{p.name}</span>
-                          <span className="block truncate text-[12px] text-muted-foreground">
-                            {CATEGORY_MAP[p.category]?.short}
-                            {' · '}
-                            {p.stock === null ? 'sin contar' : p.stock === 0 ? 'agotado' : p.stock === 1 ? 'queda 1' : `quedan ${p.stock}`}
-                          </span>
-                        </span>
-                        <span className="shrink-0 font-mono text-[14px] font-semibold tabular-nums">{money(p.price)}</span>
-                        {inCart > 0 ? (
-                          <span
-                            className="grid size-6 shrink-0 place-items-center rounded-full bg-primary text-[12px] font-bold text-primary-foreground"
-                            aria-label={`${inCart} en el carrito`}
-                          >
-                            {inCart}
-                          </span>
-                        ) : (
-                          <Plus className="size-6 shrink-0 p-1 text-muted-foreground" aria-hidden="true" />
-                        )}
-                      </button>
-                    </li>
-                  )
-                })}
-              </ul>
-            </>
-          )}
-        </section>
-
-        <section className="rounded-3xl border border-border bg-card p-4 md:p-5">
-          <header className="flex items-center gap-2">
             <span className="grid size-9 place-items-center rounded-xl bg-status-pending/12 text-status-pending">
               <PackagePlus className="size-4" aria-hidden="true" />
             </span>
             <div>
-              <h2 className="text-[16px] font-extrabold tracking-tight">Otro artículo</h2>
-              <p className="text-xs text-muted-foreground">Lo que no está en el catálogo: nombre, precio, costo y cantidad.</p>
+              <h2 className="text-[16px] font-extrabold tracking-tight">Artículo</h2>
+              <p className="text-xs text-muted-foreground">Nombre, valor de venta, valor de compra y cantidad.</p>
             </div>
           </header>
 
@@ -543,7 +407,7 @@ export function SaleForm({ onCreated }: { onCreated: () => void }) {
                         size="icon-sm"
                         aria-label={`Aumentar cantidad de ${item.name}`}
                         onClick={() => changeQuantity(item.key, item.quantity + 1)}
-                        disabled={item.quantity >= (item.max != null ? Math.min(999, item.max) : 999)}
+                        disabled={item.quantity >= 999}
                         className="size-7 rounded-lg"
                       >
                         <Plus className="size-3.5" />
